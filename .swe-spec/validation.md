@@ -7,7 +7,7 @@ Exception coverage: F15 defines the zero-evidence exception path (drop, never so
 Security coverage: the skill crawls only the operator-supplied target URL (F6) — no autonomous target discovery; forbidden-claim guardrails per persona (F5) plus F21/F22 prevent the report itself from emitting claims that could mislead downstream users; N6 excludes third-party data egress for localhost runs, keeping audit data on the operator's machine.
 
 ## Concise
-Each line states one testable obligation; req-lint passed 43/43 (F1-F36, N1-N7) with zero compound/vague/unbound findings on the original elicitation pass, and the scrub log (stage 6) cut speculative items rather than carrying them as padding. req-lint passed 133/133 after the unknowns pass plus challenge round 1; 153/153 after challenge round 2. Current live total (post-challenge-round-3): req-lint passes 169/169 — see lint-result.txt for the up-to-date re-run.
+Each line states one testable obligation; req-lint passed 43/43 (F1-F36, N1-N7) with zero compound/vague/unbound findings on the original elicitation pass, and the scrub log (stage 6) cut speculative items rather than carrying them as padding. req-lint passed 133/133 after the unknowns pass plus challenge round 1; 153/153 after challenge round 2; 169/169 after challenge round 3. Current live total (post-challenge-round-4): req-lint passes 186/186 — see lint-result.txt for the up-to-date re-run.
 
 ## Consistent
 No requirement contradicts another: the maximum-critique stance (D6) is compatible with the evidence discipline because F14/F15 make every critique artifact-anchored; F26's "block only severity-4" does not contradict F12's full 0–4 scoring because scoring and gating are separate concerns; persona minimum (F16) is consistent with the three shipped defaults (F2–F4).
@@ -135,3 +135,66 @@ other D15-family flag, and every non-flagged step in the same run stays fully su
 `*-scoped-not-global-bad` convention). The off-path `step` definition (F147) does not contradict the
 F45/F92 identity tuple it feeds — it resolves an ambiguity the tuple's own field never closed, it does
 not change the tuple's shape or field names.
+
+## Challenge round 4 (2026-07-09)
+
+A fourth independent adversarial challenge pass (`.swe-spec/CHALLENGE-ROUND-4.md`) ran 25 raw attacks
+against the post-round-3 spec (F1-F160/N1-N9), the ADR, and the RED test suite. Verdict:
+CHANGES_REQUIRED. 22 distinct defects confirmed (4 BLOCKER, 12 MAJOR, 6 MINOR), 3 attacks rejected as
+already litigated/closed in a prior round or factually contradicted by the frozen files (see
+CHALLENGE-ROUND-4.md §3). All 22 confirmed defects are applied in this pass: 17 new functional
+requirements (F161-F177, no new N-numbers), 8 existing lines edited in place (F9, F24, F35, F49, F53,
+F123, F157, N8), the D12/D15 decision rows amended (personas_flagging as the sole convergence_tier
+input; the D15 per-step flag family gains a 4th precedence clause closing flag-vs-flag mutual
+exclusivity), and 26 new acceptance-test cases plus 19 new fixtures added to `test/acceptance.test.mjs`
+— `node --test test/acceptance.test.mjs`: 68 tests, 0 pass, 68 fail — RED preserved.
+requirements.txt grew from 169 to 186 lines (177 functional, 9 nonfunctional); req-lint 186/186 PASS.
+Reconciliation decisions — including the numbering-collision resolution where the panel's own
+illustrative "e.g." numbers (F160, F161, F108a, F92a, F43a, F44a, F64a, F17a) collided with
+already-assigned IDs — are recorded in `scrub-log.md` under a dedicated `## CR4` section.
+
+Beyond the 22 confirmed defects, this pass additionally ran a MANDATED systematic sweep of the 5
+defect-generator patterns the round-4 panel named in its §4 systemic observations, across the whole
+spec (traced via `# CR4-S<n>` comments), so no further instance of these patterns remains for a future
+panel to find:
+
+1. **Enum/producer completeness** — every closed enum/flag family (`run_status`, `reason_code`,
+   `friction_type`, the D15 per-step flag family, CLI exit codes, `convergence_tier`/`partial_tier`)
+   was audited for a producer mapping. Closed the `run_status` producer gap for all 5 members
+   (F173-F176) and closed `friction_type` as an explicit closed set with producer citations (F177). A
+   new "Enum / flag-family → producers" table in spec.md makes this mapping mechanically visible.
+2. **Sibling completeness** — F12's severity formula had frequency operationalized (F159, CR3-17) but
+   impact and persistence left as free judgment; F161/F162 close both with the same fixed-bucket-
+   function treatment, and F157's reproducibility caveat is widened to cover the numeric branch too
+   (closing the false-certainty gap the free-text-only wording implied).
+3. **Control-pair evenness** — swept `test/acceptance.test.mjs` + fixtures for gate-checked rules
+   missing a matching `-ok`/bad companion. Closed: F57/F58/F154 (runner-capped positive controls,
+   BLOCKER-1), F14/F15 (evidence-present positive control, BLOCKER-4), F111/F112/F113 (the whole
+   retry-classification test block had ZERO positive controls — 2 new `-ok` fixtures added), F43/F44
+   (the apikey/cardnumber RED fixtures each had zero dedicated `-ok` counterpart — 2 new fixtures
+   added), and F9 (walkthrough answer-completeness gained its own gate()-routed bad/ok pair).
+4. **SSOT/count drift** — README.md, spec.md traceability, validation.md (this section), and
+   scope-match.md all updated to the current 186-requirement/107-fixture/68-test state in the same
+   pass that changed the counts, closing the exact one-round-behind drift class CR4 itself found in
+   README (MAJOR-12).
+5. **Traceability sweep** — every new requirement carries a `# CR4-Bn`/`# CR4-Mn`/`# CR4-MINn`/
+   `# CR4-Sn` trace comment; the "Known verification gaps" section's gate-routed-ID list and
+   zero-coverage-tier list were both extended to include every new F161-F177 ID, so the disclosed
+   residual-risk boundary does not itself drift one round behind (the same defect class as CR4's own
+   README finding, applied preemptively here).
+6. **Pluggability-commitment wording regression (panel §4 systemic observation 5)** — swept every
+   CRITICAL gate-enforcement requirement's literal wording against its own paired decision record for
+   a hardcoded-vs-pluggable mismatch (the F24-vs-D7 pattern: F24 named "Nielsen" literally while D7
+   promised generalized pluggability). Checked F23, F25, F28, F95, F96 (the other schema/gate-rejection
+   lines) — all already use generic wording ("violates the schema," "not in the gate's supported-
+   versions list"); F28's own "Nielsen 10-heuristic list shipped as the default set" phrase is a
+   correct DEFAULT-content description, not a gate-enforcement mismatch. F24 (fixed under MAJOR-5) is
+   confirmed as the sole instance of this pattern in the current spec.
+
+Boundary/exception/security coverage recorded above for F1-F160/N1-N9 remains valid and unchanged;
+this paragraph extends coverage to the F161-F177 range only. Consistency check: F164's mutual-
+exclusivity rule does not contradict any existing D15-family fixture (`audited-terminal-step-ok.json`,
+`precondition-step-login-ok.json`, `denylist-override-used-ok.json` — each already carries exactly one
+flag); F49's rescoped BLOCKED trigger does not contradict F101 (CI mode still exits nonzero on BLOCKED
+independent of severity-4 content) — it only narrows WHEN run_status becomes BLOCKED in the first
+place, which is a stricter, not looser, definition (fewer runs read as BLOCKED, never more).

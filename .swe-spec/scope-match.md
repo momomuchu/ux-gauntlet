@@ -87,3 +87,23 @@ this net-REDUCES eventual implementation risk versus the pre-round-3 design, whe
 safety-vs-completion tension had already produced 3 rounds of independent per-collision patches on the
 identical root cause (F41/F42 alone drew 3 separate confirmed findings across the 3 rounds).
 Verdict unchanged: scope still FITS budget (unconstrained token budget, no external deadline).
+
+## Challenge round 4 growth (2026-07-09)
+
+Requirement count grew again, from 169 (F1-F160, N1-N9) to 186 (F1-F177, N1-N9), after the
+challenge-round-4 adversarial pass confirmed 22 distinct defects (4 BLOCKER, 12 MAJOR, 6 MINOR) and
+every fix_directive was applied, PLUS a mandated systematic sweep of the panel's own 5 named
+defect-generator patterns across the whole spec (traced via `# CR4-S<n>`). `test/fixtures/` grew from
+88 to 107 files (19 new fixtures for the new/extended RED test cases). Build surface addition: zero new
+schema/script files (this round's fixes are all requirement-wording, disclosure, and identity-formula
+closures, not new subsystems) — the closest to a new build item is the enum-producer closure
+(F173-F176), which is pure orchestrator state-transition logic the runner already needed to implement
+to satisfy the pre-existing F53 enum, not a new capability. No new CLI flags (ADR-0001 unchanged this
+round). The systematic sweep's most consequential finding was NOT a new requirement but a test-suite
+completeness gap: the entire F111/F112/F113 retry-classification test block had zero positive controls
+(all 3 assertions were `notEqual(code, 0)`), meaning it could pass without the gate ever correctly
+classifying a CORRECT retry — closed with 2 new `-ok` fixtures, net-improving test-suite rigor at zero
+schema/build cost. Verdict unchanged: scope still FITS budget (unconstrained token budget, no external
+deadline); the enum-producer traceability table added to spec.md (Enum / flag-family → producers)
+net-simplifies future challenge-round audits by making producer coverage visually inspectable instead
+of requiring a fresh adversarial sweep each round.

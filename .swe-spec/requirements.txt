@@ -13,7 +13,7 @@ F5: The persona schema MUST require these 5 fields: goal statement, success crit
 F6: The skill MUST drive a real browser session against the operator-supplied target URL.
 F7: The skill MUST consume an operator-supplied happy-path task list before the crawl starts.
 F8: The skill MUST refuse to start a crawl when no happy-path task list is supplied.
-F9: At each task step the persona agent MUST record an answer to each of the 4 cognitive-walkthrough questions before advancing.
+F9: At each executed task step the persona agent MUST record an answer to each of the 4 cognitive-walkthrough questions before advancing. # CR4-M1
 F10: The persona agent MUST record one friction instance for every action performed beyond the happy-path task list.
 F11: Each friction instance MUST carry exactly one criterion tag drawn from the configured heuristic set.
 F12: Each friction instance's severity score MUST equal round(mean(frequency, impact, persistence)), each of the 3 rubric factors scored 0-4 whenever severity_factors is stored as 3 numeric values; when severity_factors is stored as free-text rationale, the recorded severity value is authoritative. # CR1-16 CR2-20
@@ -28,7 +28,7 @@ F20: Every generated report MUST contain the validity-envelope disclosure sectio
 F21: The report generator MUST NOT emit willingness-to-pay estimates.
 F22: The report generator MUST NOT emit population-percentage extrapolations.
 F23: The report gate script MUST exit nonzero when the JSON findings file violates the findings schema.
-F24: The report gate script MUST exit nonzero when any finding lacks a Nielsen-heuristic tag.
+F24: The report gate script MUST exit nonzero when any finding lacks a tag from the configured heuristic set. # CR4-M5 CR4-MIN5
 F25: The persona validator script MUST exit nonzero when a persona file violates the persona schema.
 F26: CI mode MUST exit nonzero when the run produces a severity-4 finding absent from the committed baseline. # CR1-2 CR1-19 CR2-22
 F27: The report MUST label findings from operator-allowlisted standardized flows as lower-confidence.
@@ -39,7 +39,7 @@ F31: Persona subagents MUST execute in parallel as background tasks.
 F32: The orchestrator MUST merge all per-persona ledgers into the single JSON findings file.
 F33: A No answer to any of the 4 walkthrough questions at a step MUST produce a friction instance for that step.
 F34: The persona agent MUST record one friction instance for every ambiguity resolution that the happy-path task list does not require.
-F35: The validity-envelope section MUST contain at least these 5 disclosures: not a replacement for real user research, no willingness-to-pay claims, no population-rate claims, no ISO-9241-11 compliance claim, no guarantee that severity values are comparable across runs when severity_factors is free-text. # CR1-20 CR3-12
+F35: The validity-envelope section MUST contain at least these 6 disclosures: not a replacement for real user research, no willingness-to-pay claims, no population-rate claims, no ISO-9241-11 compliance claim, no guarantee that severity values are comparable or reproducible across runs regardless of whether severity_factors is free-text or numeric, cognitive walkthroughs are weaker on standardized well-learned interaction patterns independent of the F27 label. # CR1-20 CR3-12 CR4-M10 CR4-B3
 F36: The runner command-line interface MUST conform to the contract recorded in docs/adr/0001-runner-cli-contract.md.
 N1: The skill package MUST conform to the Anthropic agent-skills format with a SKILL.md entry file carrying name plus description frontmatter.
 N2: The SKILL.md body MUST stay under 500 lines, with personas, schemas, templates in bundled resource files.
@@ -77,11 +77,11 @@ F45: The orchestrator MUST classify two friction records as the same underlying 
 F46: The orchestrator MUST merge two findings classified as the same underlying finding into one findings.json entry with one evidence-pointer array. # DR-06b
 F47: When a target-app-side 5xx-or-network-failure event occurs during a walkthrough step, the persona agent MUST record it as a distinct app-error event separate from the friction ledger. # DR-07a
 F48: The report generator MUST list app-error events in a section separate from the heuristic-tagged friction list. # DR-07b
-F49: The orchestrator MUST record a machine-readable run-status field, separate from findings.json, that is set to BLOCKED when fewer than 3 persona subagents complete their crawl due to a persona-execution failure. # DR-08
+F49: The orchestrator MUST record a machine-readable run-status field, separate from findings.json, set to BLOCKED only when fewer than 3 persona subagents reach run_status completed, crashed, or timed-out — excluding patience-exhausted and runner-capped persona subagents from that count. # DR-08 CR4-B2
 F50: When a persona's step count crosses patience_threshold_steps, the persona subagent MUST abandon the current task. # DR-09a
 F51: When a persona's step count crosses patience_threshold_steps, the persona subagent MUST record a terminal friction instance tagged with the abandonment step index. # DR-09b
 F52: When a persona's step count crosses patience_threshold_steps, the persona subagent MUST set the task outcome field to failed-by-patience in its ledger. # DR-09c
-F53: Each persona entry in findings.json MUST include a run_status field with exactly one value from {completed, crashed, timed-out, patience-exhausted}. # DR-10a
+F53: Each persona entry in findings.json MUST include a run_status field with exactly one value from {completed, crashed, timed-out, patience-exhausted, runner-capped}. # DR-10a CR4-B1
 F54: The report's validity-envelope section MUST state the count of personas with run_status not equal to completed whenever that count is greater than zero. # DR-10b
 F55: The ledger MUST record a task_completed boolean per persona per task. # DR-11a
 F56: The ledger MUST record a reason code per persona per task when task_completed is false, independent of the friction list for that task. # DR-11b
@@ -158,10 +158,10 @@ F119: A finding produced by the F46 merge MUST set its severity field equal to t
 F120: Each finding MUST carry a partial_tier field equal to the integer count of non-completed-run_status personas that flagged it, counted separately from convergence_tier. # CR1-18
 F121: A lower-confidence-labeled severity-4 finding MUST still trigger the F26 CI gate, identical to a full-confidence severity-4 finding. # CR1-19
 F122: The findings JSON output MUST use a finding_id field name distinct from any narrative field name, distinct from any timestamp field name. # CR1-22
-F123: The reason code recorded per F56 MUST be drawn from a fixed enumerated set including at minimum dry-run-boundary-stop, denylist-abort, robots-disallowed, patience-exhausted, target-unreachable. # CR1-23
+F123: The reason code recorded per F56 MUST be drawn from a fixed enumerated set including at minimum dry-run-boundary-stop, denylist-abort, robots-disallowed, patience-exhausted, target-unreachable, runner-capped. # CR1-23 CR4-B1
 F124: Each finding from a run whose run_status is not completed MUST carry a confidence field set to degraded-below-persona-floor. # CR1-24
 F125: The terminal friction instance recorded per F51 MUST carry a heuristic_tag value from the configured heuristic set. # CR1-26
-N8: A first-time operator MUST reach a started crawl against a reachable localhost target using only the required flags enumerated in ADR-0001's CLI contract table (--url, --tasks, --i-own-this-target, --env, --denylist), the shipped example tasks file, the shipped default denylist file, in one CLI invocation with zero failed prior attempts. # DR-28 CR1-15 CR2-2 CR2-19
+N8: A first-time operator MUST reach a started crawl against a reachable localhost target using only the required flags enumerated in ADR-0001's CLI contract table (--url, --tasks, --i-own-this-target, --env, --denylist), the shipped example tasks file, the shipped default denylist file, in one CLI invocation with zero failed prior attempts (this promise covers flag-validation refusal only, per ADR-0001's exit-code contract; a target whose robots.txt disallows the crawl path still requires --override-robots per F152, D15). # DR-28 CR1-15 CR2-2 CR2-19 CR4-MIN2
 
 # --- Challenge round 2 pass 2026-07-08 (.swe-spec/CHALLENGE-ROUND-2.md, 23 confirmed defects) ---
 # Trailing "# CR2-NN" comments trace each new/changed line back to the challenge-round-2 defect entry
@@ -223,7 +223,39 @@ F153: The evidence capture module MUST NOT redact a substring that matches only 
 F154: The orchestrator MUST default the per-run LLM tool-call maximum to 250 when the operator has not supplied a --max-tool-calls value. # CR3-9
 F155: A target MUST be classified as localhost when its --url hostname matches any of: the literal string 'localhost', an address in the 127.0.0.0/8 range, the address ::1. # CR3-10
 F156: The repo MUST ship schemas/tasks.schema.json defining task-list steps as a plain string / object carrying the optional per-step boolean fields payment_step, precondition_step, external_side_effect, denylist_override, audited_terminal_step. # CR3-11
-F157: The validity-envelope disclosure section MUST state that a finding's severity value is not guaranteed comparable, not guaranteed reproducible, across runs for the same finding_id when severity_factors is stored as free-text rationale, distinct from the F138 new-finding rerun-instability caveat. # CR3-12
+F157: The validity-envelope disclosure section MUST state that a finding's severity value is not guaranteed comparable, not guaranteed reproducible, across runs for the same finding_id, independent of whether severity_factors is stored as free-text rationale or as 3 numeric values, distinct from the F138 new-finding rerun-instability caveat. # CR3-12 CR4-B3 CR4-M9
 F158: ci-diff.mjs MUST print the rerun-instability caveat, plus a manual-re-run instruction, to its own stderr when it exits nonzero due to a new-or-escalated severity-4 finding. # CR3-13
 F159: When severity_factors is stored as 3 numeric values, the frequency factor MUST be computed from the raw within-run re-encounter count via the fixed mapping: 1 encounter=0, 2-3=1, 4-6=2, 7-10=3, 11-plus=4, applied identically by every persona. # CR3-17
 F160: The validity-envelope section MUST state that cognitive walkthroughs are validated for novel workflows, weaker on standardized, well-learned interaction patterns, whenever any finding carries the F27 lower-confidence label. # CR3-19
+
+# --- Challenge round 4 pass 2026-07-09 (.swe-spec/CHALLENGE-ROUND-4.md, 22 confirmed defects) ---
+# Trailing "# CR4-NN" comments trace each new line back to the challenge-round-4 defect entry
+# (BLOCKER 1-4 = CR4-B1..CR4-B4; MAJOR 1-12 = CR4-M1..CR4-M12; MINOR 1-6 = CR4-MIN1..CR4-MIN6).
+# Edits to existing lines (F9, F24, F35, F49, F53, F123, F157, N8) are made in place above rather
+# than appended here; this section holds only new F lines — no new N lines this round. Per the
+# scrub-log CR3-2/CR3-7/CR3-10 numbering-collision precedent, the challenge doc's own illustrative
+# "e.g." numbers (F160, F161, F108a, F92a, F43a, F44a, F64a, F17a) are NOT reused verbatim where
+# they collide with an already-assigned ID (F160 is CR3-19); the actual next-available sequential
+# IDs (F161-F177) are assigned instead — see scrub-log.md CR4-numbering entry.
+# Sweep markers "# CR4-S<n>" trace lines added purely by the mandated systematic sweep of the panel's
+# 5 named defect-generator patterns (.swe-spec/CHALLENGE-ROUND-4.md §4), not by a single confirmed
+# defect entry; several lines carry both a CR4-B/M/MIN tag and a CR4-S tag where the same edit closes
+# both a confirmed defect and a sweep-found sibling gap.
+
+F161: When severity_factors is stored as 3 numeric values, the impact factor MUST be computed from the persona's terminal recovery outcome for that friction instance via the fixed mapping: self-recovered-no-detour=0, recovered-with-minor-detour=1, recovered-with-major-detour=2, recovered-only-via-support-or-workaround=3, task-abandoned-or-never-resumed=4, applied identically by every persona. # CR4-B3
+F162: When severity_factors is stored as 3 numeric values, the persistence factor MUST be computed from the same-run recurrence count of the same finding_id via the fixed mapping: resolved-once-never-recurring=0, recurs-2-to-3-times=1, recurs-4-to-6-times=2, recurs-7-to-10-times=3, recurs-11-plus-times-or-never-resolved=4, applied identically by every persona. # CR4-B3
+F163: The persona subagent MUST NOT record cognitive-walkthrough answers for a step it skipped under F63. # CR4-M1
+F164: The task-list step schema validator MUST reject a step object carrying more than one of the 5 D15 per-step boolean fields (payment_step, precondition_step, external_side_effect, denylist_override, audited_terminal_step). # CR4-M2
+F165: finding_id MUST equal the literal string 'fid-' concatenated with the first 16 hex characters of sha256(`${heuristic_tag}|${step}|${target_element_identifier}`), a normative formula binding on every builder, not an unspecified deterministic hash left to builder discretion. # CR4-M3
+F166: Before writing any evidence artifact to disk, the evidence capture module MUST redact a substring matching a case-insensitive literal `Cookie:` or `Set-Cookie:` prefix followed by one or more semicolon-separated key=value segments, from a screenshot-type evidence entry's captured_text sidecar field. # CR4-M4
+F167: Before writing any evidence artifact to disk, the evidence capture module MUST redact a substring matching a case-insensitive literal `Cookie:` or `Set-Cookie:` prefix followed by one or more semicolon-separated key=value segments, from DOM snippets. # CR4-M4
+F168: The shipped examples/tasks.json MUST author its terminal non-idempotent submission step with audited_terminal_step: true, verified by schema validation against schemas/tasks.schema.json and a dedicated acceptance test, not merely referenced by name in SKILL.md. # CR4-M6
+F169: The heuristic-set configuration file MUST include exactly one top-level field, naming a designated patience-abandonment tag whose value is one of the tag identifiers present in that same file's heuristic list. # CR4-M7 CR4-MIN1
+F170: Each finding MUST carry a personas_flagging array field listing the identifiers of every persona that flagged it, used as the sole input for computing convergence_tier (F17). # CR4-M8
+F171: Every report's validity-envelope section MUST state that cognitive walkthroughs are weaker on standardized, well-learned interaction patterns, independent of whether any finding carries the F27 lower-confidence label. # CR4-M10
+F172: Each stderr line printed for a violated F107/F108 static launch precondition that has a shipped-default remedy MUST include that remedy's file path — examples/tasks.json for the tasks precondition, denylist/default-destructive-labels.json for the denylist precondition. # CR4-MIN3
+F173: The orchestrator MUST set a persona's run_status field to crashed when that persona subagent's execution fails unrecoverably (unhandled exception, browser process death, or equivalent) before completing its crawl, distinct from a wallclock timeout or a runner-level cap. # CR4-S1
+F174: The orchestrator MUST set a persona's run_status field to timed-out when that persona subagent is terminated by the F75 run-level wallclock timeout. # CR4-S1
+F175: The orchestrator MUST set a persona's run_status field to patience-exhausted when that persona subagent abandons its task per F50's patience_threshold_steps crossing. # CR4-S1
+F176: The orchestrator MUST set a persona's run_status field to runner-capped when that persona subagent is force-aborted under F57's 50-action cap or F154's per-run LLM tool-call maximum. # CR4-S1 CR4-B1
+F177: Each finding's friction_type field MUST be exactly one value from {extra_action, ambiguity_resolution, terminal_friction, walkthrough_failure}, matching the friction-producing requirement that generated it: extra_action per F10, ambiguity_resolution per F34, terminal_friction per F51, walkthrough_failure per F33. # CR4-S1

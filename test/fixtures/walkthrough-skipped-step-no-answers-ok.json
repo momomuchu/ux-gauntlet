@@ -1,0 +1,17 @@
+{
+  "run": {
+    "target_url": "http://localhost:3000",
+    "task_list": "test/fixtures/tasks.json",
+    "personas": ["free-tier-user"]
+  },
+  "task_list_steps": [
+    { "step": 5, "external_side_effect": true }
+  ],
+  "actions": [
+    { "persona": "free-tier-user", "step": 5, "type": "skip", "external_side_effect": true, "outcome": "blocked" }
+  ],
+  "walkthrough": [
+    { "persona": "free-tier-user", "step": 4, "answers": { "right_result": "yes", "notice": "yes", "associate": "yes", "progress": "yes" } }
+  ],
+  "findings": []
+}

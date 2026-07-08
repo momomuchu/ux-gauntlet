@@ -242,3 +242,35 @@ corrections are recorded in scrub-log.md under CR3-7/CR3-10.
 | F160 | functional | disclosure policy (F27 walkthrough-weakness rationale, not just the label) — CR3-19 |
 
 Summary: 160 functional, 9 nonfunctional (169 total).
+
+## Challenge round 4 pass 2026-07-09 (.swe-spec/CHALLENGE-ROUND-4.md, F161-F177)
+
+Same Perfect Technology Filter question applied to each landed line. All 17 new lines resolve to
+`functional`: every one is a scoring/enum-closure/refusal-scoping/identity/disclosure/schema policy
+that a live-target crawl, a real payment form, or a nondeterministic parallel pipeline still needs
+regardless of compute speed/memory/cost — none describe a pure QoS/resource attribute of the
+evaluating machine itself. This round adds ZERO new N-numbers (same pattern as round 3): the
+enum-producer-closure lines (F173-F176) are refusal/output-contract policy, not a QoS bound, matching
+the existing F53/F123 precedent those lines extend.
+
+| ID | Category | Filter note |
+|----|----------|-------------|
+| F161 | functional | scoring policy (numeric-branch impact fixed mapping) — CR4-B3 |
+| F162 | functional | scoring policy (numeric-branch persistence fixed mapping) — CR4-B3 |
+| F163 | functional | walkthrough-scope policy (no fabricated answers for a skipped step) — CR4-M1 |
+| F164 | functional | schema policy (D15 per-step flag mutual exclusivity) — CR4-M2 |
+| F165 | functional | identity-computation policy (normative finding_id hash formula) — CR4-M3 |
+| F166 | functional | evidence-redaction policy (cookie shape, screenshot sidecar) — CR4-M4 |
+| F167 | functional | evidence-redaction policy (cookie shape, DOM snippets) — CR4-M4 |
+| F168 | functional | shipped-artifact content policy (examples/tasks.json audited_terminal_step) — CR4-M6 |
+| F169 | functional | schema policy (heuristic-set config patience_abandonment_tag field) — CR4-M7 CR4-MIN1 |
+| F170 | functional | output-contract policy (personas_flagging array field) — CR4-M8 |
+| F171 | functional | disclosure policy (unconditional walkthrough-weakness statement) — CR4-M10 |
+| F172 | functional | refusal-reporting policy (shipped-default remedy path in stderr) — CR4-MIN3 |
+| F173 | functional | enum-producer policy (run_status=crashed trigger) — CR4-S1 |
+| F174 | functional | enum-producer policy (run_status=timed-out trigger) — CR4-S1 |
+| F175 | functional | enum-producer policy (run_status=patience-exhausted trigger) — CR4-S1 |
+| F176 | functional | enum-producer policy (run_status=runner-capped trigger) — CR4-S1 CR4-B1 |
+| F177 | functional | enum-closure policy (friction_type closed set + producer citation) — CR4-S1 |
+
+Summary: 177 functional, 9 nonfunctional (186 total).

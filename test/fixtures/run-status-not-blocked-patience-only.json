@@ -1,0 +1,31 @@
+{
+  "run": {
+    "target_url": "http://localhost:3000",
+    "task_list": "test/fixtures/tasks.json",
+    "personas": ["free-tier-user", "willing-to-pay-user", "vp-team-buyer"]
+  },
+  "run_status": "completed",
+  "personas": [
+    { "name": "free-tier-user", "run_status": "completed" },
+    { "name": "willing-to-pay-user", "run_status": "patience-exhausted" },
+    { "name": "vp-team-buyer", "run_status": "patience-exhausted" }
+  ],
+  "findings": [
+    {
+      "id": "fr-970",
+      "friction_name": "two personas independently gave up on the upgrade-plan task before the third completed it",
+      "friction_type": "terminal_friction",
+      "step": 11,
+      "personas_flagging": ["willing-to-pay-user", "vp-team-buyer"],
+      "convergence_tier": 0,
+      "partial_tier": 2,
+      "heuristic_tag": "flexibility-efficiency-of-use",
+      "severity": 4,
+      "confidence": "degraded-below-persona-floor",
+      "severity_factors": { "frequency": "every attempt past threshold", "impact": "task abandoned", "persistence": "recurs" },
+      "market_impact": true,
+      "evidence": [{ "type": "screenshot", "path": "runs/fixture/step11-abandon.png" }],
+      "narrative": "2 of 3 personas legitimately abandoned via patience exhaustion (0 crashed, 0 timed-out); this is a designed, successful methodology outcome (F50-F52), not an execution failure, so run_status is NOT BLOCKED (F49 rescoped, CR4-B2) — the run's own high-severity finding must still surface, not be masked as a near-total infra failure."
+    }
+  ]
+}

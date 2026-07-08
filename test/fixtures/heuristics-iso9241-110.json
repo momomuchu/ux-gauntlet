@@ -1,0 +1,13 @@
+{
+  "set_name": "iso-9241-110",
+  "criteria": [
+    { "id": "suitability-for-the-task", "label": "Suitability for the task" },
+    { "id": "self-descriptiveness", "label": "Self-descriptiveness" },
+    { "id": "conformity-with-user-expectations", "label": "Conformity with user expectations" },
+    { "id": "learnability", "label": "Learnability" },
+    { "id": "controllability", "label": "Controllability" },
+    { "id": "error-tolerance", "label": "Error tolerance" },
+    { "id": "suitability-for-individualization", "label": "Suitability for individualization" }
+  ],
+  "narrative": "An operator-configured non-Nielsen heuristic set (ISO 9241-110 style), loadable without logic edits per D7's pluggable-heuristic-taxonomy promise. Labeled as the author's own choice, not source-attributed."
+}

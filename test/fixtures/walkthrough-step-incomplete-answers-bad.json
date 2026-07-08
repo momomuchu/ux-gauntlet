@@ -1,0 +1,14 @@
+{
+  "run": {
+    "target_url": "http://localhost:3000",
+    "task_list": "test/fixtures/tasks.json",
+    "personas": ["free-tier-user", "willing-to-pay-user", "vp-team-buyer"]
+  },
+  "walkthrough": [
+    { "persona": "free-tier-user", "step": 1, "answers": { "right_result": "yes", "notice": "yes", "associate": "yes", "progress": "yes" } },
+    { "persona": "willing-to-pay-user", "step": 1, "answers": { "right_result": "yes", "notice": "yes" } },
+    { "persona": "vp-team-buyer", "step": 1, "answers": { "right_result": "yes", "notice": "yes", "associate": "yes", "progress": "yes" } }
+  ],
+  "findings": [],
+  "narrative": "willing-to-pay-user's step-1 answers object is missing 2 of the 4 required keys (associate, progress) — a silent skip, not an unmatched 'No' (F33 never fires since no 'no' value was ever recorded). F9's core mandate that every step records all 4 answers must be gate-checked as real behavior, not merely SKILL.md prose (CR4-M11)."
+}

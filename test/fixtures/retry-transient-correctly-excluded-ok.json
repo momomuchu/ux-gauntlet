@@ -1,0 +1,12 @@
+{
+  "run": {
+    "target_url": "http://localhost:3000",
+    "task_list": "test/fixtures/tasks.json",
+    "personas": ["free-tier-user"]
+  },
+  "actions": [
+    { "persona": "free-tier-user", "step": 2, "type": "retry", "auto_recovered": true, "within_wait_timeout": true, "persona_initiated": false, "http_status": null }
+  ],
+  "findings": [],
+  "narrative": "A widget failed to render once and the automatic retry succeeded within the wait timeout with no persona action; this transient technical failure is correctly EXCLUDED from the friction ledger (F111 negative control, CR4-S3 pattern-3 sweep)."
+}
