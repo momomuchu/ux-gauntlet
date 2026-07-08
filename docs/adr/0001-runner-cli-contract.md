@@ -31,7 +31,8 @@ A CLI is a public interface — a material decision per decision-record discipli
 | `--no-headless` | no | forces a visible-browser launch, overriding the auto-headless default (F135, CR2-10) |
 | `--timeout <minutes>` | no | run-level wallclock timeout; default 50 (F131, CR2-7) |
 | `--standardized-flow-allowlist <file>` | no | flow-name file naming standardized flows (e.g. login) whose findings receive the F27 lower-confidence label (F140/F141/F142, CR2-14) |
-| `--ci --baseline <file>` | no | CI mode: diff findings against committed baseline by finding_id (F72–F74) |
+| `--help` | no | prints usage text; per F152, MUST reference `--override-robots` as the resolution for a local/staging robots.txt disallow-all (CR6-MIN5 — closes the table/prose gap where the F152/CR4-MIN4 `--help` test invoked a flag the table never listed) |
+| `--ci --baseline <file>` | no | documented pass-through only, explicitly OUT of MVP test scope: `run-gauntlet.mjs` does NOT itself diff — CI-mode diffing is exclusively `ci-diff.mjs`'s responsibility (`--baseline`/`--current`, F72–F74), matching spec.md's CI-mode narrative and the F101 acceptance test, which invokes `ci-diff.mjs`, never `run-gauntlet.mjs --ci` (CR6-M3 — removes the interpretation surface where a builder could ship this flag unimplemented yet pass every F101/F26/F151 assertion) |
 | `--out <dir>` | no | output directory; default `runs/<timestamp>/` |
 
 Exit codes: `0` = run completed and gates passed; `1` = gate/validation failure (incl. refusal to
@@ -39,9 +40,15 @@ start: missing task list, <3 personas, malformed persona, invalid denylist file,
 flags per F37/F39/F61/F65/F67/F106); `2` = usage error (unknown flag, missing required flag); `3` =
 target unreachable at crawl start — DNS failure, connection refused, TLS handshake error (F80,
 distinct from gate refusals so CI can tell "new severity-4" from "app down"). Refusals print a
-one-line reason to stderr naming the violated rule (F108 governs the multi-violation case). In
-`--ci` mode, exit is additionally nonzero whenever the run's `run_status` is `BLOCKED`, independent
-of severity-4 diff content (F101) — a near-total persona failure must not read as a clean CI run.
+one-line reason to stderr naming the violated rule (F108 governs the multi-violation case). In CI
+mode — performed by `ci-diff.mjs`, not by a `run-gauntlet.mjs --ci` diff path (see the `--ci
+--baseline` row above, CR6-M3) — exit is additionally nonzero whenever the run's `run_status` is
+`BLOCKED`, independent of severity-4 diff content (F101). `run_status` BLOCKED is itself recomputed
+from the per-persona terminal states under F49's counted-set rule (crashed/timed-out push toward
+BLOCKED; completed/patience-exhausted/runner-capped count toward the 3-persona floor — F49 re-inverted
+CR6-B1) and that derivation is gate-locked by F191, so a near-total persona failure (e.g. 3-of-3
+crashed) can never read as a clean CI run, and a designed patience-exhaustion run is never mislabeled
+BLOCKED.
 
 **Revision 2026-07-08 (same day):** refusal-layer flags added after the unknowns audit
 (docs/research/UNKNOWNS-DELTA.md) — closes the disjoint-executor residual "CLI contract not

@@ -1,0 +1,16 @@
+{
+  "run": {
+    "target_url": "http://localhost:3000",
+    "task_list": "test/fixtures/tasks.json",
+    "personas": ["free-tier-user", "willing-to-pay-user", "vp-team-buyer"]
+  },
+  "run_status": "completed",
+  "personas": [
+    { "name": "free-tier-user", "run_status": "crashed" },
+    { "name": "willing-to-pay-user", "run_status": "crashed" },
+    { "name": "vp-team-buyer", "run_status": "crashed" }
+  ],
+  "validity_envelope_text": "This report is not a replacement for real user research. It contains no willingness-to-pay estimates. It contains no population percentage extrapolations. It makes no ISO 9241-11 compliance claim. 3 of 3 personas did not complete.",
+  "findings": [],
+  "narrative": "CR6-B6 derivation-lock RED fixture: the per-persona run_status list is 3-of-3 crashed, so the value DERIVED under F49's counted-set rule is BLOCKED (0 personas in the not-blocked floor set), but the stored top-level run_status hand-sets 'completed'. report-gate.mjs must RECOMPUTE run_status/BLOCKED from the per-persona terminal-state list (F191) and exit nonzero on this disagreement — proving the derivation is computed, not merely a hand-set field that every other fixture pre-fills."
+}

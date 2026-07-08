@@ -176,18 +176,18 @@ mandated systematic sweep). Every terminal or forced-abort path named in the tas
 "—" means the axis does not apply to that path (the path never reaches a persona-level `run_status` or
 never produces a `task_completed:false` ledger entry, and the table states why).
 
-| Terminal / abort path | `run_status` (F53) | `reason_code` (F123) | Producer requirement(s) | BLOCKED trigger (F49)? |
+| Terminal / abort path | `run_status` (F53) | `reason_code` (F123) | Producer requirement(s) | Pushes toward BLOCKED (F49, inverted CR6-B1)? |
 |---|---|---|---|---|
-| Patience-threshold exhaustion | `patience-exhausted` | `patience-exhausted` | F50-F52, F175 | No — designed, successful methodology outcome (CR4-B2) |
-| Runner-level action cap (50 actions, F57/F58) | `runner-capped` | `runner-capped` | F57, F58, F176, F123 | No — counted set is exactly `{completed, crashed, timed-out}` (F49); a capped persona still delivered a valid partial ledger, not an infra failure |
-| Runner-level tool-call cap (250 calls default, F99/F100/F154) | `runner-capped` | `runner-capped` | F99, F100, F154, F176, F123 | No — same enum member and same BLOCKED-exclusion as the action cap; F176 unifies both caps' producer under one `run_status` value since the founder-facing consequence (force-abort, partial ledger) is identical |
-| Run-level wallclock timeout (F75/F76) | `timed-out` | — (no single in-flight task reason code beyond the persona-level `timed-out` status; the partial ledger is merged as-is, F76) | F75, F76, F174 | Yes — `timed-out` is one of the 3 counted values |
-| Persona crash (unhandled exception / browser death) | `crashed` | — (crash is an infra fault at the persona-execution level, not a per-task refusal reason; F56's reason-code axis is for a *deliberate* per-task non-completion, not an unplanned fault) | F173 | Yes — `crashed` is one of the 3 counted values |
+| Patience-threshold exhaustion | `patience-exhausted` | `patience-exhausted` | F50-F52, F175 | No — `patience-exhausted` is IN the not-blocked floor set `{completed, patience-exhausted, runner-capped}` (F49 inverted, CR6-B1); designed, successful methodology outcome (CR4-B2) |
+| Runner-level action cap (50 actions, F57/F58) | `runner-capped` | `runner-capped` | F57, F58, F176, F123 | No — `runner-capped` is IN the not-blocked floor set `{completed, patience-exhausted, runner-capped}` (F49 inverted, CR6-B1); a capped persona still delivered a valid partial ledger, not an infra failure |
+| Runner-level tool-call cap (250 calls default, F99/F100/F154) | `runner-capped` | `runner-capped` | F99, F100, F154, F176, F123 | No — same enum member and same not-blocked-floor membership as the action cap; F176 unifies both caps' producer under one `run_status` value since the founder-facing consequence (force-abort, partial ledger) is identical |
+| Run-level wallclock timeout (F75/F76) | `timed-out` | — (no single in-flight task reason code beyond the persona-level `timed-out` status; the partial ledger is merged as-is, F76) | F75, F76, F174 | Yes — `timed-out` is EXCLUDED from the not-blocked floor set `{completed, patience-exhausted, runner-capped}`, so it lowers the floor count and pushes toward BLOCKED (F49 inverted, CR6-B1) — a timeout is an infra-failure signal, not a designed outcome |
+| Persona crash (unhandled exception / browser death) | `crashed` | — (crash is an infra fault at the persona-execution level, not a per-task refusal reason; F56's reason-code axis is for a *deliberate* per-task non-completion, not an unplanned fault) | F173 | Yes — `crashed` is EXCLUDED from the not-blocked floor set `{completed, patience-exhausted, runner-capped}`, so it pushes toward BLOCKED (F49 inverted, CR6-B1); 3-of-3 crashed now correctly computes BLOCKED, closing the defect where the pre-CR6 `{completed, crashed, timed-out}` counted set computed count=3 and could never trigger BLOCKED |
 | Target-unreachable at crawl start (F80, exit code 3) | — (no persona is ever delegated; findings.json may not exist at all — this is a pre-crawl CLI refusal, not a persona terminal state) | `target-unreachable` | F80, F85, F86, F123 | N/A — the run never starts; F49's BLOCKED trigger is a post-crawl findings.json concept that presupposes at least an attempted delegation |
 | Denylist-abort (F37/F38) | `completed` (the persona continues; only the one flagged step is aborted) | `denylist-abort` | F38, F123 | No — per-step refusal, not a persona-terminal state |
 | Robots.txt disallow (F41/F42) | `completed` (persona continues; only that navigation is aborted) | `robots-disallowed` | F42, F123 | No — per-step refusal, not a persona-terminal state |
 | Default dry-run boundary stop (F40, non-`audited_terminal_step`/`precondition_step`) | `completed` (persona continues; only that submission is withheld) | `dry-run-boundary-stop` | F40, F123 | No — per-step refusal, not a persona-terminal state |
-| Successful completion (implicit default) | `completed` | (no reason code — `task_completed:true`, F56 only fires when `task_completed` is `false`) | — (absence of every other trigger) | N/A — counts toward the "3 completed" floor |
+| Successful completion (implicit default) | `completed` | (no reason code — `task_completed:true`, F56 only fires when `task_completed` is `false`) | — (absence of every other trigger) | No — `completed` is IN the not-blocked floor set `{completed, patience-exhausted, runner-capped}` (F49 inverted, CR6-B1) |
 
 Every `run_status` member (F53's now-5-value closed enum) has exactly one producer citation in
 `docs/specs/0001-ux-gauntlet-mvp.spec.md`'s "Enum / flag-family → producers" table (F173-F176 plus the
@@ -264,3 +264,110 @@ localhost carve-out already adjudicated at CR3; F26/F151's convergence_tier gati
 adjudicated at CR1-19; F27's opt-in confidence routing already a documented soft "should"; the
 186/177 traceability-count attack simply misquoted the file's actual current content). None required
 action in this pass; recorded here only so a future reader does not re-litigate them as if unseen.
+
+## CR6 arbitration
+
+Challenge round 6 (`.swe-spec/CHALLENGE-ROUND-6.md`, 17 confirmed defects: 7 BLOCKER, 4 MAJOR, 6
+MINOR; 5 rejected by the panel). The panel's own §4 systemic observation is that THREE independently
+confirmed BLOCKER attacks target ONE requirement — F49's BLOCKED counted-set formula — and propose
+THREE MUTUALLY INCONSISTENT fixes. This pass ARBITRATES the disagreement with a stated principle
+before patching, rather than mechanically applying all three (which would re-break the requirement).
+
+### Arbitration 1 — F49 BLOCKED counted set (the 3-way conflict) — DECIDED: invert the counted set
+
+**Principle.** `crashed` and `timed-out` are INFRA-FAILURE signals that BLOCKED exists to catch;
+`patience-exhausted` and `runner-capped` are DESIGNED non-failure outcomes (F50-F52 patience is a
+successful methodology result; F57/F154/F176 runner-caps still deliver a valid partial ledger);
+`completed` is success. Therefore the not-blocked floor set is `{completed, patience-exhausted,
+runner-capped}` and BLOCKED := count(personas in that set) < 3; `crashed`/`timed-out` are excluded
+from the floor and push toward BLOCKED. This matches DR-08's original intent (crash = non-completion)
+and ADR-0001's "near-total persona failure must not read as clean CI".
+
+**Chosen fix:** the round-6 "invert the counted set" directive (BLOCKER row 1). Verified against ALL
+three ground-truth cases at once:
+- `run-status-not-blocked-patience-only.json` (1 completed + 2 patience-exhausted): floor count = 3, NOT < 3 → NOT BLOCKED ✓ (matches frozen ground truth "completed").
+- `run-status-blocked-with-disclosure-ok.json` (2 completed + 1 crashed): floor count = 2 < 3 → BLOCKED ✓ (matches frozen ground truth "BLOCKED").
+- 3-of-3 crashed (new `run-status-blocked-all-crashed.json`): floor count = 0 < 3 → BLOCKED ✓ (the paradigm case the pre-CR6 formula could never catch).
+
+**Rejected alternative A — floor-AND-crash-trigger** ("BLOCKED iff ≥1 crashed/timed-out AND fewer
+than 3 completed"). REJECTED as **redundant**: F53's run_status enum is closed to exactly
+`{completed, crashed, timed-out, patience-exhausted, runner-capped}`, and F107/F108 guarantee ≥3
+personas are delegated. Given that closed enum, "fewer than 3 in the not-blocked floor set" ALREADY
+implies "≥1 crashed-or-timed-out" — the extra AND-clause is subsumed by the floor and adds a second
+condition that can never independently fire. The inverted-set formula IS this formula collapsed to
+its non-redundant core.
+
+**Rejected alternative B — any-crash-trigger, no floor** ("BLOCKED iff any persona is crashed or
+timed-out"). REJECTED as **removing the 3-persona floor the reliability rationale needs**: it BLOCKS a
+run of 3 completed + 1 crashed (4 personas), even though the ≥3-completed convergence floor DR-08/F16
+require was fully met — a 4th persona crashing after 3 succeeded does not invalidate the run. The
+floor is load-bearing (convergence tiers assume ≥3 valid personas); dropping it over-blocks valid
+runs. F107/F108 guarantee ≥3 delegation but NOT ≥3 non-failure terminal outcomes, so F49 still needs
+the terminal-outcome floor, not just a presence-of-crash trigger.
+
+**Applied coherently in ONE pass** across all four surfaces so no literal drifts stale behind the
+fix (the exact CR5-B3 drift defect this round re-attacked): requirements.txt F49 (CR6-B1), spec.md
+line 201 partial-run-visibility bullet, ADR-0001 exit-codes paragraph, and this file's CR4
+closure-sweep table (the Persona-crash / timeout rows flipped to "pushes toward BLOCKED", the
+patience/runner-capped/completed rows re-annotated as "in the not-blocked floor set"; the column
+header renamed "Pushes toward BLOCKED (F49, inverted CR6-B1)?"). New fixtures:
+`run-status-blocked-all-crashed.json` (positive: CI nonzero via F101) + its boundary negative control
+`run-status-not-blocked-runner-capped-boundary-ok.json` (1 completed + 2 runner-capped = NOT BLOCKED).
+
+### Arbitration 2 — the test-lock gap class the panel named (freeze-readiness gap) — F191 added
+
+The panel observed that TODAY no test proves the orchestrator COMPUTES run_status / convergence_tier
+/ BLOCKED from a persona list — every fixture HAND-SETS them, so even after the F49 wording fix
+nothing would catch a mis-computation. This is a real freeze-readiness gap, not a wording issue. Added
+a computation-level requirement **F191** (report-gate.mjs MUST recompute BLOCKED from the per-persona
+run_status list under F49's counted-set rule and exit nonzero when the stored run_status disagrees) +
+a fixture-pair test (`F191 CR6-B6`): `run-status-blocked-all-crashed.json` (derivation agrees → PASS)
+vs. `run-status-derived-blocked-mismatch-bad.json` (3 crashed personas, stored run_status "completed"
+→ FAIL). RED (no script yet), but it locks DERIVATION, not just schema shape.
+
+### Per-defect disposition (applied severity = JUDGE's severity from CHALLENGE-ROUND-6.md §2)
+
+| # | Defect (panel severity) | Disposition | Trace | Notes / reintroduction check |
+|---|---|---|---|---|
+| 1 | F49 counted set contradicts F101 (BLOCKER) | APPLIED — invert counted set | CR6-B1 | Arbitration 1. Reconciled 3-way conflict; 2 alternatives rejected with reasons above. |
+| 2 | F49 computes opposite of both fixtures — floor-AND-crash fix (BLOCKER) | REJECTED alt | CR6-B1 | Redundant given closed F53 enum + F107/F108 (see Arbitration 1-A). Same root defect. |
+| 3 | payment_step can never submit under --test-mode (BLOCKER) | APPLIED — F196 (payment_step = narrow F40 exemption, test_mode-gated) | CR6-B2 | New fixture `payment-testmode-submits-ok.json`; neg control = existing `payment-no-testmode.json`. Checked against D15 (does NOT add a 6th flag; adds a conditional F40-exemption behavior to the existing payment_step flag) and F164 (no flag stacking) — no conflict; D15 precedence clause (1) updated. |
+| 4 | N8 flagship-file stand-in (BLOCKER) | APPLIED — N8 test now invokes `examples/tasks.json`, not `test/fixtures/tasks.json` | CR6-B3 | Grepped test file: only the N8 test used the tasks file as a first-run SUCCESS proof (refusal tests legitimately use any tasks file). No req change. |
+| 5 | F49 contradicts both fixtures — any-crash-no-floor fix (BLOCKER) | REJECTED alt | CR6-B1 | Removes the ≥3 floor the reliability rationale needs (see Arbitration 1-B). Same root defect. |
+| 6 | F159 frequency bucket ≡ F162 persistence bucket, bit-for-bit (BLOCKER) | APPLIED — F181 restated to exact-identity, F12 discloses reduces-to round((2*frequency+impact)/3) | CR6-B4 | Verified by enumeration (r=c-1 substitution). Did NOT re-derive persistence from an independent signal (out of scope at spec phase, per directive) — disclosed honestly. CR5-B4 record clarified (its shift-by-1 was a math no-op; only disclosure corrects it) in the F161/F162 test comment. |
+| 7 | gate() dispatches on literal filename — filename-keyed static table gameable (BLOCKER) | APPLIED — F192 (content-derived exit code/output) + runtime-generated-fixture anti-gaming test | CR6-B5 | mkdtemp per-test paths + one-field mutations (merged-severity flip; render friction_name marker). Cross-ref F23/F24/F119/F153/F189. No requirement-scope expansion — makes existing content-driven behavior explicit. |
+| — | (panel freeze-readiness gap) orchestrator never proven to COMPUTE run_status/BLOCKED | APPLIED — F191 + derivation-lock fixture pair | CR6-B6 | Arbitration 2. |
+| 8 | F183 tier-5 undefined when zero qualifying ancestors (MAJOR) | APPLIED — F193 (documentElement terminal case) + fixture pair | CR6-M1 | `findings-icon-only-zero-qualifying-ancestor-merged-ok.json` / `-divergent-bad.json`. Mirrors the F183 CR5-M3 test pattern. |
+| 9 | F184/F12 lets report attribute score to "NN/g rubric" on swapped/free-text paths (MAJOR) | APPLIED — F194 (7th disclosure condition) + spec.md validity-envelope bullet + render-report test | CR6-M2 | Reuses `findings-custom-severity-rubric-ok.json` (non-default rubric) + `findings-custom-heuristic-set-ok.json` (free-text severity_factors). |
+| 10 | run-gauntlet.mjs `--ci --baseline` never invoked; ADR vs spec.md contradiction (MAJOR) | APPLIED — Option B: ADR reworded — run-gauntlet does NOT diff; ci-diff.mjs owns CI mode | CR6-M3 | Chose Option B over Option A (add a run-gauntlet --ci test) to REDUCE interpretation surface per the task's "do not introduce new interpretation surface" constraint: Option A would have created a second, partly-duplicate CI implementation obligation. ADR flag-table row + exit-codes paragraph aligned to spec.md:247's actual narrative (F101 test already invokes ci-diff.mjs). No new test. |
+| 11 | report-gate.mjs bare-arg production form never tested (MAJOR) | APPLIED — added `F23 CR6-M4` test invoking the bare positional form | CR6-M4 | Reuses existing pass/fail fixtures (findings-valid.json / finding-untagged.json). No req change — F23 already covers "the JSON findings file"; the gap was a missing invocation form. |
+| 12 | F31 unconditional "parallel" unsatisfiable under F98 queuing (MINOR) | APPLIED — F31 reworded (delegated concurrently up to --max-parallel, excess queued per F98) | CR6-MIN1 | Consistent with F98 cap+queue and F134 overlap (min(persona_count, max_parallel) ≥ 2 always overlaps). |
+| 13 | F123 binds whole reason_code enum to F56, but target-unreachable has no F56 ledger entry (MINOR) | APPLIED — F123 reworded ("every reason_code emitted by any producer among F56, F80") | CR6-MIN2 | Matches spec.md's producer table (target-unreachable producer = F80). CR5 canonical token table reason_code family unchanged (enum values identical). |
+| 14 | No self-consistency check: shipped denylist vs shipped example terminal label (MINOR) | APPLIED — F195 + assertion in the F83 test | CR6-MIN3 | audited_terminal_step exempts only F40, never F38; F164 forbids stacking denylist_override. |
+| 15 | DR-28 first-run "under 5 min" met only for canned demo, not real authoring (MINOR) | SKIPPED-with-reason | — | The directive's fix is an informational line in SKILL.md's quickstart — but SKILL.md is a BUILD-phase artifact that does not exist at spec phase (only F83 references it by name). No requirements.txt change (the directive itself says none needed); the F56/F123 `dry-run-boundary-stop` reason_code mechanism already closes the silent-failure mode. Recorded as accepted residual for the build phase, same category as CR5-MIN3's infeasible-pre-build proofs. |
+| 16 | Test invokes `--help`, a flag ADR-0001's table never lists (MINOR) | APPLIED — added `--help` row to ADR-0001 flag table | CR6-MIN5 | Content obligation already in F152; this closes the table/prose completeness gap. |
+| 17 | scrub-log recorded RED-baseline count (71) stale vs current suite (MINOR) | APPLIED — see count sync below | CR6-MIN6 | Superseded by the CR6 count sync: suite is now 82 tests (76 pre-CR6 + 6 CR6). |
+
+### CR6 numbering note
+
+Per the CR3-2/CR3-7/CR3-10/CR4-numbering/CR5-numbering precedent: two round-6 fix_directives each
+independently suggested "F191" for a DIFFERENT new requirement (the content-derivation anti-gaming
+line AND the F184/F12 rubric-attribution line), and a third suggested lettered "F183a". None could
+see the others. Assigned the actual next-available sequential IDs at pass start: **F191-F196** (6 new
+functional requirements; no new N lines — every CR6 addition is a derivation/disclosure/refusal
+policy, still needed under the Perfect Technology Filter). Mapping: F191 derivation-lock (CR6-B6),
+F192 content-derivation (CR6-B5), F193 documentElement terminal (CR6-M1), F194 rubric-attribution
+disclosure (CR6-M2), F195 denylist/example self-consistency (CR6-MIN3), F196 payment test-mode F40
+exemption (CR6-B2). The lettered "F183a" was translated to sequential F193 (no lettered-suffix ID has
+ever shipped in this document). Edits to existing lines (F12, F31, F49, F123, F181) are made in place;
+the CR6 section of requirements.txt holds only the new F191-F196 lines.
+
+### CR6 count sync (supersedes the stale CR4 "71 tests" / CR5 "199 lines" snapshots)
+
+Post-CR6 fresh re-runs from repo root: `req-lint.sh .swe-spec/requirements.txt` → **205/205 PASS**
+(199 pre-CR6 + 6 new F191-F196; 196 functional + 9 nonfunctional); `coverage-audit.sh --pre-freeze`
+→ **8/8 stages PASS**; `test-coverage-audit.sh` → **95/95 CRITICAL PASS** (up from 91/91 post-CR5;
+F191, F192, F194, F196 newly covered as CRITICAL citations); `node --test test/acceptance.test.mjs`
+→ **82 tests, 0 pass, 82 fail** (RED preserved; 76 pre-CR6 + 6 new CR6 blocks). The RED baseline
+count last recorded in this file as "71 tests" (CR4 snapshot, line ~169) and "76 tests" (CR5) is now
+82 (CR6-MIN6 resolution — validation.md remains the file of record and is updated in the same pass).

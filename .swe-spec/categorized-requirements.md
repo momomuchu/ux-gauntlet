@@ -303,3 +303,23 @@ matching the existing F28 heuristic-set-pluggability precedent it extends.
 | F190 | functional | CI-output policy (convergence_tier stderr line) — CR5-MIN7 |
 
 Summary: 190 functional, 9 nonfunctional (199 total).
+
+## Challenge round 6 pass 2026-07-09 (.swe-spec/CHALLENGE-ROUND-6.md, F191-F196)
+
+Same Perfect Technology Filter question applied to each landed line. All 6 new lines resolve to
+`functional`: each is a derivation/content-gating/identity-fallback/disclosure/self-consistency/
+refusal-scoping policy that a real crawl or a real gate still needs regardless of the evaluating
+machine's speed/memory/cost — none describe a pure QoS/resource attribute of the machine itself. This
+round adds ZERO new N-numbers (same pattern as rounds 3-5). The 5 in-place edits (F12, F31, F49, F123,
+F181) do not change any line's functional/nonfunctional category.
+
+| ID | Category | Filter note |
+|----|----------|-------------|
+| F191 | functional | derivation-lock policy (report-gate recomputes run_status/BLOCKED from per-persona list) — CR6-B6 |
+| F192 | functional | content-gating policy (exit code/output from parsed content, not path) — CR6-B5 |
+| F193 | functional | identity-computation policy (F183 documentElement terminal case) — CR6-M1 |
+| F194 | functional | disclosure policy (non-default-rubric/free-text severity attribution) — CR6-M2 |
+| F195 | functional | self-consistency policy (example terminal label vs shipped denylist) — CR6-MIN3 |
+| F196 | functional | refusal-scoping policy (payment_step F40 exemption, test_mode-gated) — CR6-B2 |
+
+Summary: 196 functional, 9 nonfunctional (205 total).

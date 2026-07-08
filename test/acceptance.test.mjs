@@ -5,8 +5,10 @@
 // Run: node --test test/acceptance.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdtempSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
+import os from 'node:os';
+import path from 'node:path';
 
 const read = (p) => readFileSync(p, 'utf8');
 const json = (p) => JSON.parse(read(p));
@@ -73,6 +75,14 @@ test('F83 F156 F168 CR3-4/CR3-11/CR4-M6: repo ships a real examples/tasks.json a
   assert.ok(Array.isArray(steps) && steps.length > 0, 'examples/tasks.json must define a non-empty ordered step list');
   const terminalStep = steps[steps.length - 1];
   assert.ok(typeof terminalStep === 'object' && terminalStep.audited_terminal_step === true, 'examples/tasks.json\'s terminal non-idempotent submission step must carry audited_terminal_step: true (F168, CR4-M6) — not a bare plain string, and not left unaudited');
+  // CR6-MIN3 (challenge round 6 MINOR — F195): the terminal audited_terminal_step label must not
+  // collide with the shipped denylist. audited_terminal_step exempts ONLY F40, never F38's
+  // denylist-abort, and F164 forbids stacking denylist_override — so a denylisted terminal label
+  // would be force-aborted by F38 despite the audit flag, re-creating D15's "flagship scenario
+  // unbuildable under its own default" failure one gate over.
+  const denylist = json('denylist/default-destructive-labels.json');
+  const terminalLabel = String(terminalStep.label ?? terminalStep.target ?? terminalStep.action ?? JSON.stringify(terminalStep)).toLowerCase();
+  assert.ok(Array.isArray(denylist) && !denylist.some((d) => terminalLabel.includes(String(d).toLowerCase())), 'examples/tasks.json terminal audited_terminal_step label must not case-insensitively match any denylist/default-destructive-labels.json entry (F195, CR6-MIN3)');
 });
 
 test('F6 F7 F8 F36: runner refuses to crawl without a happy-path task list, with a named reason', () => {
@@ -140,9 +150,14 @@ test('N8 CR2-2: the exact first-time-operator invocation (shipped tasks, shipped
   // Requirement ID: N8 (challenge round 2 BLOCKER-2 — N8's original minimal flag list omitted --env,
   // which F61 hard-stops on with no default; the literal N8 command used to exit 1 on attempt #1).
   assert.ok(existsSync('scripts/run-gauntlet.mjs'), 'scripts/run-gauntlet.mjs missing');
-  assert.ok(existsSync('test/fixtures/tasks.json'), 'the shipped example tasks file (stood in for by F83 in the real package) must exist');
+  // CR6-B3 (challenge round 6 BLOCKER): N8 is the literal ADR-0001 first-run command, so it MUST be
+  // proven against the SHIPPED examples/tasks.json (object-shaped terminal step, F168), not the
+  // structurally-different test/fixtures/tasks.json (plain-string steps) it previously stood in for —
+  // otherwise a builder can implement the loader against only the plain-string shape, ship an
+  // incompatible examples/tasks.json, pass 100% of the frozen suite, and crash a founder's copy-paste.
+  assert.ok(existsSync('examples/tasks.json'), 'the shipped example tasks file must exist (F83)');
   assert.ok(existsSync('denylist/default-destructive-labels.json'), 'the shipped default denylist (F105) must exist');
-  const r = run(['scripts/run-gauntlet.mjs', '--url', 'http://localhost:9', '--tasks', 'test/fixtures/tasks.json', '--i-own-this-target', '--env', 'local', '--denylist', 'denylist/default-destructive-labels.json', '--headless']);
+  const r = run(['scripts/run-gauntlet.mjs', '--url', 'http://localhost:9', '--tasks', 'examples/tasks.json', '--i-own-this-target', '--env', 'local', '--denylist', 'denylist/default-destructive-labels.json', '--headless']);
   // No live fixture server exists in this repo (named residual risk, CR1-8) — "reaches a started crawl"
   // is therefore verified as "never refused by the static aggregate gate," leaving only a
   // target-availability outcome (F80, exit 3) as the acceptable non-zero result in a sandbox with no
@@ -279,6 +294,12 @@ test('F161 F162 CR4-B3: impact and persistence, F12\'s other two severity factor
   // observation in every severity score. Persistence is now DEFINED as F136's count minus 1, not a
   // sibling count; the multi-occurrence fixture below (raw_within_run_reencounter_count=4) exercises
   // the persistence-not-equal-to-0 branch honestly under the corrected, non-double-counting definition.
+  // CR6-B4 correction to the CR5-B4 record: the r=c-1 shift did NOT actually decorrelate the two
+  // factors — F162's persistence bucket still equals F159's frequency bucket for EVERY re-encounter
+  // count (bit-for-bit identity by enumeration), so the numeric-branch severity is provably
+  // round((2*frequency+impact)/3). CR5-B4 corrected the fixture arithmetic; only F181/F12's honest
+  // disclosure (see the F181 test above) corrects the double-count itself. Do not read CR5-B4 as
+  // having "fixed" the duplication — it did not, and could not, at spec phase.
   const multi = gate('findings-persistence-multi-occurrence-ok.json');
   assert.equal(multi.code, 0, 'a raw within-run re-encounter count of 4 (same_run_recurrence_count=3, the corrected F162 definition of F136\'s count minus 1) mapping to persistence=2, with severity=round(mean(2,2,2))=2 correctly matching, must pass the gate (negative control, CR5-B4)');
 });
@@ -288,8 +309,13 @@ test('F181 CR5-B4: the validity envelope discloses that frequency and persistenc
   // persistence as structurally distinct signals, but the isolated single-persona-per-subagent
   // architecture (F30/F31) forces both down to one observable proxy; the report must disclose the
   // collapse to the reader, not silently double-weight it in every severity score.)
+  // CR6-B4 (challenge round 6 BLOCKER): F159's frequency bucket and F162's persistence bucket are
+  // bit-for-bit IDENTICAL for every possible raw within-run re-encounter count (verified by direct
+  // enumeration once r=c-1 is substituted) — persistence is a deterministic DUPLICATE of frequency,
+  // not merely "correlated" or "the same observation". The disclosure is strengthened to state the
+  // exact identity; the CR5-B4 shift-by-1 attempt to decorrelate them was a mathematical no-op.
   const mdNumeric = run(['scripts/render-report.mjs', 'test/fixtures/findings-severity-impact-persistence-mapped-ok.json']).stdout;
-  assert.match(mdNumeric, /frequency.{0,80}persistence.{0,80}same within-run|persistence.{0,80}frequency.{0,80}same within-run|same within-run re-encounter observation/i, 'the validity envelope states frequency and persistence are both derived from the same within-run re-encounter observation, not independently verified NN/g inputs, when severity_factors is numeric (F181, CR5-B4)');
+  assert.match(mdNumeric, /deterministic duplicate of frequency|persistence bucket equals[^.]*frequency bucket|persistence[^.]{0,80}duplicate[^.]{0,80}frequency|frequency[^.]{0,80}persistence[^.]{0,80}same within-run/i, 'the validity envelope states F162 persistence is a deterministic duplicate of F159 frequency (equal buckets for every re-encounter count), not an independently verified NN/g input, when severity_factors is numeric (F181, CR6-B4)');
 });
 
 test('F184 CR5-M4: the severity scale, the F12/F159/F161/F162 bucket mappings, load from the configured heuristic-set file, not a hardcoded rubric', () => {
@@ -830,15 +856,24 @@ test('F49 F53 F54: a run with a crashed persona must expose run_status BLOCKED a
   assert.equal(ok.code, 0, 'the same BLOCKED run with the non-completed-persona count correctly disclosed must pass the gate (negative control, CR2-3)');
 });
 
-test('F49 CR4-B2: patience-exhausted personas alone never trigger the BLOCKED run-status, distinguishing designed abandonment from execution failure', () => {
-  // Requirement ID: F49 (challenge round 4 BLOCKER-2 — F49's original wording set run_status=BLOCKED
-  // when fewer than 3 personas "complete their crawl due to a persona-execution failure," but F53's
-  // flat enum gave no failure/non-failure axis and F50-F52 define patience-exhaustion as a designed,
-  // successful methodology outcome, not a failure. 2 of 3 personas legitimately abandoning via
-  // patience exhaustion, with 0 crashed/timed-out, must never read as indistinguishable from a
-  // near-total infra crash — that would make CI exit nonzero on the tool's most valuable output.)
+test('F49 CR4-B2/CR6-B1: the BLOCKED counted set is inverted — crashed/timed-out push toward BLOCKED, completed/patience-exhausted/runner-capped count toward the not-blocked floor', () => {
+  // Requirement ID: F49 (challenge round 6 BLOCKER-1 — the arbitrated reconciliation of 3 conflicting
+  // F49 fixes. The pre-CR6 formula counted {completed, crashed, timed-out} toward the floor, so a
+  // 3-of-3-crashed run computed count=3 and could NEVER be BLOCKED — the exact "near-total persona
+  // failure reads as clean CI" scenario ADR-0001/F101 exist to catch. Inverted: the not-blocked floor
+  // set is {completed, patience-exhausted, runner-capped} (designed/successful outcomes); crashed and
+  // timed-out are the infra-failure signals BLOCKED catches. Verified against both frozen fixtures.)
   const patienceOnly = gate('run-status-not-blocked-patience-only.json');
-  assert.equal(patienceOnly.code, 0, 'a run with 2 patience-exhausted personas and 1 completed persona (0 crashed, 0 timed-out) must exit CI clean — patience-exhaustion alone never triggers BLOCKED (F49 rescoped, CR4-B2)');
+  assert.equal(patienceOnly.code, 0, 'a run with 2 patience-exhausted personas and 1 completed persona (0 crashed, 0 timed-out) must exit clean — 3 in the not-blocked floor set, never BLOCKED (F49 CR4-B2, preserved under CR6-B1 inversion)');
+  // CR6-B1 positive control: 3-of-3 crashed is the paradigm case BLOCKED exists to catch — it must
+  // compute BLOCKED and trip the F101 CI gate nonzero. Under the pre-CR6 counted set it never did.
+  const allCrashedCi = run(['scripts/ci-diff.mjs', '--baseline', 'test/fixtures/findings-valid.json', '--current', 'test/fixtures/run-status-blocked-all-crashed.json']);
+  assert.notEqual(allCrashedCi.code, 0, 'a 3-of-3-crashed run computes run_status BLOCKED (0 personas in the {completed, patience-exhausted, runner-capped} floor set) and CI exits nonzero (F49 inverted counted set + F101, CR6-B1)');
+  assert.match(allCrashedCi.stderr + allCrashedCi.stdout, /blocked/i, 'CI output names BLOCKED as the blocking reason for the all-crashed run');
+  // CR6-B1 negative control (0-crashed boundary): 1 completed + 2 runner-capped = 3 in the floor set,
+  // NOT BLOCKED — proves runner-capped counts toward the floor exactly like patience-exhausted.
+  const runnerCapped = gate('run-status-not-blocked-runner-capped-boundary-ok.json');
+  assert.equal(runnerCapped.code, 0, '1 completed + 2 runner-capped = 3 non-failure outcomes is NOT BLOCKED — runner-capped counts toward the not-blocked floor, never pushes toward BLOCKED (F49 inverted counted set, CR6-B1 boundary control)');
 });
 
 test('F124 CR1-24: a finding from a non-completed run must carry a degraded-below-persona-floor confidence field', () => {
@@ -1005,4 +1040,103 @@ test('F170 F189 CR4-M8/CR5-MIN6: personas_flagging feeds convergence_tier\'s ari
   assert.equal(ok.code, 0, 'the valid fixture whose tier equals |personas_flagging| passes (negative control)');
   const provenanceBad = gate('findings-personas-flagging-provenance-bad.json');
   assert.notEqual(provenanceBad.code, 0, 'personas_flagging with correct length/tier (2) but a persona_id swapped for one that never produced a pre-merge friction record under this finding\'s F45 identity tuple must fail the gate — the F17/F170 arithmetic check alone cannot catch a provenance-wrong substitution (F189, CR5-MIN6)');
+});
+
+// ============================================================================
+// Challenge round 6 (.swe-spec/CHALLENGE-ROUND-6.md) — new RED test blocks.
+// ============================================================================
+
+test('F191 CR6-B6: report-gate.mjs derives run_status/BLOCKED from the per-persona terminal-state list, rejecting a hand-set value that disagrees', () => {
+  // Requirement ID: F191 (challenge round 6 — the panel-named freeze-readiness gap: TODAY every
+  // fixture hand-sets run_status/BLOCKED, so even after the F49 wording fix nothing catches a
+  // mis-COMPUTATION. This locks the derivation, not just the schema shape: report-gate recomputes
+  // BLOCKED from the per-persona run_status list under F49's inverted counted-set rule and rejects a
+  // stored run_status that disagrees.)
+  const agree = gate('run-status-blocked-all-crashed.json');
+  assert.equal(agree.code, 0, 'a findings file whose stored run_status=BLOCKED matches the value derived from its 3 crashed personas (0 in the not-blocked floor set) passes the gate — derivation agrees (F191 positive control)');
+  const mismatch = gate('run-status-derived-blocked-mismatch-bad.json');
+  assert.notEqual(mismatch.code, 0, 'a findings file whose personas are 3-of-3 crashed (derived BLOCKED) but whose stored run_status hand-sets "completed" must fail the gate — report-gate recomputes run_status from the per-persona terminal states and rejects the disagreement (F191, CR6-B6), proving derivation rather than a trusted hand-set field');
+});
+
+test('F192 CR6-B5: report-gate/render-report derive exit code and output from PARSED CONTENT of a runtime-generated path, not the filename', () => {
+  // Requirement ID: F192 (challenge round 6 — all ~112 gate() calls use permanently-known literal
+  // fixture filenames, so a builder could pass every gate-routed CRITICAL assertion with a
+  // basename-keyed static lookup table, never parsing JSON. These runtime-generated fixtures use
+  // per-test mkdtemp paths a filename-keyed dispatcher cannot know in advance, and mutate exactly one
+  // field so the exit code / rendered output MUST flip relative to the unmutated control.)
+  const tmp = mkdtempSync(path.join(os.tmpdir(), 'ux-gauntlet-cr6-'));
+  const gatePath = (p) => run(['scripts/report-gate.mjs', '--check-fixture', p]);
+
+  // (1) report-gate content-derivation: merged severity is MAX of component_severities (F119). Write
+  // the unmutated canonical fixture to a fresh unknowable path (control: must PASS), then flip its
+  // merged severity from the max (4) to the mean (3) at a second fresh path (mutant: must FAIL).
+  const base = json('test/fixtures/findings-merged-severity-ok.json');
+  const controlPath = path.join(tmp, 'control.json');
+  writeFileSync(controlPath, JSON.stringify(base));
+  const control = gatePath(controlPath);
+  assert.equal(control.code, 0, 'the unmutated canonical merged-severity fixture, written to a fresh unknowable-in-advance mkdtemp path, must PASS the gate — proves the gate parses content, not a known filename (F192 control)');
+  const mutant = JSON.parse(JSON.stringify(base));
+  mutant.findings[0].severity = 3; // was 4 (the max of [2,4]); 3 is the mean — an F119 violation
+  const mutantPath = path.join(tmp, 'mutant.json');
+  writeFileSync(mutantPath, JSON.stringify(mutant));
+  const mutated = gatePath(mutantPath);
+  assert.notEqual(mutated.code, 0, 'flipping merged severity from max(4) to mean(3) at a fresh unknowable path must FLIP the gate to FAIL — a basename-keyed static lookup table cannot do this (F192, defeats filename-keyed dispatch)');
+
+  // (2) render-report content-derivation: output tracks the parsed content of the given path.
+  const rep = json('test/fixtures/findings-valid.json');
+  const repMut = JSON.parse(JSON.stringify(rep));
+  repMut.findings[0].friction_name = 'CR6-CONTENT-DERIVED-MARKER-9f3a';
+  const repMutPath = path.join(tmp, 'render-mutant.json');
+  writeFileSync(repMutPath, JSON.stringify(repMut));
+  const md = run(['scripts/render-report.mjs', repMutPath]).stdout;
+  assert.match(md, /CR6-CONTENT-DERIVED-MARKER-9f3a/, 'render-report output must contain the one-field-mutated friction_name from a fresh unknowable path — proves the renderer derives output from parsed content, not the path string or a static template (F192)');
+});
+
+test('F196 CR6-B2: a payment_step step declared test_mode actually submits and passes the gate; the same step without test_mode stays refused/dry-run-blocked', () => {
+  // Requirement ID: F196 (challenge round 6 BLOCKER — under F40+D15+F164 a payment_step step could
+  // NEVER actually submit even in test-mode: F39 passed but F40's dry-run boundary blocked it, and its
+  // only escapes were mis-authoring as audited_terminal_step (bypassing F39's financial refusal) or
+  // --full-submission (stripping dry-run protection from every other step). F196 makes payment_step a
+  // narrow F40 exemption for its OWN submission, ONLY when the run declares test_mode.)
+  const submits = gate('payment-testmode-submits-ok.json');
+  assert.equal(submits.code, 0, 'a payment_step-flagged step in a run declaring test_mode=true (no --full-submission, not mis-authored as audited_terminal_step) actually submits its own payment and passes the gate (F196 positive path)');
+  // Negative control: the SAME payment_step step without test_mode is still refused (F39) and
+  // dry-run-blocked (F40) — proving F196's exemption is strictly test_mode-gated, not a blanket bypass.
+  const noTestMode = gate('payment-no-testmode.json');
+  assert.notEqual(noTestMode.code, 0, 'the identical payment_step step in a run WITHOUT test_mode must still fail the gate — F196 exempts F40 only under test_mode, F39 still refuses (CR6-B2 negative control)');
+});
+
+test('F194 CR6-M2: the validity envelope attributes severity to the skill/operator rubric (not NN/g-verified) when the active rubric is non-default or severity_factors is free-text', () => {
+  // Requirement ID: F194 (challenge round 6 MAJOR — F184 makes the severity formula/bucket mappings
+  // swappable via the heuristic-set config, and F12's free-text branch lets severity bypass the
+  // formula entirely, but nothing stopped the report attributing the score to "the NN/g 3-factor
+  // rubric" on either path — the exact overclaiming DECISION-BRIEF §2.3 forbids.)
+  const mdCustom = run(['scripts/render-report.mjs', 'test/fixtures/findings-custom-severity-rubric-ok.json']).stdout;
+  assert.match(mdCustom, /own rubric|operator'?s? own|not independently NN\/g.?verified|not independently verified/i, 'when a non-default heuristic-set severity-rubric config is active (heuristics-custom-severity-rubric.json), the validity envelope must state the severity is the skill/operator\'s own rubric, not independently NN/g-verified (F194, CR6-M2)');
+  const mdFreeText = run(['scripts/render-report.mjs', 'test/fixtures/findings-custom-heuristic-set-ok.json']).stdout;
+  assert.match(mdFreeText, /own rubric|operator'?s? own|not independently NN\/g.?verified|not independently verified/i, 'when a finding\'s severity_factors is stored as free-text rationale (severity asserted directly, F12 free-text branch), the same non-NN/g-verified attribution disclosure must appear (F194, CR6-M2)');
+});
+
+test('F193 CR6-M1: F183 tier-5 has a defined terminal case when no ancestor carries a stable id — both personas anchor to documentElement and merge; a divergent terminal choice fails', () => {
+  // Requirement ID: F103, F183, F193 (challenge round 6 MAJOR — F183's tier-5 structural-path fallback
+  // had no terminal case when zero ancestors up to <html> carry a data-testid/id/ARIA-landmark-role, a
+  // common SPA pattern; two builders inventing different terminals produce divergent finding_ids,
+  // silently defeating the F45/F92 dedup convergence F183 exists to guarantee. F193 pins the terminal
+  // to documentElement, defined for any parsed DOM.)
+  const merged = gate('findings-icon-only-zero-qualifying-ancestor-merged-ok.json');
+  assert.equal(merged.code, 0, 'two personas independently anchoring a zero-stable-ancestor icon control to the documentElement (F193) compute the identical structural path and merge into one finding at convergence_tier=2 (negative control)');
+  const divergent = gate('findings-icon-only-zero-qualifying-ancestor-divergent-bad.json');
+  assert.notEqual(divergent.code, 0, 'one persona anchoring to documentElement (F193) and the other inventing a different tier-5 terminal produce divergent finding_ids for the identical control — the run splits convergence_tier=2 into two tier-1 entries and must fail the gate (F193 violation)');
+});
+
+test('F23 CR6-M4: report-gate.mjs bare-arg production form (no --check-fixture) enforces the identical pass/fail exit-code contract as the flagged test-shim form', () => {
+  // Requirement ID: F23 (challenge round 6 MAJOR — ADR-0001 documents two report-gate.mjs invocation
+  // forms (`--check-fixture <file>` and a bare positional `<findings.json>`, the real production path),
+  // but all ~112 test calls use only --check-fixture; a builder could wire the flagged path fully and
+  // leave the bare-arg production path unimplemented/divergent, and the frozen suite would never notice.
+  // This proves the two ADR-documented forms are the same code path.)
+  const bareOk = run(['scripts/report-gate.mjs', 'test/fixtures/findings-valid.json']);
+  assert.equal(bareOk.code, 0, 'the bare positional production form `report-gate.mjs <findings.json>` must PASS a valid fixture, identical to the --check-fixture form (ADR-0001:122, F23, CR6-M4)');
+  const bareBad = run(['scripts/report-gate.mjs', 'test/fixtures/finding-untagged.json']);
+  assert.notEqual(bareBad.code, 0, 'the bare positional production form must FAIL an untagged finding exactly like --check-fixture — the two ADR-documented invocation forms are one code path, not two divergent implementations (F23, CR6-M4)');
 });

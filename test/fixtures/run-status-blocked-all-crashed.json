@@ -1,0 +1,16 @@
+{
+  "run": {
+    "target_url": "http://localhost:3000",
+    "task_list": "test/fixtures/tasks.json",
+    "personas": ["free-tier-user", "willing-to-pay-user", "vp-team-buyer"]
+  },
+  "run_status": "BLOCKED",
+  "personas": [
+    { "name": "free-tier-user", "run_status": "crashed" },
+    { "name": "willing-to-pay-user", "run_status": "crashed" },
+    { "name": "vp-team-buyer", "run_status": "crashed" }
+  ],
+  "validity_envelope_text": "This report is not a replacement for real user research. It contains no willingness-to-pay estimates. It contains no population percentage extrapolations. It makes no ISO 9241-11 compliance claim. 3 of 3 personas did not complete: free-tier-user, willing-to-pay-user, vp-team-buyer.",
+  "findings": [],
+  "narrative": "CR6-B1 positive control: all 3 persona subagents crashed before completing (0 completed, 0 patience-exhausted, 0 runner-capped), so the count in the F49 not-blocked floor set {completed, patience-exhausted, runner-capped} is 0 < 3 and run_status is correctly BLOCKED. Under the pre-CR6 counted set {completed, crashed, timed-out} this run computed count=3 and could NEVER trigger BLOCKED — the exact 'near-total persona failure reads as clean CI' scenario ADR-0001 and F101 exist to catch. ci-diff.mjs must exit nonzero on this run (F101); report-gate.mjs's recomputed BLOCKED value (F191) agrees with the stored run_status here."
+}

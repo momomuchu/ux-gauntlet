@@ -7,7 +7,7 @@ Exception coverage: F15 defines the zero-evidence exception path (drop, never so
 Security coverage: the skill crawls only the operator-supplied target URL (F6) — no autonomous target discovery; forbidden-claim guardrails per persona (F5) plus F21/F22 prevent the report itself from emitting claims that could mislead downstream users; N6 excludes third-party data egress for localhost runs, keeping audit data on the operator's machine.
 
 ## Concise
-Each line states one testable obligation; req-lint passed 43/43 (F1-F36, N1-N7) with zero compound/vague/unbound findings on the original elicitation pass, and the scrub log (stage 6) cut speculative items rather than carrying them as padding. req-lint passed 133/133 after the unknowns pass plus challenge round 1; 153/153 after challenge round 2; 169/169 after challenge round 3; 187/187 after challenge round 4. Current live total (post-challenge-round-5): req-lint passes 199/199 — see lint-result.txt for the up-to-date re-run.
+Each line states one testable obligation; req-lint passed 43/43 (F1-F36, N1-N7) with zero compound/vague/unbound findings on the original elicitation pass, and the scrub log (stage 6) cut speculative items rather than carrying them as padding. req-lint passed 133/133 after the unknowns pass plus challenge round 1; 153/153 after challenge round 2; 169/169 after challenge round 3; 187/187 after challenge round 4. req-lint passed 199/199 after challenge round 5. Current live total (post-challenge-round-6): req-lint passes 205/205 — see lint-result.txt for the up-to-date re-run.
 
 ## Consistent
 No requirement contradicts another: the maximum-critique stance (D6) is compatible with the evidence discipline because F14/F15 make every critique artifact-anchored; F26's "block only severity-4" does not contradict F12's full 0–4 scoring because scoring and gating are separate concerns; persona minimum (F16) is consistent with the three shipped defaults (F2–F4).
@@ -263,3 +263,46 @@ formulas — it discloses their shared observational root, it does not change th
 data-file swappability does not contradict F12's formula — the formula's DEFAULT value is unchanged;
 only its override mechanism is new, mirroring F28/D7's existing heuristic-set pluggability precedent
 exactly.
+
+## Challenge round 6 validation (2026-07-09)
+
+This pass: 6 new functional requirements (F191-F196, no new N-numbers — every CR6 addition is a
+derivation/disclosure/refusal policy, unchanged under the Perfect Technology Filter) plus in-place
+edits to F12, F31, F49, F123, F181. 6 new RED test blocks added to `test/acceptance.test.mjs`
+(76 → 82 tests) — `node --test test/acceptance.test.mjs`: **82 tests, 0 pass, 82 fail — RED
+preserved**. requirements.txt grew from 199 to 205 lines (196 functional, 9 nonfunctional); req-lint
+**205/205 PASS**. `coverage-audit.sh --pre-freeze`: **8/8 stages PASS**. `test-coverage-audit.sh`:
+**95/95 CRITICAL PASS**, up from 91/91 post-round-5 (F191, F192, F194, F196 newly covered as CRITICAL
+citations).
+
+**Root arbitration (completeness/consistency).** The panel raised the SAME root defect — F49's
+BLOCKED counted-set formula — via 3 independently-confirmed BLOCKER attacks proposing 3 mutually
+inconsistent fixes (invert-counted-set / floor-AND-crash-trigger / any-crash-no-floor). This pass
+reconciled to ONE formula (invert the counted set: not-blocked floor = `{completed,
+patience-exhausted, runner-capped}`; crashed/timed-out push toward BLOCKED) with the principle and the
+two rejected alternatives recorded in `scrub-log.md` under `## CR6 arbitration`. The single formula
+was verified consistent against BOTH frozen fixtures AND the new 3-of-3-crashed case simultaneously —
+the pre-CR6 formula computed the opposite of both frozen fixtures and could never catch a 3-of-3
+crash. The fix was applied coherently in one pass across requirements.txt F49, spec.md line 201,
+ADR-0001's exit-codes paragraph, and the CR4 closure-sweep table (Persona-crash/timeout rows flipped),
+so no literal drifts stale behind it (the exact CR5-B3 drift shape this round re-attacked).
+
+**Freeze-readiness gap closed.** The panel named a real gap: no test proved the orchestrator COMPUTES
+run_status/BLOCKED from a persona list (every fixture hand-set it). F191 + a fixture-pair test
+(`run-status-blocked-all-crashed.json` derivation-agrees PASS vs.
+`run-status-derived-blocked-mismatch-bad.json` derivation-disagrees FAIL) now lock the derivation
+itself, RED, not just the schema shape.
+
+**Boundary/exception/security consistency check (F191-F196).** F196's payment_step F40-exemption is
+strictly `test_mode`-gated and scoped to that step's own submission — it adds no 6th D15 flag (D15's
+family stays CLOSED) and does not weaken F39's refusal (which still fires without test_mode) or F40's
+default for any other step; F164's mutual-exclusivity is untouched. F192's content-derivation
+requirement makes the existing gate behavior explicit (no scope expansion) and is proven by
+runtime-generated mkdtemp fixtures a filename-keyed dispatcher cannot pass. F193's documentElement
+terminal for F183 is defined for any parsed DOM, closing the undefined-fallback nondeterminism.
+F194 extends the validity envelope's disclosure set (7th condition) without contradicting F181/F35.
+F195's denylist/example self-consistency check does not contradict D15 (audited_terminal_step exempts
+only F40; F38 stays live). One MINOR (DR-28 SKILL.md quickstart line) was SKIPPED-with-reason: SKILL.md
+is a build-phase artifact absent at spec phase, and the directive itself required no requirements.txt
+change — the F56/F123 `dry-run-boundary-stop` reason_code already closes the silent-failure mode
+(recorded in `scrub-log.md ## CR6 arbitration`, disposition #15).

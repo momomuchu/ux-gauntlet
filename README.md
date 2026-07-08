@@ -23,8 +23,9 @@
 | Challenge round 3 (`.swe-spec/CHALLENGE-ROUND-3.md`) | done — 20 confirmed defects applied (6 BLOCKER, 10 MAJOR, 4 MINOR), 16 requirements added (F145-F160) |
 | Challenge round 4 (`.swe-spec/CHALLENGE-ROUND-4.md`) | done — 22 confirmed defects applied (4 BLOCKER, 12 MAJOR, 6 MINOR), 18 requirements added (F161-F178), plus a systematic sweep of 5 defect-generator patterns across the whole spec |
 | Challenge round 5 (`.swe-spec/CHALLENGE-ROUND-5.md`) | done — 18 confirmed defects applied (4 BLOCKER, 7 MAJOR, 7 MINOR), 12 requirements added (F179-F190), plus a canonical-token-table sweep closing the "same value spelled differently" defect class across requirements.txt/spec.md/fixtures/tests |
-| Specification (`docs/specs/0001-ux-gauntlet-mvp.spec.md`) | written + disjoint-reviewed + unknowns-integrated + challenge-round-5-hardened (199 requirements) — awaiting founder approval, freeze withheld |
-| RED acceptance test (`test/acceptance.test.mjs`) | in place, intentionally failing (76 tests, 0 pass, 76 fail) |
+| Challenge round 6 (`.swe-spec/CHALLENGE-ROUND-6.md`) | done — 17 confirmed defects applied (7 BLOCKER, 4 MAJOR, 6 MINOR), 6 requirements added (F191-F196); root arbitration of the 3-way F49 BLOCKED-formula conflict (invert the counted set; 2 alternatives rejected) + closed the panel-named orchestrator-computation test-lock gap (F191 derivation lock) |
+| Specification (`docs/specs/0001-ux-gauntlet-mvp.spec.md`) | written + disjoint-reviewed + unknowns-integrated + challenge-round-6-hardened (205 requirements) — awaiting founder approval, freeze withheld |
+| RED acceptance test (`test/acceptance.test.mjs`) | in place, intentionally failing (82 tests, 0 pass, 82 fail) |
 | Skill implementation (`SKILL.md` + personas + gates) | pending |
 
 ## Why another one?

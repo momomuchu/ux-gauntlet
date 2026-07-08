@@ -1,0 +1,16 @@
+{
+  "run": {
+    "target_url": "http://localhost:3000",
+    "task_list": "test/fixtures/tasks.json",
+    "personas": ["free-tier-user", "willing-to-pay-user", "vp-team-buyer"]
+  },
+  "run_status": "completed",
+  "personas": [
+    { "name": "free-tier-user", "run_status": "completed" },
+    { "name": "willing-to-pay-user", "run_status": "runner-capped" },
+    { "name": "vp-team-buyer", "run_status": "runner-capped" }
+  ],
+  "validity_envelope_text": "This report is not a replacement for real user research. It contains no willingness-to-pay estimates. It contains no population percentage extrapolations. It makes no ISO 9241-11 compliance claim. 2 of 3 personas did not complete: willing-to-pay-user, vp-team-buyer.",
+  "findings": [],
+  "narrative": "CR6-B1 negative control (the 0-crashed/timed-out boundary case the panel named): 1 completed + 2 runner-capped = 3 personas in the F49 not-blocked floor set {completed, patience-exhausted, runner-capped}, so count=3 is NOT < 3 and run_status is NOT BLOCKED. Proves runner-capped (a designed force-abort delivering a valid partial ledger, F57/F176) counts TOWARD the floor, exactly like patience-exhausted, and never pushes toward BLOCKED. The validity envelope still discloses the 2 non-completed personas (F54)."
+}

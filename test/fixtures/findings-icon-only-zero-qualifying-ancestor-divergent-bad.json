@@ -1,0 +1,45 @@
+{
+  "run": {
+    "target_url": "http://localhost:3000",
+    "task_list": "test/fixtures/tasks.json",
+    "personas": ["free-tier-user", "willing-to-pay-user", "vp-team-buyer"]
+  },
+  "findings": [
+    {
+      "id": "fr-804",
+      "finding_id": "fid-icon-only-documentelement-anchored",
+      "friction_name": "icon-only close control has no discoverable label and no stable ancestor",
+      "friction_type": "walkthrough_failure",
+      "step": 1,
+      "target_element_identifier": "html>body>div:nth-of-type(2)>button:nth-of-type(1)",
+      "personas_flagging": ["free-tier-user"],
+      "convergence_tier": 1,
+      "partial_tier": 0,
+      "heuristic_tag": "recognition-rather-than-recall",
+      "severity": 2,
+      "component_severities": [2],
+      "severity_factors": { "frequency": "every first visit", "impact": "persona hunts for the control", "persistence": "recurs" },
+      "market_impact": false,
+      "evidence": [{ "type": "screenshot", "path": "runs/fixture/step1-free-tier-icon2.png", "persona": "free-tier-user" }],
+      "narrative": "This persona correctly anchored the zero-stable-ancestor icon control to the document root element (documentElement) per F193."
+    },
+    {
+      "id": "fr-805",
+      "finding_id": "fid-icon-only-invented-root",
+      "friction_name": "icon-only close control has no discoverable label and no stable ancestor",
+      "friction_type": "walkthrough_failure",
+      "step": 1,
+      "target_element_identifier": "div:nth-of-type(2)>button:nth-of-type(1)",
+      "personas_flagging": ["willing-to-pay-user"],
+      "convergence_tier": 1,
+      "partial_tier": 0,
+      "heuristic_tag": "recognition-rather-than-recall",
+      "severity": 2,
+      "component_severities": [2],
+      "severity_factors": { "frequency": "every first visit", "impact": "persona hunts for the control", "persistence": "recurs" },
+      "market_impact": false,
+      "evidence": [{ "type": "dom", "path": "runs/fixture/step1-wtp-icon2.html", "persona": "willing-to-pay-user" }],
+      "narrative": "CR6-M1 RED fixture: the SAME icon control, but this persona invented its own tier-5 terminal (a bare relative path rooted at an arbitrary div rather than the documentElement F193 mandates), yielding a different target_element_identifier and therefore a different finding_id. The two records that should have merged into one convergence_tier=2 finding instead split into two convergence_tier=1 entries — exactly the divergent-finding_id nondeterminism F183/F193 exist to remove. The gate must fail this run."
+    }
+  ]
+}

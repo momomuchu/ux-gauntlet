@@ -132,3 +132,23 @@ question before a future round mistakes it for one. Verdict unchanged: scope sti
 challenge-round audits the same way CR4's enum-producer table already did, by making every closed
 family's ground-truth spelling visually inspectable in one place instead of requiring a fresh
 cross-file grep sweep each round.
+
+## Challenge round 6 growth (2026-07-09)
+
+Requirement count grew again, from 199 (F1-F190, N1-N9) to 205 (F1-F196, N1-N9), after the
+challenge-round-6 adversarial pass confirmed 17 distinct defects (7 BLOCKER, 4 MAJOR, 6 MINOR; 5
+rejected) and the root arbitration of the 3-way F49 BLOCKED-formula conflict (invert the counted set;
+2 alternatives rejected — recorded in `scrub-log.md ## CR6 arbitration`). `test/fixtures/` grew from
+119 to 125 files (6 new fixtures: `run-status-blocked-all-crashed.json`,
+`run-status-not-blocked-runner-capped-boundary-ok.json`, `run-status-derived-blocked-mismatch-bad.json`,
+`payment-testmode-submits-ok.json`, `findings-icon-only-zero-qualifying-ancestor-merged-ok.json`,
+`findings-icon-only-zero-qualifying-ancestor-divergent-bad.json`). Build surface addition: zero new
+schema/script files and zero new CLI flags — this round's fixes are derivation-lock (F191),
+content-gating (F192, making the existing gate behavior explicit + adding anti-gaming runtime-fixture
+tests), identity-fallback (F193), disclosure (F194), self-consistency (F195), and a test_mode-gated
+F40 exemption on the EXISTING payment_step flag (F196, no 6th D15 flag). One MAJOR was resolved by
+REDUCING build/interpretation surface (ADR-0001 reworded so `run-gauntlet.mjs` does not itself
+implement `--ci` diffing — CI mode is exclusively `ci-diff.mjs`, CR6-M3). Verdict unchanged: scope
+still FITS budget (unconstrained token budget, no external deadline). The panel-named freeze-readiness
+gap (no test proved the orchestrator COMPUTES run_status/BLOCKED) was closed with F191 at zero new
+build subsystem — it is a new assertion in the existing report-gate contract, not a new script.
