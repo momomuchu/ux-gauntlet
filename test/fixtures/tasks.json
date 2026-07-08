@@ -1,0 +1,10 @@
+{
+  "goal": "sign up on the free tier and reach the dashboard",
+  "steps": [
+    "open the landing page",
+    "click the signup CTA",
+    "submit the signup form",
+    "confirm the account",
+    "land on the dashboard"
+  ]
+}

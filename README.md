@@ -15,9 +15,10 @@
 
 | Artifact | State |
 |---|---|
-| Deep research decision brief (`docs/research/`) | in progress |
-| Problem analysis (`docs/specs/`) | draft |
-| Specification (frozen) | pending |
+| Deep research decision brief (`docs/research/DECISION-BRIEF.md`) | done — 18 sources, load-bearing claims adversarially verified |
+| Problem analysis (`docs/specs/0000-problem-analysis.md`) | done (superseded by spec 0001) |
+| Specification (`docs/specs/0001-ux-gauntlet-mvp.spec.md`) | written + disjoint-reviewed — awaiting founder approval, freeze withheld |
+| RED acceptance test (`test/acceptance.test.mjs`) | in place, intentionally failing |
 | Skill implementation (`SKILL.md` + personas + gates) | pending |
 
 ## Why another one?

@@ -37,6 +37,10 @@ unlimited memory, zero cost, no failures?" yes → functional; no → nonfunctio
 | F30 | functional | execution model: per-persona delegated subagent is the product behavior the founder specified (isolation of persona context), not a QoS constraint |
 | F31 | functional | execution model: parallel background delegation, same rationale as F30 |
 | F32 | functional | output contract (merge into one findings file) |
+| F33 | functional | walkthrough-failure consequence rule (review finding #3) |
+| F34 | functional | friction-definition completeness: ambiguity resolutions (review finding #4) |
+| F35 | functional | disclosure-content policy (review finding #5) |
+| F36 | functional | interface contract per ADR-0001 (review finding #18) |
 | N1 | nonfunctional | packaging/format constraint (agent-skills format) — vanishes on a perfect computer |
 | N2 | nonfunctional | size/progressive-disclosure constraint (token budget = imperfect tech) |
 | N3 | nonfunctional | licensing constraint |
@@ -45,4 +49,4 @@ unlimited memory, zero cost, no failures?" yes → functional; no → nonfunctio
 | N6 | nonfunctional | dependency/environment constraint |
 | N7 | nonfunctional | language constraint |
 
-Summary: 32 functional, 7 nonfunctional. Borderline calls recorded: F6, F30/F31 (see notes).
+Summary: 36 functional, 7 nonfunctional. Borderline calls recorded: F6, F30/F31 (see notes).

@@ -1,0 +1,106 @@
+{
+  "run": {
+    "target_url": "http://localhost:3000",
+    "task_list": "test/fixtures/tasks.json",
+    "personas": [
+      "free-tier-user",
+      "willing-to-pay-user",
+      "vp-team-buyer"
+    ]
+  },
+  "walkthrough": [
+    {
+      "persona": "free-tier-user",
+      "step": 1,
+      "answers": {
+        "right_result": "yes",
+        "notice": "yes",
+        "associate": "yes",
+        "progress": "yes"
+      }
+    },
+    {
+      "persona": "free-tier-user",
+      "step": 2,
+      "answers": {
+        "right_result": "yes",
+        "notice": "no",
+        "associate": "yes",
+        "progress": "yes"
+      }
+    },
+    {
+      "persona": "willing-to-pay-user",
+      "step": 2,
+      "answers": {
+        "right_result": "yes",
+        "notice": "no",
+        "associate": "yes",
+        "progress": "yes"
+      }
+    },
+    {
+      "persona": "vp-team-buyer",
+      "step": 2,
+      "answers": {
+        "right_result": "yes",
+        "notice": "yes",
+        "associate": "yes",
+        "progress": "yes"
+      }
+    }
+  ],
+  "findings": [
+    {
+      "id": "fr-001",
+      "friction_name": "signup CTA hidden below the fold on the pricing page",
+      "friction_type": "walkthrough_failure",
+      "step": 2,
+      "personas_flagging": [
+        "free-tier-user",
+        "willing-to-pay-user"
+      ],
+      "convergence_tier": 2,
+      "heuristic_tag": "visibility-of-system-status",
+      "severity": 3,
+      "severity_factors": {
+        "frequency": "every first visit",
+        "impact": "user scrolls and hunts",
+        "persistence": "recurs until learned"
+      },
+      "market_impact": true,
+      "evidence": [
+        {
+          "type": "screenshot",
+          "path": "runs/fixture/step2-free-tier.png"
+        }
+      ],
+      "narrative": "Roughly 23% of users would abandon at this step."
+    },
+    {
+      "id": "fr-002",
+      "friction_name": "plan names do not state what happens after the trial",
+      "friction_type": "ambiguity_resolution",
+      "step": 3,
+      "personas_flagging": [
+        "vp-team-buyer"
+      ],
+      "convergence_tier": 1,
+      "heuristic_tag": "match-system-real-world",
+      "severity": 2,
+      "severity_factors": {
+        "frequency": "each pricing review",
+        "impact": "persona re-reads plan copy twice",
+        "persistence": "recurs"
+      },
+      "market_impact": false,
+      "evidence": [
+        {
+          "type": "dom",
+          "path": "runs/fixture/step3-pricing.html"
+        }
+      ],
+      "narrative": "The buyer persona had to open the FAQ to resolve what 'flexible billing' means."
+    }
+  ]
+}

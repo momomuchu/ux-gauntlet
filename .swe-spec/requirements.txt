@@ -21,7 +21,7 @@ F13: Each friction instance MUST carry a market-impact flag that is stored separ
 F14: Each friction instance MUST reference at least one captured evidence artifact.
 F15: The report generator MUST drop every finding that references zero evidence artifacts.
 F16: A standard audit run MUST execute at least 3 personas against the same task list.
-F17: The report MUST assign each finding a convergence tier equal to the count of personas that flagged it.
+F17: The report MUST assign each finding a convergence tier equal to the integer count of personas that flagged it.
 F18: The primary run output MUST be a JSON findings file that validates against the findings schema.
 F19: The markdown report MUST be generated from the JSON findings file.
 F20: Every generated report MUST contain the validity-envelope disclosure section.
@@ -37,10 +37,15 @@ F29: The operator MUST be able to add a persona by adding one data file, with ze
 F30: Each persona MUST execute as an independent delegated subagent with its own browser session.
 F31: Persona subagents MUST execute in parallel as background tasks.
 F32: The orchestrator MUST merge all per-persona ledgers into the single JSON findings file.
+F33: A No answer to any of the 4 walkthrough questions at a step MUST produce a friction instance for that step.
+F34: The persona agent MUST record one friction instance for every ambiguity resolution that the happy-path task list does not require.
+F35: The validity-envelope section MUST contain these 4 disclosures: not a replacement for real user research, no willingness-to-pay claims, no population-rate claims, no ISO-9241-11 compliance claim.
+F36: The runner command-line interface MUST conform to the contract recorded in docs/adr/0001-runner-cli-contract.md.
 N1: The skill package MUST conform to the Anthropic agent-skills format with a SKILL.md entry file carrying name plus description frontmatter.
 N2: The SKILL.md body MUST stay under 500 lines, with personas, schemas, templates in bundled resource files.
 N3: The project license MUST be MIT.
 N4: A CI run MUST complete headless without interactive operator input.
+# N5 provenance: agent-set assumption (2026-07-08), not founder-stated, not brief-sourced; validate empirically during build.
 N5: A 3-persona run against a 5-step task list MUST complete within 45 minutes on one machine.
 N6: A run against a localhost target URL MUST succeed without any third-party network service beyond the agent runtime itself.
 N7: All shipped artifacts MUST be written in English.

@@ -14,7 +14,7 @@ PASS: F13: Each friction instance MUST carry a market-impact flag that is stored
 PASS: F14: Each friction instance MUST reference at least one captured evidence artifact.
 PASS: F15: The report generator MUST drop every finding that references zero evidence artifacts.
 PASS: F16: A standard audit run MUST execute at least 3 personas against the same task list.
-PASS: F17: The report MUST assign each finding a convergence tier equal to the count of personas that flagged it.
+PASS: F17: The report MUST assign each finding a convergence tier equal to the integer count of personas that flagged it.
 PASS: F18: The primary run output MUST be a JSON findings file that validates against the findings schema.
 PASS: F19: The markdown report MUST be generated from the JSON findings file.
 PASS: F20: Every generated report MUST contain the validity-envelope disclosure section.
@@ -30,6 +30,10 @@ PASS: F29: The operator MUST be able to add a persona by adding one data file, w
 PASS: F30: Each persona MUST execute as an independent delegated subagent with its own browser session.
 PASS: F31: Persona subagents MUST execute in parallel as background tasks.
 PASS: F32: The orchestrator MUST merge all per-persona ledgers into the single JSON findings file.
+PASS: F33: A No answer to any of the 4 walkthrough questions at a step MUST produce a friction instance for that step.
+PASS: F34: The persona agent MUST record one friction instance for every ambiguity resolution that the happy-path task list does not require.
+PASS: F35: The validity-envelope section MUST contain these 4 disclosures: not a replacement for real user research, no willingness-to-pay claims, no population-rate claims, no ISO-9241-11 compliance claim.
+PASS: F36: The runner command-line interface MUST conform to the contract recorded in docs/adr/0001-runner-cli-contract.md.
 PASS: N1: The skill package MUST conform to the Anthropic agent-skills format with a SKILL.md entry file carrying name plus description frontmatter.
 PASS: N2: The SKILL.md body MUST stay under 500 lines, with personas, schemas, templates in bundled resource files.
 PASS: N3: The project license MUST be MIT.
@@ -38,7 +42,7 @@ PASS: N5: A 3-persona run against a 5-step task list MUST complete within 45 min
 PASS: N6: A run against a localhost target URL MUST succeed without any third-party network service beyond the agent runtime itself.
 PASS: N7: All shipped artifacts MUST be written in English.
 ---
-SUMMARY: 39 requirement(s) checked, 0 failed (mechanical check: testable/atomic/binding/unambiguous).
+SUMMARY: 43 requirement(s) checked, 0 failed (mechanical check: testable/atomic/binding/unambiguous).
 MANUAL CHECKLIST (not mechanically checkable — verify by hand before freeze, per CRITERION 1):
   - true stakeholder need: does each line trace to a real stated need, not an assumption?
   - stakeholder vocabulary: does each line use the domain's own words, not implementation jargon?

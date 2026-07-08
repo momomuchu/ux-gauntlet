@@ -12,3 +12,7 @@
 | Novice/expert differentiated detection, error-prevention-over-recovery rule, financial-over-cosmetic weighting, hesitation-as-signal | claims KILLED in adversarial verification — cannot be encoded as sourced methodology (brief §2.3) |
 | 1-persona "quick audit" mode | cut from MVP (D1): single-evaluator severity is unreliable; founder may re-add with a loud low-confidence disclaimer |
 | Auto-detection of standardized flows | unproven; replaced by operator allowlist (D4) |
+| Pure cognitive-load friction (no extra action, no resolved ambiguity) | cut from MVP: cannot be evidence-anchored without reintroducing the KILLED hesitation-as-signal claim; actions (F10) + ambiguity resolutions (F34) stay in |
+| Brief §5 `heuristic_tag[2]` bracket notation | interpreted as an (id,label) pair, NOT multi-tag — single tag per finding is deliberate per brief §2.1 "exactly one" framing (disjoint-review finding #1) |
+| "Maximum critique" as a CRITICAL requirement | demoted deliberately from draft 0000 to decision D6: tone is not mechanically gateable; enforced instead via report-template language + F14/F15 evidence discipline (disjoint-review finding #7) |
+| Skip-scoring for allowlisted standardized flows (brief §2.2 alternative) | rejected: allowlisted flows keep FULL walkthrough scoring with a downgraded confidence label (F27) — uniform data shape, scoring is cheap, and label-only downgrade preserves comparability across runs (disjoint-review finding #2) |

@@ -1,0 +1,8 @@
+name: broken-persona
+goal: "reach the dashboard on the free tier"
+success_criteria: "dashboard visible without paying"
+budget_authority: "none - personal use, refuses to pay"
+forbidden_claims:
+  - willingness_to_pay_estimates
+  - population_percentages
+# patience_threshold_steps deliberately MISSING (F25 fixture)
