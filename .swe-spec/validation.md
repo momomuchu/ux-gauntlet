@@ -7,7 +7,7 @@ Exception coverage: F15 defines the zero-evidence exception path (drop, never so
 Security coverage: the skill crawls only the operator-supplied target URL (F6) — no autonomous target discovery; forbidden-claim guardrails per persona (F5) plus F21/F22 prevent the report itself from emitting claims that could mislead downstream users; N6 excludes third-party data egress for localhost runs, keeping audit data on the operator's machine.
 
 ## Concise
-Each line states one testable obligation; req-lint passed 43/43 (F1-F36, N1-N7) with zero compound/vague/unbound findings on the original elicitation pass, and the scrub log (stage 6) cut speculative items rather than carrying them as padding. Current live total (post-unknowns-pass, post-challenge-round-1): req-lint passes 133/133 — see lint-result.txt for the up-to-date re-run.
+Each line states one testable obligation; req-lint passed 43/43 (F1-F36, N1-N7) with zero compound/vague/unbound findings on the original elicitation pass, and the scrub log (stage 6) cut speculative items rather than carrying them as padding. req-lint passed 133/133 after the unknowns pass plus challenge round 1. Current live total (post-challenge-round-2): req-lint passes 153/153 — see lint-result.txt for the up-to-date re-run.
 
 ## Consistent
 No requirement contradicts another: the maximum-critique stance (D6) is compatible with the evidence discipline because F14/F15 make every critique artifact-anchored; F26's "block only severity-4" does not contradict F12's full 0–4 scoring because scoring and gating are separate concerns; persona minimum (F16) is consistent with the three shipped defaults (F2–F4).
@@ -64,3 +64,33 @@ assertion (`test-coverage-audit.sh`: 59/59 CRITICAL PASS). requirements.txt grew
 tests, 0 pass, 40 fail — RED preserved. Reconciliation decisions made where the challenge round left a
 choice open are recorded in `scrub-log.md` with the `CR1-N` prefix (identity-unification field drop,
 CI-flag validation-order-vs-aggregation merge, allowlist-confidence-label-is-cosmetic-not-suppressive).
+
+## Challenge round 2 (2026-07-08)
+
+A second independent adversarial challenge pass (`.swe-spec/CHALLENGE-ROUND-2.md`) ran 24 raw attacks
+against the post-round-1 spec (F1-F125/N1-N8), the ADR, and the RED test suite. Verdict:
+CHANGES_REQUIRED. 23 distinct defects confirmed (4 BLOCKER, 12 MAJOR, 7 MINOR; 2 raw attacks
+independently converged on one N8/F61 `--env` defect), 4 attacks rejected as already resolved by an
+existing decision or partition (see CHALLENGE-ROUND-2.md §3). All 23 confirmed defects are applied in
+this pass: 19 new functional requirements (F126-F144) plus 1 nonfunctional requirement (N9), 11
+existing lines edited in place (F12, F26, F43, F44, F45, F87, F92, F103, F104, the N5 derivation
+comment, N8), one new unified Decision D14 (per-step operator-override flag family) plus D13 (max-not-
+mean, backfilling a CR1-17 decision that was applied but never got its own Decisions-table row), and
+33 new/extended acceptance-test assertions plus 28 new fixtures added to `test/acceptance.test.mjs` —
+every new [CRITICAL] requirement citation is now covered by a non-constant assertion
+(`test-coverage-audit.sh`: 63/63 CRITICAL PASS, up from 59/59 post-round-1). requirements.txt grew
+from 133 to 153 lines (144 functional, 9 nonfunctional); req-lint 153/153 PASS.
+`node --test test/acceptance.test.mjs`: 52 tests, 0 pass, 52 fail — RED preserved. Reconciliation
+decisions made where the challenge round left a choice open, or where directives had to be composed
+into one coherent design, are recorded in `scrub-log.md` with the `CR2-N` prefix (unified per-step
+override family, F27 allowlist reframed as a gate-testable run-configuration field rather than an
+unbuildable live-CLI assertion, N8's "crawl started" interpreted as "not refused by the static gate"
+given no live fixture server exists pre-build, DECISION-BRIEF.md left untouched per this pass's scope
+boundary).
+
+Boundary/exception/security coverage recorded above for F1-F125/N1-N8 remains valid and unchanged;
+this paragraph extends coverage to the F126-F144/N9 range only. Consistency check: the new per-step
+override family (F126, F128) does not contradict the run-global safety defaults (F37/F38, F40) — each
+override is logged, step-scoped, and every non-flagged step in the same run stays fully subject to the
+existing refusal rules (D14; proven by the `*-scoped-not-global-bad` fixture pairs in the acceptance
+test).

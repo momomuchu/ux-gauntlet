@@ -1,0 +1,27 @@
+{
+  "run": {
+    "target_url": "http://localhost:3000",
+    "task_list": "test/fixtures/tasks.json",
+    "personas": ["free-tier-user", "willing-to-pay-user", "vp-team-buyer"],
+    "standardized_flow_allowlist": ["login"]
+  },
+  "findings": [
+    {
+      "id": "fr-990",
+      "finding_id": "fid-login-error-copy-applied",
+      "friction_name": "login error copy does not name the failed field",
+      "friction_type": "walkthrough_failure",
+      "step": 1,
+      "standardized_flow": "login",
+      "confidence_label": "lower-confidence",
+      "personas_flagging": ["free-tier-user", "willing-to-pay-user", "vp-team-buyer"],
+      "convergence_tier": 3,
+      "heuristic_tag": "help-users-recognize-recover-errors",
+      "severity": 4,
+      "severity_factors": { "frequency": 4, "impact": 4, "persistence": 4 },
+      "market_impact": true,
+      "evidence": [{ "type": "screenshot", "path": "runs/fixture/step1-login-error.png" }],
+      "narrative": "This finding's step matches the 'login' entry recorded in the run configuration's standardized_flow_allowlist, so the lower-confidence label is backed by a real supply channel (F140/F141/F142, CR2-14)."
+    }
+  ]
+}

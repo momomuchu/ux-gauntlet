@@ -16,7 +16,7 @@ F8: The skill MUST refuse to start a crawl when no happy-path task list is suppl
 F9: At each task step the persona agent MUST record an answer to each of the 4 cognitive-walkthrough questions before advancing.
 F10: The persona agent MUST record one friction instance for every action performed beyond the happy-path task list.
 F11: Each friction instance MUST carry exactly one criterion tag drawn from the configured heuristic set.
-F12: Each friction instance's severity score MUST equal round(mean(frequency, impact, persistence)), each of the 3 rubric factors scored 0-4. # CR1-16
+F12: Each friction instance's severity score MUST equal round(mean(frequency, impact, persistence)), each of the 3 rubric factors scored 0-4 whenever severity_factors is stored as 3 numeric values; when severity_factors is stored as free-text rationale, the recorded severity value is authoritative. # CR1-16 CR2-20
 F13: Each friction instance MUST carry a market-impact flag that is stored separately from the severity score.
 F14: Each friction instance MUST reference at least one captured evidence artifact.
 F15: The report generator MUST drop every finding that references zero evidence artifacts.
@@ -30,7 +30,7 @@ F22: The report generator MUST NOT emit population-percentage extrapolations.
 F23: The report gate script MUST exit nonzero when the JSON findings file violates the findings schema.
 F24: The report gate script MUST exit nonzero when any finding lacks a Nielsen-heuristic tag.
 F25: The persona validator script MUST exit nonzero when a persona file violates the persona schema.
-F26: CI mode MUST exit nonzero when the run produces a severity-4 finding absent from the committed baseline. # CR1-2
+F26: CI mode MUST exit nonzero when the run produces a severity-4 finding absent from the committed baseline. # CR1-2 CR1-19 CR2-22
 F27: The report MUST label findings from operator-allowlisted standardized flows as lower-confidence.
 F28: The heuristic set MUST load from a data file, with the Nielsen 10-heuristic list shipped as the default set.
 F29: The operator MUST be able to add a persona by adding one data file, with zero edits to skill logic.
@@ -46,8 +46,14 @@ N2: The SKILL.md body MUST stay under 500 lines, with personas, schemas, templat
 N3: The project license MUST be MIT.
 N4: A CI run MUST complete headless without interactive operator input.
 # N5 provenance: agent-set assumption (2026-07-08), not founder-stated, not brief-sourced; validate empirically during build.
-# N5 derivation (CR1-25): 3 personas x 50-action runner cap (F57) x ~18s per-action budget (agentic round-trip plus evidence capture plus redaction) roughly equals a 45-minute upper bound; the per-action-budget figure is itself pending empirical measurement at build time, not independently sourced.
-N5: A 3-persona run against a 5-step task list MUST complete within 45 minutes on one machine. # CR1-25
+# N5 derivation (CR1-25, corrected CR2-8): under F30/F31 parallel execution, wall-clock cost is ~1x a
+# single persona's time, not personas x actions — the original derivation multiplied 3 personas x
+# 50-action runner cap (F57) x ~18s per-action budget as if sequential. Corrected derivation: ONE
+# persona's 50-action runner cap (F57) x ~18s per-action budget (agentic round-trip plus evidence
+# capture plus redaction) roughly equals a 45-minute upper bound, with headroom against F26/N4
+# CI-latency variance, per N9's parallel-derivation rule; the per-action-budget figure is itself
+# pending empirical measurement at build time, not independently sourced.
+N5: A 3-persona run against a 5-step task list MUST complete within 45 minutes on one machine. # CR1-25 CR2-8
 N6: A run against a localhost target URL MUST succeed without any third-party network service beyond the agent runtime itself.
 N7: All shipped artifacts MUST be written in English.
 
@@ -62,9 +68,9 @@ F39: The skill MUST refuse to execute any payment-submission step in the operato
 F40: The persona agent MUST default to stopping short of submitting any form whose action is a non-idempotent HTTP method, unless the operator has explicitly configured full-submission mode. # DR-03
 F41: The runner MUST load the target's robots.txt before crawling begins. # DR-04a
 F42: Each persona subagent MUST abort navigation to a path disallowed for its user-agent in robots.txt, unless the operator passes an explicit override flag. # DR-04b
-F43: Before writing any evidence artifact to disk, the evidence capture module MUST redact substrings matching a credential-or-payment-data pattern from a screenshot-type evidence entry's captured_text sidecar field. # DR-05a CR1-3
-F44: Before writing any evidence artifact to disk, the evidence capture module MUST redact substrings matching a credential-or-payment-data pattern from DOM snippets. # DR-05b
-F45: The orchestrator MUST classify two friction records as the same underlying finding when they share an identical (heuristic tag, happy-path step index, target-element identifier) tuple. # DR-06a
+F43: Before writing any evidence artifact to disk, the evidence capture module MUST redact substrings matching any of: a Bearer/JWT token, a cookie header value, a cloud API-key prefix among AKIA, sk-, ghp_, gh_pat_, a 13-19 digit Luhn-valid card-number sequence, from a screenshot-type evidence entry's captured_text sidecar field. # DR-05a CR1-3 CR2-9
+F44: Before writing any evidence artifact to disk, the evidence capture module MUST redact substrings matching any of: a Bearer/JWT token, a cookie header value, a cloud API-key prefix among AKIA, sk-, ghp_, gh_pat_, a 13-19 digit Luhn-valid card-number sequence, from DOM snippets. # DR-05b CR2-9
+F45: The orchestrator MUST classify two friction records as the same underlying finding when they share an identical (heuristic_tag, step, target_element_identifier) tuple, using the JSON field name step for the happy-path step index. # DR-06a CR2-6
 F46: The orchestrator MUST merge two findings classified as the same underlying finding into one findings.json entry with one evidence-pointer array. # DR-06b
 F47: When a target-app-side 5xx-or-network-failure event occurs during a walkthrough step, the persona agent MUST record it as a distinct app-error event separate from the friction ledger. # DR-07a
 F48: The report generator MUST list app-error events in a section separate from the heuristic-tagged friction list. # DR-07b
@@ -106,12 +112,12 @@ F83: The skill MUST ship an example happy-path tasks JSON file conforming to the
 F84: The runner CLI MUST emit a fixed-path summary.json, distinct from findings.json, on every completed run containing exit status, finding counts per severity level, convergence-tier distribution, the findings.json/markdown-report output paths. # DR-29
 F85: The runner CLI MUST verify target URL reachability before delegating any subagent. # DR-30a
 F86: The runner CLI MUST emit a single actionable stderr message identifying the unreachable URL when the reachability check fails. # DR-30b
-F87: When browser launch fails due to a missing display with --headless not passed, the runner MUST exit nonzero with a diagnostic message naming the missing display, instructing the operator to add --headless. # DR-31
+F87: The runner MUST auto-enable headless browser mode when no DISPLAY environment variable is detected, unless the operator has passed an explicit flag forcing a visible-browser launch. # DR-31 CR2-10
 F88: Each persona subagent's browser session MUST use a browser profile with no cookies, localStorage, app-server session state shared with any other concurrently running persona subagent targeting the same app instance. # DR-32
 F89: The happy-path task-list format MUST let the operator author precondition-establishing steps, such as login with a pre-seeded fixture account, as explicit leading steps of the task list. # DR-33a
 F90: The specification MUST state that creating precondition state is the operator's responsibility, out of scope for the persona to invent. # DR-33b
 F91: The skill README MUST instruct operators to add the evidence output directory to .gitignore before running against any target containing real user data. # DR-34
-F92: The findings schema MUST assign each finding a finding_id computed as a deterministic hash of exactly the (heuristic_tag, normalized_step_id, target_element_identifier) tuple, excluding persona_role, ledger arrival order, evidence text, timestamp. # DR-35 CR1-1 CR1-5
+F92: The findings schema MUST assign each finding a finding_id computed as a deterministic hash of exactly the (heuristic_tag, step, target_element_identifier) tuple, excluding persona_role, ledger arrival order, evidence text, timestamp. # DR-35 CR1-1 CR1-5 CR2-6
 F93: findings.json MUST include a top-level schema_version integer field. # DR-36a
 F94: Each persona file MUST include a top-level schema_version integer field. # DR-36b
 F95: The report gate script MUST reject any findings.json whose schema_version value is not in the gate's supported-versions list. # DR-36c
@@ -129,8 +135,8 @@ F100: The orchestrator MUST emit the partial ledger of any persona subagent term
 
 F101: CI mode MUST exit nonzero when the run-level run_status field equals BLOCKED, independent of severity-4 findings. # CR1-2
 F102: A screenshot-type evidence artifact MUST carry a captured_text sidecar field containing text extracted from the browser accessibility tree at capture time. # CR1-3
-F103: The target_element_identifier used in the F45 dedup tuple MUST be computed via a priority-ordered fallback of data-testid attribute value, accessible-name-plus-role, stable id attribute value, innerText-anchored CSS path, in that priority order, computed identically independent of persona identity, independent of account state. # DR-06a CR1-4
-F104: The validity-envelope disclosure section MUST state that convergence tiers can undercount on target applications lacking stable element selectors. # DR-06a CR1-4
+F103: The target_element_identifier used in the F45 dedup tuple MUST be computed via a priority-ordered fallback of data-testid attribute value, accessible-name-plus-role, stable id attribute value, innerText-anchored CSS path, in that priority order, applying the same deterministic procedure to every persona, every account state, scoped only to that step's own rendered DOM, never re-branched by which persona produced it, never re-branched by which account produced it. # DR-06a CR1-4 CR2-18
+F104: The validity-envelope disclosure section MUST state that convergence tiers can undercount on target applications lacking stable element selectors, distinct from a persona-gated, account-gated DOM element that legitimately differs by design. # DR-06a CR1-4 CR2-18
 F105: The skill MUST ship denylist/default-destructive-labels.json conforming to schemas/denylist.schema.json, referenced by name in SKILL.md. # DR-01a CR1-6
 F106: The orchestrator MUST exit nonzero when the operator-supplied denylist file fails to validate as a non-empty JSON array of strings. # DR-01a CR1-6
 F107: The runner CLI MUST check every static launch precondition among url presence, tasks-file presence, i-own-this-target-flag presence, env-flag presence, denylist-file validity, persona-count minimum, before refusing to start a crawl on any single violation. # CR1-7 CR1-14
@@ -152,4 +158,36 @@ F122: The findings JSON output MUST use a finding_id field name distinct from an
 F123: The reason code recorded per F56 MUST be drawn from a fixed enumerated set including at minimum dry-run-boundary-stop, denylist-abort, robots-disallowed, patience-exhausted, target-unreachable. # CR1-23
 F124: Each finding from a run whose run_status is not completed MUST carry a confidence field set to degraded-below-persona-floor. # CR1-24
 F125: The terminal friction instance recorded per F51 MUST carry a heuristic_tag value from the configured heuristic set. # CR1-26
-N8: A first-time operator MUST reach a started crawl against a reachable localhost target using only the shipped example tasks file, the shipped default denylist, the --i-own-this-target flag, in one CLI invocation with zero failed prior attempts. # DR-28 CR1-15
+N8: A first-time operator MUST reach a started crawl against a reachable localhost target using only the required flags enumerated in ADR-0001's CLI contract table (--url, --tasks, --i-own-this-target, --env, --denylist), the shipped example tasks file, the shipped default denylist file, in one CLI invocation with zero failed prior attempts. # DR-28 CR1-15 CR2-2 CR2-19
+
+# --- Challenge round 2 pass 2026-07-08 (.swe-spec/CHALLENGE-ROUND-2.md, 23 confirmed defects) ---
+# Trailing "# CR2-NN" comments trace each new/changed line back to the challenge-round-2 defect entry
+# (BLOCKER 1-4 = CR2-1..CR2-4, MAJOR 1-12 = CR2-5..CR2-16, MINOR 1-7 = CR2-17..CR2-23). Edits to
+# existing lines (F12, F26, F43, F44, F45, F87, F92, F103, F104, the N5 derivation comment, N8) are
+# made in place above rather than appended here; this section holds only new F/N lines. D14
+# (spec.md) documents the unified per-step operator-override flag family that F126/F128 join
+# alongside the existing payment_step (F115) and external_side_effect (F62) fields: each field is
+# independently settable per step, each exempts one narrow named behavior, none is a run-global
+# safety bypass — the run-global denylist (F37), the robots.txt gate (F41/F42), the payment
+# test-mode gate (F39) all stay live for every step not carrying its own matching override flag.
+
+F126: The task-list schema MUST support an operator-set precondition_step boolean per step, separate from the payment_step field, separate from the external_side_effect field. # CR2-1
+F127: The persona agent's default dry-run boundary from F40 MUST NOT apply to a step flagged precondition_step. # CR2-1
+F128: The task-list schema MUST support an operator-set denylist_override boolean per step, separate from the precondition_step field, separate from the payment_step field, separate from the external_side_effect field. # CR2-5
+F129: Each persona subagent MUST log a denylist_override_used event when it clicks a denylisted element on a step flagged denylist_override. # CR2-5
+F130: The orchestrator MUST enforce the F38 denylist-abort rule on every step not flagged denylist_override within the same run. # CR2-5
+F131: The orchestrator MUST default the run-level wallclock timeout to 50 minutes when the operator has not supplied a --timeout value. # CR2-7
+F132: Each persona entry in findings.json MUST include a start_ts field marking when its subagent began execution. # CR2-8
+F133: Each persona entry in findings.json MUST include an end_ts field marking when its subagent finished execution. # CR2-8
+F134: The report gate script MUST exit nonzero when no two persona entries' execution-time intervals overlap in a run with at least 2 completed personas. # CR2-8
+F135: The runner CLI MUST accept a --no-headless flag that forces a visible-browser launch, overriding the F87 auto-headless default. # CR2-10
+F136: The frequency factor in F12's severity formula MUST be scored as the count of times the persona subagent re-encountered the same friction instance within its own run, excluding any cross-persona population estimate. # CR2-11
+F137: The markdown report MUST render a merged finding's component_severities array adjacent to its severity value whenever component_severities contains more than one distinct value. # CR2-12
+F138: The validity-envelope disclosure section MUST state that a new severity-4 finding triggering the F26 CI gate carries the same rerun-instability caveat as F70. # CR2-13
+F139: The validity-envelope disclosure section MUST instruct the operator to manually re-run the target before treating a single red CI run as a confirmed regression. # CR2-13
+F140: The runner CLI MUST accept an operator-supplied --standardized-flow-allowlist file path. # CR2-14
+F141: The run configuration MUST record the standardized-flow-allowlist file's flow-name entries used during that run, distinct from the findings array. # CR2-14
+F142: The report gate script MUST exit nonzero when a finding carries the F27 lower-confidence label whose step matches no flow-name entry recorded per F141. # CR2-14
+F143: A finding carrying the F27 lower-confidence label together with the F124 degraded-confidence value MUST store them as two independent fields: confidence_label, confidence. # CR2-17
+F144: Storing both confidence_label, confidence on the same finding MUST NOT alter the F121 CI-gate outcome for that finding. # CR2-17
+N9: The run-level wallclock budget derivation MUST use a single persona's action-count budget under parallel execution, excluding the sequential persona-count multiplication used in N5's original derivation comment. # CR2-8

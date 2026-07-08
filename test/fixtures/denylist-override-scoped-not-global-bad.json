@@ -1,0 +1,20 @@
+{
+  "run": {
+    "target_url": "http://localhost:3000",
+    "task_list": "test/fixtures/tasks.json",
+    "personas": ["free-tier-user"],
+    "denylist": ["Delete Account", "Cancel Subscription"]
+  },
+  "task_list_steps": [
+    { "step": 6, "denylist_override": true },
+    { "step": 8, "denylist_override": false }
+  ],
+  "actions": [
+    { "persona": "free-tier-user", "step": 6, "type": "click", "element_label": "Cancel Subscription", "denylist_override": true, "outcome": "executed" },
+    { "persona": "free-tier-user", "step": 8, "type": "click", "element_label": "Delete Account", "denylist_override": false, "outcome": "executed" }
+  ],
+  "denylist_override_events": [
+    { "persona": "free-tier-user", "step": 6, "element_label": "Cancel Subscription" }
+  ],
+  "findings": []
+}

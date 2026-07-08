@@ -172,3 +172,37 @@ onboarding-time bound), consistent with the DR-28 provenance it traces to.
 | N8 | nonfunctional | quality-of-service: first-run onboarding-time bound — DR-28 CR1-15 |
 
 Summary: 125 functional, 8 nonfunctional (133 total).
+
+## Challenge round 2 pass 2026-07-08 (.swe-spec/CHALLENGE-ROUND-2.md, F126-F144, N9)
+
+Same Perfect Technology Filter question applied to each landed line. All 19 new F-lines resolved to
+`functional`: every one is a refusal/safety/detection/scoring/disclosure/schema policy that a live-target
+crawl, a real payment form, or a nondeterministic parallel pipeline still needs regardless of compute
+speed/memory/cost. N9 (parallel-vs-sequential wallclock-budget derivation rule) is `nonfunctional`, same
+category as N5 (quality-of-service / wall-clock bound), since it is a QoS-derivation correction, not a
+behavior policy.
+
+| ID | Category | Filter note |
+|----|----------|-------------|
+| F126 | functional | schema policy (precondition_step per-step flag) — CR2-1 |
+| F127 | functional | refusal-exemption policy (F40 boundary does not apply to precondition_step) — CR2-1 |
+| F128 | functional | schema policy (denylist_override per-step flag) — CR2-5 |
+| F129 | functional | logging policy (denylist_override_used event) — CR2-5 |
+| F130 | functional | refusal-scoping policy (F38 stays live outside the override) — CR2-5 |
+| F131 | functional | default-value policy (50-minute timeout when --timeout absent) — CR2-7 |
+| F132 | functional | output-contract policy (persona start_ts field) — CR2-8 |
+| F133 | functional | output-contract policy (persona end_ts field) — CR2-8 |
+| F134 | functional | gate policy (concurrency-overlap proof) — CR2-8 |
+| F135 | functional | interface-contract policy (--no-headless flag) — CR2-10 |
+| F136 | functional | scoring-scope policy (frequency = within-run re-encounter count) — CR2-11 |
+| F137 | functional | rendering policy (component_severities adjacency) — CR2-12 |
+| F138 | functional | disclosure policy (rerun-instability extends to F26-blocking findings) — CR2-13 |
+| F139 | functional | disclosure policy (manual-re-run instruction) — CR2-13 |
+| F140 | functional | interface-contract policy (--standardized-flow-allowlist flag) — CR2-14 |
+| F141 | functional | reproducibility policy (allowlist entries recorded in run configuration) — CR2-14 |
+| F142 | functional | gate policy (label requires a matching allowlist entry) — CR2-14 |
+| F143 | functional | output-contract policy (confidence_label/confidence field independence) — CR2-17 |
+| F144 | functional | gate-interaction policy (combo never alters F121 outcome) — CR2-17 |
+| N9 | nonfunctional | quality-of-service: wall-clock budget derivation correction (parallel, not sequential) — CR2-8 |
+
+Summary: 144 functional, 9 nonfunctional (153 total).

@@ -1,0 +1,26 @@
+{
+  "run": {
+    "target_url": "http://localhost:3000",
+    "task_list": "test/fixtures/tasks.json",
+    "personas": ["free-tier-user", "willing-to-pay-user"]
+  },
+  "findings": [
+    {
+      "id": "fr-951",
+      "finding_id": "fid-682e3d8888c84e71",
+      "friction_name": "signup CTA hidden below the fold",
+      "friction_type": "walkthrough_failure",
+      "step": 2,
+      "target_element_identifier": "aria:Sign up|role:button",
+      "personas_flagging": ["free-tier-user", "willing-to-pay-user"],
+      "convergence_tier": 2,
+      "heuristic_tag": "visibility-of-system-status",
+      "severity": 3,
+      "component_severities": [3, 3],
+      "severity_factors": { "frequency": "every first visit", "impact": "user scrolls and hunts", "persistence": "recurs until learned" },
+      "market_impact": true,
+      "evidence": [{ "type": "screenshot", "path": "runs/fixture/step2-aria-fallback.png" }],
+      "narrative": "Same formula as fixture A, but target_element_identifier is resolved via the accessible-name-plus-role fallback tier (no data-testid present) — a differently-shaped merge, proving the identity function is tier-agnostic (F103, CR2-6)."
+    }
+  ]
+}

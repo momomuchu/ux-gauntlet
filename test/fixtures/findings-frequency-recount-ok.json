@@ -1,0 +1,23 @@
+{
+  "run": {
+    "target_url": "http://localhost:3000",
+    "task_list": "test/fixtures/tasks.json",
+    "personas": ["free-tier-user", "willing-to-pay-user", "vp-team-buyer"]
+  },
+  "findings": [
+    {
+      "id": "fr-981",
+      "friction_name": "checkout dead-ends with a blank page after payment submit",
+      "friction_type": "extra_action",
+      "step": 5,
+      "personas_flagging": ["free-tier-user", "willing-to-pay-user", "vp-team-buyer"],
+      "convergence_tier": 3,
+      "heuristic_tag": "help-users-recognize-recover-errors",
+      "severity": 3,
+      "severity_factors": { "frequency": "re-encountered twice within this persona's own run", "impact": "user abandons cart", "persistence": "recurs" },
+      "market_impact": true,
+      "evidence": [{ "type": "screenshot", "path": "runs/fixture/step5-blank.png" }],
+      "narrative": "The frequency factor is correctly scoped to this persona's own within-run re-encounter count, never a cross-persona/population estimate (F136 negative control, CR2-11)."
+    }
+  ]
+}

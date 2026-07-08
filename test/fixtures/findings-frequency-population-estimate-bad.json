@@ -1,0 +1,23 @@
+{
+  "run": {
+    "target_url": "http://localhost:3000",
+    "task_list": "test/fixtures/tasks.json",
+    "personas": ["free-tier-user", "willing-to-pay-user", "vp-team-buyer"]
+  },
+  "findings": [
+    {
+      "id": "fr-980",
+      "friction_name": "checkout dead-ends with a blank page after payment submit",
+      "friction_type": "extra_action",
+      "step": 5,
+      "personas_flagging": ["free-tier-user", "willing-to-pay-user", "vp-team-buyer"],
+      "convergence_tier": 3,
+      "heuristic_tag": "help-users-recognize-recover-errors",
+      "severity": 3,
+      "severity_factors": { "frequency": "38% of users hit this on their first checkout", "impact": "user abandons cart", "persistence": "recurs" },
+      "market_impact": true,
+      "evidence": [{ "type": "screenshot", "path": "runs/fixture/step5-blank.png" }],
+      "narrative": "The frequency factor is annotated as a cross-persona population/percentage estimate ('38% of users'), which F136 forbids — the isolated persona subagent scoring this friction cannot observe population-wide commonality; frequency must be scored as this persona's own re-encounter count within its own run (F12/F136 violation, CR2-11)."
+    }
+  ]
+}

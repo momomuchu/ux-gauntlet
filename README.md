@@ -19,7 +19,8 @@
 | Problem analysis (`docs/specs/0000-problem-analysis.md`) | done (superseded by spec 0001) |
 | Unknowns audit (`docs/research/UNKNOWNS-DELTA.md`) | done — 8-lens adversarial pass, 39 requirements added (F37-F100), safety/refusal layer identified as the largest missing surface |
 | Challenge round 1 (`.swe-spec/CHALLENGE-ROUND-1.md`) | done — 26 confirmed defects applied (10 BLOCKER, 12 MAJOR, 4 MINOR), 25 requirements added (F101-F125, N8) |
-| Specification (`docs/specs/0001-ux-gauntlet-mvp.spec.md`) | written + disjoint-reviewed + unknowns-integrated + challenge-round-1-hardened (133 requirements) — awaiting founder approval, freeze withheld |
+| Challenge round 2 (`.swe-spec/CHALLENGE-ROUND-2.md`) | done — 23 confirmed defects applied (4 BLOCKER, 12 MAJOR, 7 MINOR), 20 requirements added (F126-F144, N9) |
+| Specification (`docs/specs/0001-ux-gauntlet-mvp.spec.md`) | written + disjoint-reviewed + unknowns-integrated + challenge-round-2-hardened (153 requirements) — awaiting founder approval, freeze withheld |
 | RED acceptance test (`test/acceptance.test.mjs`) | in place, intentionally failing |
 | Skill implementation (`SKILL.md` + personas + gates) | pending |
 

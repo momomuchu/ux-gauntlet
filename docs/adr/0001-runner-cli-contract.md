@@ -22,11 +22,14 @@ A CLI is a public interface — a material decision per decision-record discipli
 | `--denylist <file>` | yes | action-level denylist of destructive element labels, validated as a non-empty JSON array of strings against `schemas/denylist.schema.json` (F37/F38/F106); `denylist/default-destructive-labels.json` ships as the copyable default (F105) |
 | `--test-mode` | conditional | declares payment flows sandboxed; payment-submission steps refuse without it (F39) |
 | `--confirm-third-party-data` | conditional | required for any non-localhost target: acknowledges evidence may contain third-party data (F67/F68) |
-| `--full-submission` | no | disables the default dry-run boundary on non-idempotent requests (F40) |
+| `--full-submission` | no | disables the default dry-run boundary on non-idempotent requests (F40) — does NOT affect a step flagged `precondition_step` in the task list, which submits regardless (F126/F127, CR2-1) |
 | `--override-robots` | no | overrides robots.txt disallow-abort (F41/F42); off by default |
 | `--personas <paths...>` | no | persona data files; default = every file in `personas/` |
 | `--max-parallel <n>` | no | concurrent persona subagent cap; default 5 (F98) |
-| `--headless` | no | headless browser mode (CI) |
+| `--headless` | no | forces headless browser mode; redundant with the auto-default below but kept for explicit CI invocations |
+| `--no-headless` | no | forces a visible-browser launch, overriding the auto-headless default (F135, CR2-10) |
+| `--timeout <minutes>` | no | run-level wallclock timeout; default 50 (F131, CR2-7) |
+| `--standardized-flow-allowlist <file>` | no | flow-name file naming standardized flows (e.g. login) whose findings receive the F27 lower-confidence label (F140/F141/F142, CR2-14) |
 | `--ci --baseline <file>` | no | CI mode: diff findings against committed baseline by finding_id (F72–F74) |
 | `--out <dir>` | no | output directory; default `runs/<timestamp>/` |
 
@@ -67,6 +70,22 @@ reads that flag directly (F116) rather than guessing from button text or form co
 non-idempotent-method detection uses network-request interception of the actual HTTP method used
 by the submitted request (F117), not static sniffing of a `<form method>` DOM attribute, which is
 frequently absent or overridden by client-side JS.
+
+**Revision 2026-07-08 (challenge round 2, CR2-1/CR2-5/CR2-10):** two per-step task-list schema
+fields join `payment_step` (F115) and `external_side_effect` (F62) as the same kind of narrowly
+scoped, operator-set, per-step override — see spec.md D14. `precondition_step` (F126) marks an
+operator-authored precondition-establishing step (e.g. a pre-seeded-fixture login); F40's default
+dry-run boundary does not apply to that step (F127), so a login-gated target is reachable without
+passing `--full-submission` (which would also strip F40's protection from the audited task's own
+submission). `denylist_override` (F128) marks a step the operator has deliberately authored to
+audit a destructive flow (e.g. "Cancel Subscription"); the persona clicks instead of aborting on
+that one step, logging a `denylist_override_used` event (F129), while F38's abort rule stays fully
+live for every other step in the same run (F130) — the run-global denylist default is never
+reopened by a per-step flag. Separately, `--headless` auto-enables whenever no `DISPLAY` is
+detected (F87) instead of erroring — every environment the frozen test suite itself runs in is
+headless, so the prior error-and-instruct behavior made N8's "zero failed prior attempts" promise
+false a second way; `--no-headless` (F135) is the explicit escape hatch for a forced visible
+browser.
 
 Companion scripts share the convention: `report-gate.mjs [--check-fixture <file>|<findings.json>]`,
 `render-report.mjs <findings.json>`, `validate-persona.mjs <persona-file>` — each exits nonzero on

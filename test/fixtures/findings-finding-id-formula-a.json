@@ -1,0 +1,26 @@
+{
+  "run": {
+    "target_url": "http://localhost:3000",
+    "task_list": "test/fixtures/tasks.json",
+    "personas": ["willing-to-pay-user", "vp-team-buyer"]
+  },
+  "findings": [
+    {
+      "id": "fr-950",
+      "finding_id": "fid-33382de94ebe9883",
+      "friction_name": "invite-teammate email link points to a 404 page",
+      "friction_type": "walkthrough_failure",
+      "step": 4,
+      "target_element_identifier": "data-testid:invite-link",
+      "personas_flagging": ["willing-to-pay-user", "vp-team-buyer"],
+      "convergence_tier": 2,
+      "heuristic_tag": "error-prevention",
+      "severity": 4,
+      "component_severities": [4, 4],
+      "severity_factors": { "frequency": 4, "impact": 4, "persistence": 4 },
+      "market_impact": true,
+      "evidence": [{ "type": "screenshot", "path": "runs/fixture/step4-invite.png" }],
+      "narrative": "finding_id equals fid- + sha256(heuristic_tag|step|target_element_identifier).slice(0,16), independently recomputed from the F45 dedup tuple, resolved here via the data-testid fallback tier (CR2-6)."
+    }
+  ]
+}

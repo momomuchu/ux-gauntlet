@@ -1,0 +1,15 @@
+{
+  "run": {
+    "target_url": "http://localhost:3000",
+    "task_list": "test/fixtures/tasks.json",
+    "personas": ["free-tier-user"],
+    "full_submission_mode": false
+  },
+  "task_list_steps": [
+    { "step": 1, "precondition_step": true }
+  ],
+  "actions": [
+    { "persona": "free-tier-user", "step": 1, "type": "submit", "http_method": "POST", "detected_via": "network-request-interception", "precondition_step": true, "outcome": "executed" }
+  ],
+  "findings": []
+}

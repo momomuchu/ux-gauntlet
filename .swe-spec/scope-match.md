@@ -47,3 +47,21 @@ pass (F105/F109/F106), not yet built, consistent with the rest of the pre-freeze
 unchanged: scope still FITS budget (unconstrained token budget, no external deadline); the identity-
 unification fix (F92 collapsed onto the F45/F46 tuple) net-simplifies the eventual CI-diff implementation
 versus the pre-challenge-round design, since dedup and CI-diff now share one function instead of two.
+
+## Challenge round 2 growth (2026-07-08)
+
+Requirement count grew again, from 133 (F1-F125, N1-N8) to 153 (F1-F144, N1-N9), after the challenge-round-2
+adversarial pass confirmed 23 distinct defects (4 BLOCKER, 12 MAJOR, 7 MINOR) and every fix_directive was
+applied (one, MAJOR-9's DECISION-BRIEF.md softening request, was intentionally NOT applied — out of this
+pass's edit scope, see scrub-log.md CR2 notes). `test/fixtures/` grew from 49 to 77 files (28 new fixtures
+for the new/extended RED test cases). Build surface addition: two new per-step task-list schema fields
+(`precondition_step`, `denylist_override`, F126/F128 — requirements-only, following the exact schema shape
+already budgeted for `payment_step`/`external_side_effect`), three new CLI flags (`--timeout`, `--no-headless`,
+`--standardized-flow-allowlist` — requirements-only, ADR-0001 flag-table rows), no new schema *files* (the
+new per-step fields extend the existing task-list schema `payment_step`/`external_side_effect` already
+budgeted for; `--standardized-flow-allowlist`'s file is a flat flow-name list, not a new JSON Schema).
+Verdict unchanged: scope still FITS budget (unconstrained token budget, no external deadline); the
+per-step operator-override family (D14) net-simplifies the eventual implementation versus three
+independently-numbered ad hoc booleans, since all four fields (`payment_step`, `external_side_effect`,
+`precondition_step`, `denylist_override`) now share one documented extension-point pattern instead of
+four one-off designs.
