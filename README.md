@@ -17,7 +17,8 @@
 |---|---|
 | Deep research decision brief (`docs/research/DECISION-BRIEF.md`) | done — 18 sources, load-bearing claims adversarially verified |
 | Problem analysis (`docs/specs/0000-problem-analysis.md`) | done (superseded by spec 0001) |
-| Specification (`docs/specs/0001-ux-gauntlet-mvp.spec.md`) | written + disjoint-reviewed — awaiting founder approval, freeze withheld |
+| Unknowns audit (`docs/research/UNKNOWNS-DELTA.md`) | done — 8-lens adversarial pass, 39 requirements added (F37-F100), safety/refusal layer identified as the largest missing surface |
+| Specification (`docs/specs/0001-ux-gauntlet-mvp.spec.md`) | written + disjoint-reviewed + unknowns-integrated (107 requirements) — awaiting founder approval, freeze withheld |
 | RED acceptance test (`test/acceptance.test.mjs`) | in place, intentionally failing |
 | Skill implementation (`SKILL.md` + personas + gates) | pending |
 

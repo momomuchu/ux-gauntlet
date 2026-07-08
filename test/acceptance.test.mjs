@@ -153,3 +153,91 @@ test('F26: CI mode blocks only on a NEW severity-4 finding vs baseline', () => {
   assert.notEqual(worse.code, 0, 'a NEW severity-4 finding must exit nonzero');
   assert.match(worse.stderr + worse.stdout, /severity.?4|catastrophe/i, 'CI output names the blocking finding class');
 });
+
+// --- Unknowns pass 2026-07-08 (docs/research/UNKNOWNS-DELTA.md §2, DR-01..DR-39) ---
+// The refusal/safety layer (D11): the tool must refuse, not only discover. Fixtures below encode
+// each violation as a run bundle the gate is expected to reject once built; a matching negative
+// control proves the gate isn't just failing shut on any input (F45/D12 group additionally proves
+// the dedup rule is content-aware, not a blanket rejection).
+
+test('F37 F38: a run configuration with no denylist is rejected; a persona that clicks a denylisted action fails the gate', () => {
+  // Requirement ID: F37, F38
+  const noDenylist = gate('run-config-no-denylist.json');
+  assert.notEqual(noDenylist.code, 0, 'a run config lacking an operator-supplied denylist must be rejected (F37)');
+  assert.match(noDenylist.stderr + noDenylist.stdout, /denylist/i, 'gate output names the missing denylist');
+  const clicked = gate('denylist-click-violation.json');
+  assert.notEqual(clicked.code, 0, 'a denylisted element that was clicked (not aborted) must fail the gate (F38)');
+  const aborted = gate('denylist-abort-ok.json');
+  assert.equal(aborted.code, 0, 'the same denylisted step correctly aborted must pass the gate (negative control)');
+});
+
+test('F39 F40: payment and non-idempotent submit steps executed outside their explicit modes fail the gate', () => {
+  // Requirement ID: F39, F40
+  const payment = gate('payment-no-testmode.json');
+  assert.notEqual(payment.code, 0, 'a payment-submission step executed without run.test_mode=true must fail the gate (F39)');
+  assert.match(payment.stderr + payment.stdout, /payment|test.?mode/i, 'gate output names the payment/test-mode rule');
+  const submit = gate('nonidempotent-no-fullmode.json');
+  assert.notEqual(submit.code, 0, 'a non-idempotent (POST) submit executed without run.full_submission_mode=true must fail the gate (F40)');
+});
+
+test('F41 F42: navigation to a robots.txt-disallowed path without an override flag fails the gate', () => {
+  // Requirement ID: F41, F42
+  const nav = gate('robots-disallowed-nav.json');
+  assert.notEqual(nav.code, 0, 'an executed navigation to a robots-disallowed path with no override must fail the gate');
+  assert.match(nav.stderr + nav.stdout, /robots/i, 'gate output names the robots.txt rule');
+});
+
+test('F43 F44: an unredacted credential-shaped string in captured evidence fails the gate', () => {
+  // Requirement ID: F43, F44
+  const leak = gate('evidence-secret-leak.json');
+  assert.notEqual(leak.code, 0, 'a bearer-token-shaped string surviving in evidence captured_text must fail the gate');
+  assert.match(leak.stderr + leak.stdout, /redact|secret|credential/i, 'gate output names the redaction rule');
+});
+
+test('F45 F46: two findings sharing the (heuristic tag, step, target) identity but left unmerged fail the gate', () => {
+  // Requirement ID: F45, F46
+  const dup = gate('findings-duplicate-not-merged.json');
+  assert.notEqual(dup.code, 0, 'two findings with an identical (heuristic_tag, step, target_selector) tuple that were not merged into one entry must fail the gate');
+  const valid = gate('findings-valid.json');
+  assert.equal(valid.code, 0, 'a findings file with no duplicate identity tuples still passes the gate (negative control)');
+});
+
+test('F47 F48: a target-app 5xx/network event recorded as a heuristic-tagged friction fails the gate', () => {
+  // Requirement ID: F47, F48
+  const misfiled = gate('app-error-as-friction.json');
+  assert.notEqual(misfiled.code, 0, 'an HTTP-503-caused event tagged as a Nielsen-heuristic friction, and absent from app_errors, must fail the gate');
+  assert.match(misfiled.stderr + misfiled.stdout, /app.?error/i, 'gate output names the app-error separation rule');
+});
+
+test('F49 F53 F54: a run with a crashed persona must expose run_status BLOCKED and disclose the non-completed count', () => {
+  // Requirement ID: F49, F53, F54
+  assert.ok(existsSync('schemas/findings.schema.json'), 'schemas/findings.schema.json missing');
+  const s = json('schemas/findings.schema.json');
+  const findingOrRun = s.$defs ?? s.definitions ?? {};
+  assert.ok(JSON.stringify(findingOrRun).includes('run_status'), 'schema must define a run_status concept (F49/F53)');
+  const blocked = gate('run-status-blocked-missing-disclosure.json');
+  assert.notEqual(blocked.code, 0, 'a BLOCKED run whose validity envelope omits the non-completed-persona count must fail the gate (F54)');
+});
+
+test('F50 F51 F52: crossing patience_threshold_steps must abandon the task, log a terminal friction, and set failed-by-patience', () => {
+  // Requirement ID: F50, F51, F52
+  assert.ok(existsSync('scripts/report-gate.mjs'), 'scripts/report-gate.mjs missing');
+  const incomplete = gate('patience-abandon-incomplete.json');
+  assert.notEqual(incomplete.code, 0, 'a persona past its patience threshold left in_progress (no abandon, no terminal friction, no failed-by-patience outcome) must fail the gate');
+  assert.match(incomplete.stderr + incomplete.stdout, /patience/i, 'gate output names the patience-abandonment rule');
+});
+
+test('F55 F56: the ledger must record task_completed and a reason code independent of the friction list', () => {
+  // Requirement ID: F55, F56
+  assert.ok(existsSync('scripts/report-gate.mjs'), 'scripts/report-gate.mjs missing');
+  const missing = gate('ledger-missing-task-completed.json');
+  assert.notEqual(missing.code, 0, 'a task-ledger entry with no task_completed boolean must fail the gate');
+  assert.match(missing.stderr + missing.stdout, /task_completed/i, 'gate output names the missing field');
+});
+
+test('F57 F58: a persona past the runner-level 50-action cap must be force-aborted with its partial ledger emitted', () => {
+  // Requirement ID: F57, F58
+  const overCap = gate('persona-exceeds-action-cap.json');
+  assert.notEqual(overCap.code, 0, 'a persona with action_count > 50 still marked run_status completed (not force-aborted) must fail the gate');
+  assert.match(overCap.stderr + overCap.stdout, /action|cap/i, 'gate output names the action-cap rule');
+});

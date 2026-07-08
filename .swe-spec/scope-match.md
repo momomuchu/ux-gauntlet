@@ -4,15 +4,34 @@ Budget: one solo founder acting as product owner + coding agents as build labor;
 deadline; token budget effectively unconstrained per founder policy; calendar target = ship an
 installable MVP skill quickly, iterate in public (MIT).
 
-Scope: 34 requirements, of which 27 functional. Build surface = 1 SKILL.md, 3 persona data files,
-2 JSON schemas, ~4 scripts (runner, report gate, renderer, persona validator), 1 report template,
-1 CI workflow, plus fixtures/tests. This is a small-to-medium single-repo build with no research
-risk (all capabilities are demonstrated prior art — see validation.md Feasible).
+Scope (2026-07-08, post-unknowns-pass): requirement count grew from 43 (F1-F36, N1-N7) to 107
+(F1-F100, N1-N7) — the unknowns audit (`docs/research/UNKNOWNS-DELTA.md`) added 39 accepted lines
+(12 mvp-critical, 21 mvp-high, 6 mvp-medium). Build surface = 1 SKILL.md, 3 persona data files,
+2+ JSON schemas (findings, persona, plus a run-config/denylist schema implied by F37/F61/F65),
+~4 scripts (runner, report gate, renderer, persona validator) now carrying materially more gate
+logic (dedup/finding_id matching, redaction, robots.txt, denylist/payment/full-submission refusal,
+run-status/status-file/summary.json emission, schema_version rejection), 1 report template, 1 CI
+workflow, plus fixtures/tests (test/fixtures/ grew from 11 to 24 files). This is still a
+small-to-medium single-repo build with no research risk (all capabilities remain demonstrated prior
+art — see validation.md Feasible) — the unknowns pass added policy/refusal density, not new
+subsystems or external dependencies.
 
-Verdict: scope FITS budget. The one watched item is N5 (45-minute run bound), which depends on
-browser-driving latency; if empirical runs blow the bound, the lever is REDUCE (trim per-step
-walkthrough verbosity, cap evidence capture size) before any scope negotiation.
+**Largest single build item is now the safety/refusal layer** (D11): denylist enforcement (F37/F38),
+payment test-mode gate (F39), default dry-run boundary (F40), robots.txt gate (F41/F42), and evidence
+redaction (F43/F44) all land inside the same two functions the original scope already budgeted for
+(action execution, evidence capture) — cheap to land together per the delta's own pattern-4 note —
+but they are new gating logic, not restatements of existing behavior, so they materially exceed the
+original "~4 scripts" sizing even though file count barely changes.
 
-Levers if over budget (in order): 1) reduce — cut F26/F27 (CI mode + standardized-flow labeling)
-from MVP to fast-follow; 2) add capacity — parallelize persona runs; 3) negotiate — founder may
-relax N5 to a nightly-only run where wall-clock is irrelevant.
+Verdict: scope still FITS budget (unconstrained token budget, no external deadline). The watched
+items are: N5 (45-minute run bound, unchanged) — now under more pressure because F41/F42 (robots.txt
+fetch), F43/F44 (redaction pass), and F65/F67/F68 (confirmation gates) add pre-crawl and
+per-evidence-capture latency; and F98 (max-parallelism default 5) — a NEW lever, not just a watch
+item, since it directly trades wall-clock against concurrency.
+
+Levers if over budget (in order, updated): 1) reduce — cut F26/F27 (CI mode + standardized-flow
+labeling) from MVP to fast-follow, as before; now also: land the refusal layer (D11 CRITICAL items)
+first and defer mvp-medium items (F91-F100) to fast-follow, since scrub-log confirms none of them are
+ship-blocking; 2) add capacity — parallelize persona runs up to the F98 max-parallelism cap (default
+5); 3) negotiate — founder may relax N5 to a nightly-only run where wall-clock is irrelevant, or may
+raise F98's default concurrency cap if the target app can tolerate more simultaneous sessions.

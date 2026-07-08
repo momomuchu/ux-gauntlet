@@ -1,0 +1,17 @@
+{
+  "run": {
+    "target_url": "http://localhost:3000",
+    "task_list": "test/fixtures/tasks.json",
+    "personas": ["free-tier-user"]
+  },
+  "personas": [
+    { "name": "free-tier-user", "patience_threshold_steps": 10 }
+  ],
+  "walkthrough_progress": [
+    { "persona": "free-tier-user", "task": "upgrade plan", "step_count": 11 }
+  ],
+  "tasks_ledger": [
+    { "persona": "free-tier-user", "task": "upgrade plan", "task_completed": false, "outcome": "in_progress" }
+  ],
+  "findings": []
+}

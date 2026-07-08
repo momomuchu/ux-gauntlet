@@ -19,3 +19,29 @@ Every capability is demonstrated prior art: browser-driving agent skills exist (
 - True stakeholder need: each line traces to founder verbatim intent (persona impersonation, live crawl, max critique, named frictions, final report) or to a verified brief claim — no orphan requirements.
 - Stakeholder vocabulary: lines use the founder's product words (persona, happy path, friction, report, gate); implementation jargon is confined to N-lines where it IS the constraint.
 - Acceptable to all stakeholders: single-founder project; founder approval of this spec is the acceptance event and is explicitly pending (spec status PLANNED, freeze withheld).
+
+## Unknowns pass (2026-07-08)
+
+An 8-lens adversarial elicitation pass ran against the frozen-pending spec, requirements.txt (then
+F1-F36/N1-N7), scrub-log.md, and ADR-0001 (`docs/research/UNKNOWNS-DELTA.md`): side-effects,
+authz-privacy, reproducibility, partial-runs, operator-dx, portability, methodology-gaps,
+cost-limits. 45 candidates surfaced; 39 integrated as F37-F100 (12 mvp-critical, 21 mvp-high, 6
+mvp-medium); 4 explicitly deferred to v2 plus 16 named-only v2 candidates (scrub-log.md); 2 rejected
+as already-covered by an existing decision (D2 task-list ordering; the ISO/blended-score scrub — see
+scrub-log.md for citations). Zero of the 39 accepted items duplicated an existing F/N line — every
+one was a genuine, additive gap.
+
+**Completeness** now explicitly includes the refusal/safety layer the original pass under-specified:
+the original set was thorough about what personas must *discover* (friction, evidence, severity) but
+silent on what the orchestrator and each persona subagent must *refuse to do* (destructive clicks,
+live payments, non-idempotent submits by default, robots.txt violations, unredacted secrets in
+evidence) — see spec.md D11. The CI-mode promise (F26/N4) is also now fully specified end-to-end: a
+finding's identity for baseline diffing is a deterministic finding_id (F92) with a content-based
+dedup rule applied before diffing (F45/F46) — see spec.md D12.
+
+Complete/concise/consistent/feasible and the boundary/exception/security coverage recorded above
+remain valid and unchanged for F1-F36/N1-N7; this paragraph extends coverage to the F37-F100 range
+only. Consistency check: the new refusal-layer lines (F37-F44) do not contradict the discovery-first
+design (F10/F34) — refusal fires on a narrow denylisted/financial/unauthorized/robots-disallowed
+subset of actions, not on exploratory "extra actions" generally, so F10's friction-accounting mandate
+and the refusal layer apply to disjoint action classes.

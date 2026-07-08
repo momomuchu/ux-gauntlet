@@ -1,0 +1,12 @@
+{
+  "run": {
+    "target_url": "http://localhost:3000",
+    "task_list": "test/fixtures/tasks.json",
+    "personas": ["free-tier-user"],
+    "denylist": ["Delete Account", "Cancel Subscription"]
+  },
+  "actions": [
+    { "persona": "free-tier-user", "step": 6, "type": "click", "element_label": "Delete Account", "outcome": "aborted" }
+  ],
+  "findings": []
+}

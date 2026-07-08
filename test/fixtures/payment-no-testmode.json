@@ -1,0 +1,12 @@
+{
+  "run": {
+    "target_url": "http://localhost:3000",
+    "task_list": "test/fixtures/tasks.json",
+    "personas": ["willing-to-pay-user"],
+    "test_mode": false
+  },
+  "actions": [
+    { "persona": "willing-to-pay-user", "step": 4, "type": "submit", "form_kind": "payment", "outcome": "executed" }
+  ],
+  "findings": []
+}

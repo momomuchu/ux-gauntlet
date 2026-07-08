@@ -41,8 +41,72 @@ PASS: N4: A CI run MUST complete headless without interactive operator input.
 PASS: N5: A 3-persona run against a 5-step task list MUST complete within 45 minutes on one machine.
 PASS: N6: A run against a localhost target URL MUST succeed without any third-party network service beyond the agent runtime itself.
 PASS: N7: All shipped artifacts MUST be written in English.
+PASS: F37: The orchestrator MUST reject a run configuration lacking an operator-supplied action-level denylist of destructive element labels. # DR-01a
+PASS: F38: Each persona subagent MUST abort, not click, any step whose only path forward matches a denylisted label. # DR-01b
+PASS: F39: The skill MUST refuse to execute any payment-submission step in the operator-supplied task list unless the operator has explicitly declared the target run as test-mode in the run configuration. # DR-02
+PASS: F40: The persona agent MUST default to stopping short of submitting any form whose action is a non-idempotent HTTP method, unless the operator has explicitly configured full-submission mode. # DR-03
+PASS: F41: The runner MUST load the target's robots.txt before crawling begins. # DR-04a
+PASS: F42: Each persona subagent MUST abort navigation to a path disallowed for its user-agent in robots.txt, unless the operator passes an explicit override flag. # DR-04b
+PASS: F43: Before writing any evidence artifact to disk, the evidence capture module MUST redact substrings matching a credential-or-payment-data pattern from screenshot text layers. # DR-05a
+PASS: F44: Before writing any evidence artifact to disk, the evidence capture module MUST redact substrings matching a credential-or-payment-data pattern from DOM snippets. # DR-05b
+PASS: F45: The orchestrator MUST classify two friction records as the same underlying finding when they share an identical (heuristic tag, happy-path step index, target-element identifier) tuple. # DR-06a
+PASS: F46: The orchestrator MUST merge two findings classified as the same underlying finding into one findings.json entry with one evidence-pointer array. # DR-06b
+PASS: F47: When a target-app-side 5xx-or-network-failure event occurs during a walkthrough step, the persona agent MUST record it as a distinct app-error event separate from the friction ledger. # DR-07a
+PASS: F48: The report generator MUST list app-error events in a section separate from the heuristic-tagged friction list. # DR-07b
+PASS: F49: The orchestrator MUST record a machine-readable run-status field, separate from findings.json, that is set to BLOCKED when fewer than 3 persona subagents complete their crawl due to a persona-execution failure. # DR-08
+PASS: F50: When a persona's step count crosses patience_threshold_steps, the persona subagent MUST abandon the current task. # DR-09a
+PASS: F51: When a persona's step count crosses patience_threshold_steps, the persona subagent MUST record a terminal friction instance tagged with the abandonment step index. # DR-09b
+PASS: F52: When a persona's step count crosses patience_threshold_steps, the persona subagent MUST set the task outcome field to failed-by-patience in its ledger. # DR-09c
+PASS: F53: Each persona entry in findings.json MUST include a run_status field with exactly one value from {completed, crashed, timed-out, patience-exhausted}. # DR-10a
+PASS: F54: The report's validity-envelope section MUST state the count of personas with run_status not equal to completed whenever that count is greater than zero. # DR-10b
+PASS: F55: The ledger MUST record a task_completed boolean per persona per task. # DR-11a
+PASS: F56: The ledger MUST record a reason code per persona per task when task_completed is false, independent of the friction list for that task. # DR-11b
+PASS: F57: The runner MUST abort any persona subagent's walkthrough once that persona has executed 50 actions, regardless of the persona's self-declared patience-threshold value. # DR-12a
+PASS: F58: The runner MUST emit the partial ledger of any persona subagent aborted for exceeding the 50-action runner-level cap. # DR-12b
+PASS: F59: The skill MUST source every persona-filled name/email/phone-number field from a pre-declared synthetic-test-domain identity pool instead of freely-generated real-looking values. # DR-13
+PASS: F60: The orchestrator MUST record, in the run ledger, every account-or-resource artifact that a persona subagent creates on the target app during a run, including its identifying key-or-URL, as a distinct created-artifact entry. # DR-14
+PASS: F61: The runner MUST hard-stop before starting any crawl when the operator has not explicitly declared the target environment class as one of local, staging, production. # DR-15
+PASS: F62: The task-list schema MUST support an operator-set external-side-effect flag per step. # DR-16a
+PASS: F63: The persona subagent MUST skip any step flagged external-side-effect rather than executing it. # DR-16b
+PASS: F64: The persona subagent MUST record any step flagged external-side-effect as blocked. # DR-16c
+PASS: F65: The runner MUST refuse to begin any crawl unless the operator has passed an explicit --i-own-this-target confirmation flag on the command line. # DR-17
+PASS: F66: The persona validator MUST exit nonzero when a persona file contains a field matching a live-credential pattern instead of an operator-designated disposable-test-account reference. # DR-18
+PASS: F67: Before any run against a non-localhost target, the runner MUST require an explicit operator confirmation that captured evidence (screenshots, DOM excerpts) may contain third-party data. # DR-19a
+PASS: F68: The runner MUST refuse to start a run against a non-localhost target without that third-party-data confirmation. # DR-19b
+PASS: F69: Each run MUST emit a run manifest recording the skill/schema version, the heuristic-set version, a per-persona content hash used in that run. # DR-20
+PASS: F70: The validity-envelope disclosure section MUST state that re-running the same target/personas can surface a differing, non-superset-non-subset set of findings. # DR-21a
+PASS: F71: The validity-envelope disclosure section MUST NOT claim single-run completeness. # DR-21b
+PASS: F72: The baseline file MUST store one stable finding_id per finding, deterministic across reruns, independent of evidence text/timestamp. # DR-22a
+PASS: F73: CI mode MUST match findings against the baseline solely by finding_id. # DR-22b
+PASS: F74: CI mode MUST treat evidence-text/timestamp fields as informational-only, excluded from the diff comparison. # DR-22c
+PASS: F75: The orchestrator MUST terminate any persona subagent still running when the run-level wallclock timeout fires. # DR-23a
+PASS: F76: The orchestrator MUST merge the partial ledger of any persona subagent terminated by the run-level wallclock timeout, as-is, into findings.json. # DR-23b
+PASS: F77: The skill MUST NOT record a transient technical failure (network error, element-not-rendered, navigation timeout) as a friction instance. # DR-24
+PASS: F78: A persona subagent MUST terminate its crawl when its step count exceeds the patience threshold declared in its persona file. # DR-25a
+PASS: F79: A persona subagent MUST emit a distinct run-status event of type patience-exceeded, separate from the findings ledger, when its step count exceeds the patience threshold declared in its persona file. # DR-25b
+PASS: F80: The runner CLI MUST exit with distinct code 3, printing a one-line stderr reason, when the target URL is unreachable at crawl start due to a target-unreachable condition (DNS failure, connection refused, TLS handshake error). # DR-26
+PASS: F81: The orchestrator MUST write a status file, updated at least once per completed persona step, recording each persona subagent's current state as one of running, done, failed. # DR-27a
+PASS: F82: The orchestrator MUST record each persona subagent's last-completed step index in the status file. # DR-27b
+PASS: F83: The skill MUST ship an example happy-path tasks JSON file conforming to the runner's tasks schema, referenced by name in SKILL.md, that an operator can pass directly to the CLI without authoring their own tasks file. # DR-28
+PASS: F84: The runner CLI MUST emit a fixed-path summary.json, distinct from findings.json, on every completed run containing exit status, finding counts per severity level, convergence-tier distribution, the findings.json/markdown-report output paths. # DR-29
+PASS: F85: The runner CLI MUST verify target URL reachability before delegating any subagent. # DR-30a
+PASS: F86: The runner CLI MUST emit a single actionable stderr message identifying the unreachable URL when the reachability check fails. # DR-30b
+PASS: F87: When browser launch fails due to a missing display with --headless not passed, the runner MUST exit nonzero with a diagnostic message naming the missing display, instructing the operator to add --headless. # DR-31
+PASS: F88: Each persona subagent's browser session MUST use a browser profile with no cookies, localStorage, app-server session state shared with any other concurrently running persona subagent targeting the same app instance. # DR-32
+PASS: F89: The happy-path task-list format MUST let the operator author precondition-establishing steps, such as login with a pre-seeded fixture account, as explicit leading steps of the task list. # DR-33a
+PASS: F90: The specification MUST state that creating precondition state is the operator's responsibility, out of scope for the persona to invent. # DR-33b
+PASS: F91: The skill README MUST instruct operators to add the evidence output directory to .gitignore before running against any target containing real user data. # DR-34
+PASS: F92: The findings schema MUST assign each finding a finding_id computed as a deterministic hash of persona role, heuristic tag, normalized step identifier, friction semantic key, independent of ledger arrival order. # DR-35
+PASS: F93: findings.json MUST include a top-level schema_version integer field. # DR-36a
+PASS: F94: Each persona file MUST include a top-level schema_version integer field. # DR-36b
+PASS: F95: The report gate script MUST reject any findings.json whose schema_version value is not in the gate's supported-versions list. # DR-36c
+PASS: F96: The persona validator script MUST reject any persona file whose schema_version value is not in the gate's supported-versions list. # DR-36d
+PASS: F97: On a delegation-unsupported runtime, with no Task/subagent delegation, no background-task support, the skill README MUST state that persona execution requires sequential non-parallel fallback, unverified/unsupported in the MVP. # DR-37
+PASS: F98: The runner MUST cap concurrently executing persona subagents at a configurable max-parallelism value (default 5), queuing any additional persona subagents until a running slot frees. # DR-38
+PASS: F99: The orchestrator MUST terminate a persona subagent early when that subagent's LLM tool-call count exceeds a configured per-run maximum, independent of its step-count patience threshold. # DR-39a
+PASS: F100: The orchestrator MUST emit the partial ledger of any persona subagent terminated for exceeding the per-run LLM tool-call maximum. # DR-39b
 ---
-SUMMARY: 43 requirement(s) checked, 0 failed (mechanical check: testable/atomic/binding/unambiguous).
+SUMMARY: 107 requirement(s) checked, 0 failed (mechanical check: testable/atomic/binding/unambiguous).
 MANUAL CHECKLIST (not mechanically checkable — verify by hand before freeze, per CRITERION 1):
   - true stakeholder need: does each line trace to a real stated need, not an assumption?
   - stakeholder vocabulary: does each line use the domain's own words, not implementation jargon?
