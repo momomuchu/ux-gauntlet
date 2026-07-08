@@ -25,7 +25,7 @@ A CLI is a public interface — a material decision per decision-record discipli
 | `--full-submission` | no | disables the default dry-run boundary on non-idempotent requests (F40) — does NOT affect a step flagged `precondition_step` or `audited_terminal_step` in the task list, both of which submit regardless (F126/F127 CR2-1; F145/F146 CR3-1, D15) |
 | `--override-robots` | no | overrides robots.txt disallow-abort (F41/F42); off by default; commonly needed against local/staging targets that ship a blanket `Disallow: /` robots.txt for search-index exclusion (F152, CR3-7) — see D15 for the full localhost/staging relaxation enumeration |
 | `--personas <paths...>` | no | persona data files; default = every file in `personas/` |
-| `--max-parallel <n>` | no | concurrent persona subagent cap; default 5 (F98) |
+| `--max-parallel <n>` | no | concurrent persona subagent cap, minimum 2; default 5 (F98/F185, CR5-MIN2 — a value below 2 is rejected as a usage error) |
 | `--max-tool-calls <n>` | no | per-persona-per-run LLM tool-call cap; default 250 (F99/F100/F154, CR3-9 — ties to F57's 50-action cap x ~5 tool-calls/action) |
 | `--headless` | no | forces headless browser mode; redundant with the auto-default below but kept for explicit CI invocations |
 | `--no-headless` | no | forces a visible-browser launch, overriding the auto-headless default (F135, CR2-10) |
@@ -72,6 +72,16 @@ non-idempotent-method detection uses network-request interception of the actual 
 by the submitted request (F117), not static sniffing of a `<form method>` DOM attribute, which is
 frequently absent or overridden by client-side JS.
 
+**Revision 2026-07-09 (challenge round 5, CR5-B2):** F117's interception MUST correlate an
+intercepted non-idempotent request to the step's own submission before treating it as covered by
+F40's dry-run boundary or by a per-step exemption flag: the request must be a same-origin
+fetch/XHR/navigation initiated synchronously within the current-step click-or-key interaction's own
+event-handler continuation (F179). A concurrent unrelated non-idempotent request in the same step
+window — an analytics beacon, an autosave PATCH, a heartbeat POST — never satisfies that
+correlation and MUST NOT be aborted or exempted as if it were the step's own submission (F180).
+This closes the ambiguity where a builder either over-blocks an unrelated write during a
+`precondition_step` (breaking login) or under-protects one during an `audited_terminal_step`.
+
 **Revision 2026-07-08 (challenge round 2, CR2-1/CR2-5/CR2-10):** two per-step task-list schema
 fields join `payment_step` (F115) and `external_side_effect` (F62) as the same kind of narrowly
 scoped, operator-set, per-step override — see spec.md D14. `precondition_step` (F126) marks an
@@ -110,10 +120,16 @@ robots.txt `Disallow: /` blocking a local/staging target (F152, CR3-7) — first
 CR2-7), applied here to F99/F100's per-run LLM tool-call cap.
 
 Companion scripts share the convention: `report-gate.mjs [--check-fixture <file>|<findings.json>]`,
-`render-report.mjs <findings.json>`, `validate-persona.mjs <persona-file>` — each exits nonzero on
-violation with a stderr reason. `ci-diff.mjs` additionally prints the F138/F139 rerun-instability
+`render-report.mjs <findings.json>`, `validate-persona.mjs <persona-file>`, `ci-diff.mjs --baseline
+<file> --current <file>` — each exits nonzero on violation with a stderr reason (CR5-M5, closing a
+gap where `ci-diff.mjs`'s own flags, invoked 8 times in the frozen suite, were never authorized here
+even though the ADR's Consequences clause claims the acceptance test may only invoke the interface
+recorded in this document). `ci-diff.mjs` additionally prints the F138/F139 rerun-instability
 caveat directly to its own stderr, not only via `render-report.mjs`'s markdown output, whenever it
-exits nonzero due to a new-or-escalated severity-4 finding (F158, CR3-13).
+exits nonzero due to a new-or-escalated severity-4 finding (F158, CR3-13), plus the `convergence_tier`
+value of each new-or-escalated severity-4 finding triggering that exit (F190, CR5-MIN7) — so an
+operator staring at a red CI run can tell a tier-1 lead from a tier-3 corroborated regression from
+stderr alone.
 
 ## Alternatives considered
 

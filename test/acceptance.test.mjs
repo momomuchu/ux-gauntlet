@@ -272,7 +272,34 @@ test('F161 F162 CR4-B3: impact and persistence, F12\'s other two severity factor
   const unscoped = gate('findings-severity-impact-persistence-unscoped-bad.json');
   assert.notEqual(unscoped.code, 0, 'an impact value not traceable to the F161 fixed mapping (terminal_recovery_outcome says "recovered-with-minor-detour"=1, but severity_factors.impact is an unscoped 4) must fail the gate');
   const mapped = gate('findings-severity-impact-persistence-mapped-ok.json');
-  assert.equal(mapped.code, 0, 'frequency, impact, and persistence each traceable to their own fixed mapping (F159/F161/F162), with severity=round(mean(0,4,1))=2 correctly matching, must pass the gate (negative control, CR4-B3)');
+  assert.equal(mapped.code, 0, 'frequency, impact, and persistence each traceable to their own fixed mapping (F159/F161/F162), with severity=round(mean(0,4,0))=1 correctly matching, must pass the gate (negative control, CR4-B3, severity/persistence corrected CR5-B4)');
+  // CR5-B4 (challenge round 5 BLOCKER-4): frequency (F159) and persistence (F162) previously collapsed
+  // to the SAME within-run recurrence signal — same_run_recurrence_count was an independently-authored
+  // count structurally identical to F136's own raw re-encounter count, silently double-weighting one
+  // observation in every severity score. Persistence is now DEFINED as F136's count minus 1, not a
+  // sibling count; the multi-occurrence fixture below (raw_within_run_reencounter_count=4) exercises
+  // the persistence-not-equal-to-0 branch honestly under the corrected, non-double-counting definition.
+  const multi = gate('findings-persistence-multi-occurrence-ok.json');
+  assert.equal(multi.code, 0, 'a raw within-run re-encounter count of 4 (same_run_recurrence_count=3, the corrected F162 definition of F136\'s count minus 1) mapping to persistence=2, with severity=round(mean(2,2,2))=2 correctly matching, must pass the gate (negative control, CR5-B4)');
+});
+
+test('F181 CR5-B4: the validity envelope discloses that frequency and persistence are derived from the same within-run re-encounter observation, not two independently verified NN/g inputs', () => {
+  // Requirement ID: F181 (challenge round 5 BLOCKER-4 — DECISION-BRIEF.md defines frequency and
+  // persistence as structurally distinct signals, but the isolated single-persona-per-subagent
+  // architecture (F30/F31) forces both down to one observable proxy; the report must disclose the
+  // collapse to the reader, not silently double-weight it in every severity score.)
+  const mdNumeric = run(['scripts/render-report.mjs', 'test/fixtures/findings-severity-impact-persistence-mapped-ok.json']).stdout;
+  assert.match(mdNumeric, /frequency.{0,80}persistence.{0,80}same within-run|persistence.{0,80}frequency.{0,80}same within-run|same within-run re-encounter observation/i, 'the validity envelope states frequency and persistence are both derived from the same within-run re-encounter observation, not independently verified NN/g inputs, when severity_factors is numeric (F181, CR5-B4)');
+});
+
+test('F184 CR5-M4: the severity scale, the F12/F159/F161/F162 bucket mappings, load from the configured heuristic-set file, not a hardcoded rubric', () => {
+  // Requirement ID: F184 (challenge round 5 MAJOR-4 — the brief hedges the severity scale identically
+  // to the heuristic taxonomy as "not independently re-verified, keep swappable in the data file," but
+  // only the heuristic set (F28/D7) received a data-file override; the severity formula and its bucket
+  // mappings were left as fixed MUSTs with no swap mechanism, so CI hard-blocks on a rubric the source
+  // material itself calls unverified, with no swap mechanism a builder could use.)
+  const ok = gate('findings-custom-severity-rubric-ok.json');
+  assert.equal(ok.code, 0, 'a raw within-run re-encounter count of 3, mapped to frequency=2 under a non-default configured severity-rubric override (test/fixtures/heuristics-custom-severity-rubric.json), not frequency=1 under F159\'s shipped default, must pass the gate — the bucket mapping is configured data, not a hardcoded rubric (F184)');
 });
 
 test('F110 CR1-9: ambiguity_resolution friction requires >=2 concurrently visible candidates, not self-narrated hesitation', () => {
@@ -369,6 +396,17 @@ test('F92 F45 F165 CR2-6/CR4-M3: finding_id equals a deterministic hash of exact
   assert.equal(b.code, 0, 'the identical formula applied to a differently-shaped merge (accessible-name-plus-role tier, no data-testid) must independently pass the gate too, proving the identity function is tier-agnostic, not one hand-matched literal (F92/F103)');
   const mismatched = gate('findings-finding-id-mismatched-bad.json');
   assert.notEqual(mismatched.code, 0, 'a finding_id that does not equal the deterministic hash of its own (heuristic_tag, step, target_element_identifier) tuple must fail the gate (F92 formula violation)');
+});
+
+test('F183 CR5-M3: an icon-only element with no testid/aria-label/id/innerText resolves via a fully-specified 5th (structural-path) tier, merging identically across personas', () => {
+  // Requirement ID: F103, F183 (challenge round 5 MAJOR-3 — F103's 4-tier fallback had no terminal
+  // case for a common real pattern, icon-only <button><svg/></button>; two builders inventing their
+  // own tier-5 behavior would silently defeat F45 cross-persona dedup on exactly the ambiguous-control
+  // class the tool is most valuable for catching.)
+  const merged = gate('findings-icon-only-structural-path-merged-ok.json');
+  assert.equal(merged.code, 0, 'two personas independently computing the identical F183 tier-5 structural path for the same icon-only element merge into one finding at convergence_tier=2 (negative control)');
+  const divergent = gate('findings-icon-only-structural-path-divergent-bad.json');
+  assert.notEqual(divergent.code, 0, 'two personas anchoring the identical icon-only element to two DIFFERENT ancestors (one correctly stable-id-qualified, one not, per F183) must fail the gate — the divergent structural path silently collapses convergence_tier=2 to two convergence_tier=1 entries');
 });
 
 test('F147 CR3-2: an off-path friction\'s step field equals the next-pending happy-path step, never the last-completed one', () => {
@@ -505,6 +543,23 @@ test('F25 F29: persona validator rejects a malformed persona and names the missi
     const ok = run(['scripts/validate-persona.mjs', `personas/${p}.yaml`]);
     assert.equal(ok.code, 0, `shipped default persona ${p} must validate (F2-F4, negative control)`);
   }
+  // CR5-M7 (challenge round 5 MAJOR-7): F1/F5 (CRITICAL/BLOCKS:critical, 5 required persona fields)
+  // previously had real behavioral proof for only 1 of its 5 mandated fields (patience_threshold_steps
+  // above); the other 4 (goal, success_criteria, budget_authority, forbidden_claims) were proven only
+  // by a static schema-declaration check (the 'F1 F5' test at the top of this file), so a hand-rolled
+  // validator hardcoding one check and ignoring the rest passed the entire frozen suite on a
+  // BLOCKS:critical requirement. Behaviorally invoke validate-persona.mjs against 4 new fixtures, one
+  // missing field each.
+  for (const [field, file] of [
+    ['goal', 'persona-missing-goal.yaml'],
+    ['success_criteria', 'persona-missing-success-criteria.yaml'],
+    ['budget_authority', 'persona-missing-budget-authority.yaml'],
+    ['forbidden_claims', 'persona-missing-forbidden-claims.yaml'],
+  ]) {
+    const rField = run(['scripts/validate-persona.mjs', `test/fixtures/${file}`]);
+    assert.notEqual(rField.code, 0, `persona missing ${field} must be rejected (F1/F5, CR5-M7)`);
+    assert.match(rField.stderr, new RegExp(field), `validator names the missing ${field} field (F1/F5, CR5-M7)`);
+  }
 });
 
 test('F66 CR2-16: persona validator rejects a live-credential-shaped field value', () => {
@@ -539,6 +594,12 @@ test('F151 CR3-6/CR3-14: CI mode also blocks when an ALREADY-KNOWN finding_id es
   const stderrCaveat = run(['scripts/ci-diff.mjs', '--baseline', 'test/fixtures/findings-valid.json', '--current', 'test/fixtures/findings-new-sev4.json']);
   assert.match(stderrCaveat.stderr, /rerun/i, 'F158: ci-diff.mjs prints the rerun-instability caveat directly to its OWN stderr, not only via render-report.mjs\'s markdown output — a headless CI consumer (N4) typically only surfaces the failing command\'s own stderr (CR3-13)');
   assert.match(stderrCaveat.stderr, /manually re-run/i, 'F158: ci-diff.mjs\'s own stderr also carries the manual-re-run instruction (CR3-13)');
+  // F190 (challenge round 5 MINOR-7): D3/CR1-19 deliberately blocks on severity-4 independent of
+  // convergence_tier, but the terse CI-failure stderr path never surfaced the blocking finding's own
+  // convergence_tier, so an operator staring at a red CI run could not tell a tier-1 lead from a
+  // tier-3 corroborated regression without opening the full report. findings-escalated-to-sev4.json's
+  // escalated finding (fr-002) carries personas_flagging=["vp-team-buyer"], convergence_tier=1.
+  assert.match(escalated.stderr, /convergence_tier[^0-9]{0,10}1\b/i, 'F190: ci-diff.mjs prints the convergence_tier value (1, matching the escalated finding\'s personas_flagging count) to its own stderr alongside the F158 caveat (CR5-MIN7)');
 });
 
 test('F101 CR1-2: CI mode also exits nonzero when run_status is BLOCKED, independent of severity-4 content', () => {
@@ -609,6 +670,18 @@ test('F145 F146 CR3-1 D15: audited_terminal_step exempts only its own step from 
   assert.equal(ok.code, 0, 'an audited_terminal_step-flagged submission passes the gate under full_submission_mode=false, with no --full-submission needed for the whole run (F146)');
   const scoped = gate('audited-terminal-step-scoped-not-global-bad.json');
   assert.notEqual(scoped.code, 0, 'a non-audited non-idempotent step in the SAME run still fails the gate under the same mode — the exemption is step-scoped, not a global bypass (F40/F145/F146, D15)');
+});
+
+test('F179 F180 CR5-B2: a non-idempotent request must correlate to the step\'s own interaction to be exempted; an unrelated background request in the same step window is neither exempted nor treated as that step\'s own submission', () => {
+  // Requirement ID: F179, F180 (challenge round 5 BLOCKER-2 — F117 mandated network-request
+  // interception to enforce F40's dry-run boundary, but nothing defined how an intercepted request
+  // correlates to "the step's own submission" versus a concurrent unrelated write (analytics beacon,
+  // autosave PATCH, heartbeat POST) — a builder either over-blocks an unrelated write during a
+  // precondition_step, breaking login, or under-protects one during an audited_terminal_step.)
+  const ok = gate('nonidempotent-background-request-correlation-ok.json');
+  assert.equal(ok.code, 0, 'a precondition_step\'s own correlated submission executes (F127) while an unrelated, uncorrelated background non-idempotent request in the same step window is independently dry-run-blocked, not exempted by the step\'s own flag (F179/F180, negative control)');
+  const bad = gate('nonidempotent-background-request-wrongly-exempted-bad.json');
+  assert.notEqual(bad.code, 0, 'an unrelated background non-idempotent request wrongly exempted just because it fired during a precondition_step\'s window, despite not correlating to that step\'s own interaction, must fail the gate (F179/F180 violation)');
 });
 
 test('F39 F40 F115 F116 F117: payment and non-idempotent submit steps executed outside their explicit modes fail the gate', () => {
@@ -788,12 +861,19 @@ test('F143 F144 CR2-17: confidence_label and confidence coexist on the same find
   assert.match(md, /degraded-below-persona-floor/i, 'confidence renders independently (F124), without colliding with confidence_label');
 });
 
-test('F50 F51 F52: crossing patience_threshold_steps must abandon the task, log a terminal friction, and set failed-by-patience', () => {
+test('F50 F51 F52: crossing patience_threshold_steps must abandon the task, log a terminal friction, and set failed_by_patience', () => {
   // Requirement ID: F50, F51, F52
   assert.ok(existsSync('scripts/report-gate.mjs'), 'scripts/report-gate.mjs missing');
   const incomplete = gate('patience-abandon-incomplete.json');
-  assert.notEqual(incomplete.code, 0, 'a persona past its patience threshold left in_progress (no abandon, no terminal friction, no failed-by-patience outcome) must fail the gate');
+  assert.notEqual(incomplete.code, 0, 'a persona past its patience threshold left in_progress (no abandon, no terminal friction, no failed_by_patience outcome) must fail the gate');
   assert.match(incomplete.stderr + incomplete.stdout, /patience/i, 'gate output names the patience-abandonment rule');
+  // CR5-M1 (challenge round 5 MAJOR-1): requirements.txt/spec.md previously mandated the hyphenated
+  // `failed-by-patience`, but all 3 frozen ledger fixtures write the underscored `failed_by_patience`,
+  // and no test asserted the literal string either way — a builder following the requirement text
+  // shipped a value that diverged byte-for-byte from every fixture, undetected by a bare /patience/i
+  // regex match. This reads the parsed ledger JSON directly and locks the chosen spelling.
+  const okLedger = json('test/fixtures/patience-abandon-with-evidence.json').tasks_ledger[0];
+  assert.equal(okLedger.outcome, 'failed_by_patience', 'the ledger outcome field literal spelling is failed_by_patience (underscored), matching the frozen fixture ground truth, not the previously-required hyphenated failed-by-patience (F52, CR5-M1)');
 });
 
 test('F114 F125 CR1-12/CR1-26: a correctly abandoned task carries a heuristic-tagged terminal friction with captured evidence, and survives the gate', () => {
@@ -813,6 +893,15 @@ test('F149 F150 CR3-5: patience-abandonment identity is fixed (sentinel + design
   assert.equal(merged.code, 0, 'two personas independently abandoning the identical task at the identical step, via different simulated DOM/path state, merge into one finding at convergence_tier=2 because target_element_identifier is a fixed per-step sentinel (F149) and heuristic_tag is the one designated patience-abandonment tag (F150) — negative control');
   const divergent = gate('patience-identity-divergent-values-bad.json');
   assert.notEqual(divergent.code, 0, 'the identical step-11 abandonment recorded with a DOM-derived target_element_identifier for one persona, instead of the fixed sentinel F149 mandates, must fail the gate — the divergence silently collapses convergence_tier=2 to two convergence_tier=1 entries');
+});
+
+test('F188 CR5-MIN5: the validity envelope states that a terminal_friction finding\'s heuristic_tag identifies the designated patience-abandonment tag, not a diagnostic classification', () => {
+  // Requirement ID: F188 (challenge round 5 MINOR-5 — F150's fixed heuristic_tag is a deliberate
+  // corroboration sentinel by design (closing a CR3-5 convergence gap), but no disclosure told the
+  // report reader that; mitigated by F114's mandatory evidence and F177's distinct friction_type tag,
+  // but never stated outright until now.)
+  const md = run(['scripts/render-report.mjs', 'test/fixtures/patience-abandon-with-evidence.json']).stdout;
+  assert.match(md, /designated patience-abandonment tag/i, 'the validity envelope names heuristic_tag on a terminal_friction finding as the designated patience-abandonment tag, not the underlying interaction failure (F188), whenever any finding carries friction_type=terminal_friction');
 });
 
 test('F55 F56 F123: the ledger must record task_completed and an enumerated reason code independent of the friction list', () => {
@@ -899,10 +988,14 @@ test('F166 CR4-M4: the evidence gate redacts an HTTP cookie header captured in a
   assert.equal(ordinary.code, 0, 'ordinary prose mentioning the word "cookie" (no header pattern) must pass — the redaction is shape-qualified, not keyword-blunt (negative control)');
 });
 
-test('F170 CR4-M8: personas_flagging is the sole input to convergence_tier, gate-enforced', () => {
-  // Requirement ID: F170 (challenge round 4 — convergence_tier's derivation was asserted in D12
-  // prose but nothing forced tier == count(personas_flagging), so a builder could compute the tier
-  // any inconsistent way and still pass; findings-bad-tier.json has tier=3 with 2 flagging personas).
+test('F170 F189 CR4-M8/CR5-MIN6: personas_flagging feeds convergence_tier\'s arithmetic AND must trace back to genuine merge provenance, gate-enforced', () => {
+  // Requirement ID: F170, F189 (challenge round 4 — convergence_tier's derivation was asserted in D12
+  // prose but nothing forced tier == count(personas_flagging-whose-run_status-is-completed), so a
+  // builder could compute the tier any inconsistent way and still pass; findings-bad-tier.json has
+  // tier=3 with 2 flagging personas. Challenge round 5 MINOR-6: the arithmetic check alone is
+  // near-tautological — it never verified the array's CONTENTS trace back to real per-persona merge
+  // provenance, only that its length matches. findings-personas-flagging-provenance-bad.json has the
+  // correct length/tier but a wrong persona_id substituted in.)
   const s = json('schemas/findings.schema.json');
   const finding = s.$defs?.finding ?? s.definitions?.finding;
   assert.ok(finding.required.includes('personas_flagging'), 'every finding must carry personas_flagging (F170)');
@@ -910,4 +1003,6 @@ test('F170 CR4-M8: personas_flagging is the sole input to convergence_tier, gate
   assert.notEqual(bad.code, 0, 'convergence_tier that does not equal the length of personas_flagging must fail the gate (F170/F17)');
   const ok = gate('findings-valid.json');
   assert.equal(ok.code, 0, 'the valid fixture whose tier equals |personas_flagging| passes (negative control)');
+  const provenanceBad = gate('findings-personas-flagging-provenance-bad.json');
+  assert.notEqual(provenanceBad.code, 0, 'personas_flagging with correct length/tier (2) but a persona_id swapped for one that never produced a pre-merge friction record under this finding\'s F45 identity tuple must fail the gate — the F17/F170 arithmetic check alone cannot catch a provenance-wrong substitution (F189, CR5-MIN6)');
 });

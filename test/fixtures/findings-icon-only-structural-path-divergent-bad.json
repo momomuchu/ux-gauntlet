@@ -1,0 +1,43 @@
+{
+  "run": {
+    "target_url": "http://localhost:3000",
+    "task_list": "test/fixtures/tasks.json",
+    "personas": ["free-tier-user", "willing-to-pay-user", "vp-team-buyer"]
+  },
+  "findings": [
+    {
+      "id": "fr-802",
+      "finding_id": "fid-icon-only-menu-toggle-a",
+      "friction_name": "icon-only menu toggle has no discoverable label",
+      "friction_type": "walkthrough_failure",
+      "step": 1,
+      "target_element_identifier": "header#app-toolbar>button:nth-of-type(3)",
+      "personas_flagging": ["free-tier-user"],
+      "convergence_tier": 1,
+      "partial_tier": 0,
+      "heuristic_tag": "recognition-rather-than-recall",
+      "severity": 2,
+      "severity_factors": { "frequency": "every first visit", "impact": "persona hunts for the menu", "persistence": "recurs" },
+      "market_impact": false,
+      "evidence": [{ "type": "screenshot", "path": "runs/fixture/step1-free-tier-icon.png", "persona": "free-tier-user" }],
+      "narrative": "free-tier-user's record correctly walks up to the nearest ancestor carrying a stable id (header#app-toolbar) per F183."
+    },
+    {
+      "id": "fr-803",
+      "finding_id": "fid-icon-only-menu-toggle-b",
+      "friction_name": "icon-only menu toggle has no discoverable label",
+      "friction_type": "walkthrough_failure",
+      "step": 1,
+      "target_element_identifier": "nav.icon-row>button:nth-of-type(2)",
+      "personas_flagging": ["willing-to-pay-user"],
+      "convergence_tier": 1,
+      "partial_tier": 0,
+      "heuristic_tag": "recognition-rather-than-recall",
+      "severity": 2,
+      "severity_factors": { "frequency": "every first visit", "impact": "persona hunts for the menu", "persistence": "recurs" },
+      "market_impact": false,
+      "evidence": [{ "type": "dom", "path": "runs/fixture/step1-wtp-icon.html", "persona": "willing-to-pay-user" }],
+      "narrative": "willing-to-pay-user's record WRONGLY anchors to a nearer, non-stable-id ancestor (nav.icon-row, a plain CSS class selector, not a data-testid/id/ARIA-landmark-carrying ancestor per F183) for the identical icon-only button free-tier-user correctly anchored to header#app-toolbar — the two records' target_element_identifier now diverge, they fail to merge, and the same underlying friction is silently reported as two convergence_tier=1 findings instead of one convergence_tier=2 finding (F183 violation)."
+    }
+  ]
+}

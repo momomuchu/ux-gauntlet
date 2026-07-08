@@ -107,3 +107,28 @@ schema/build cost. Verdict unchanged: scope still FITS budget (unconstrained tok
 deadline); the enum-producer traceability table added to spec.md (Enum / flag-family → producers)
 net-simplifies future challenge-round audits by making producer coverage visually inspectable instead
 of requiring a fresh adversarial sweep each round.
+
+## Challenge round 5 growth (2026-07-09)
+
+Requirement count grew again, from 187 (F1-F178, N1-N9) to 199 (F1-F190, N1-N9), after the
+challenge-round-5 adversarial pass confirmed 18 distinct defects (4 BLOCKER, 7 MAJOR, 7 MINOR) and
+every fix_directive was applied, PLUS a mandated root-cause sweep of every closed-enum value family
+across requirements.txt/spec.md/fixtures/tests for the "same value spelled differently" defect class
+(recorded as `## CR5 canonical token table` in scrub-log.md). `test/fixtures/` grew from 107 to 119
+files (12 new fixtures for the new/extended RED test cases; 1 existing fixture,
+`findings-severity-impact-persistence-mapped-ok.json`, edited in place to correct its severity
+arithmetic under F162's corrected bucket definition). Build surface addition: zero new schema/script
+files (this round's fixes are all requirement-wording, correlation-rule, disclosure, and
+provenance-check closures, not new subsystems) — the closest to a new build item is F179/F180's
+request-correlation rule, which is browser network-interception logic the runner already needed to
+implement to satisfy the pre-existing F117 requirement, not a new capability. No new CLI flags
+(ADR-0001's flag table is unchanged this round; `--max-parallel`'s existing cell gained a
+minimum-value clause, F185, not a new flag). The root-cause sweep's most consequential finding was
+that only 3 of the ~8 closed-enum families it checked had a real spelling/claim drift (F170, F49,
+F52) — the sweep also positively confirmed one near-miss (`robots_disallowed`, a per-action boolean
+field, vs. `robots-disallowed`, the `reason_code` enum value) was NOT a collision, closing the
+question before a future round mistakes it for one. Verdict unchanged: scope still FITS budget
+(unconstrained token budget, no external deadline); the canonical token table net-simplifies future
+challenge-round audits the same way CR4's enum-producer table already did, by making every closed
+family's ground-truth spelling visually inspectable in one place instead of requiring a fresh
+cross-file grep sweep each round.

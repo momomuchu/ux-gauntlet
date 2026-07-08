@@ -276,3 +276,30 @@ the original combined F168) is the same shipped-artifact-verification policy cat
 | F178 | functional | example-verification policy (schema-validated terminal flag) — CR4-M6 |
 
 Summary: 178 functional, 9 nonfunctional (187 total).
+
+## Challenge round 5 pass 2026-07-09 (.swe-spec/CHALLENGE-ROUND-5.md, F179-F190)
+
+Same Perfect Technology Filter question applied to each landed line. All 12 new lines resolve to
+`functional`: every one is a correlation/disclosure/data-file-swappability/ledger-detection/schema-
+fallback/CI-output policy that a live-target crawl, a real non-idempotent request, or a nondeterministic
+parallel pipeline still needs regardless of compute speed/memory/cost — none describe a pure QoS/
+resource attribute of the evaluating machine itself. This round adds ZERO new N-numbers (same pattern
+as rounds 3 and 4): F184 (severity-rubric swappability) is a data-loading policy, not a QoS bound,
+matching the existing F28 heuristic-set-pluggability precedent it extends.
+
+| ID | Category | Filter note |
+|----|----------|-------------|
+| F179 | functional | refusal-scoping policy (non-idempotent request correlation rule) — CR5-B2 |
+| F180 | functional | refusal-scoping policy (uncorrelated request never exempted) — CR5-B2 |
+| F181 | functional | disclosure policy (frequency/persistence shared-observation caveat) — CR5-B4 |
+| F182 | functional | ledger-detection policy (self-reported created-artifact entry) — CR5-M2 |
+| F183 | functional | identity-computation policy (5th structural-path selector tier) — CR5-M3 |
+| F184 | functional | scoring-rubric swappability policy (data-file override) — CR5-M4 |
+| F185 | functional | CLI validation policy (--max-parallel floor rejection) — CR5-MIN2 |
+| F186 | functional | orchestration policy (status-fragment merge) — CR5-MIN3 |
+| F187 | functional | documentation policy (sequential-fallback CI-mode caveat) — CR5-MIN4 |
+| F188 | functional | disclosure policy (heuristic_tag corroboration-sentinel caveat) — CR5-MIN5 |
+| F189 | functional | output-contract policy (personas_flagging merge-provenance check) — CR5-MIN6 |
+| F190 | functional | CI-output policy (convergence_tier stderr line) — CR5-MIN7 |
+
+Summary: 190 functional, 9 nonfunctional (199 total).

@@ -1,0 +1,13 @@
+{
+  "run": {
+    "target_url": "http://localhost:3000",
+    "task_list": "test/fixtures/tasks.json",
+    "personas": ["free-tier-user"],
+    "full_submission_mode": false
+  },
+  "actions": [
+    { "persona": "free-tier-user", "step": 1, "type": "submit", "http_method": "POST", "detected_via": "network-request-interception", "precondition_step": true, "correlated_to_step_interaction": true, "outcome": "executed" },
+    { "persona": "free-tier-user", "step": 1, "type": "background-request", "http_method": "POST", "target_path": "/analytics/beacon", "detected_via": "network-request-interception", "correlated_to_step_interaction": false, "outcome": "executed" }
+  ],
+  "narrative": "The same uncorrelated background analytics-beacon POST as the -ok sibling, but here a builder over-broadly scoped the precondition_step exemption to the ENTIRE step window instead of the one correlated interaction, wrongly letting the unrelated background request execute (outcome: executed) even though correlated_to_step_interaction=false — an F179/F180 violation: a non-idempotent request that does not satisfy F179's correlation rule MUST NOT be exempted by F40's dry-run boundary, regardless of which step's window it fired in (CR5-B2)."
+}

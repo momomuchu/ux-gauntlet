@@ -22,8 +22,9 @@
 | Challenge round 2 (`.swe-spec/CHALLENGE-ROUND-2.md`) | done — 23 confirmed defects applied (4 BLOCKER, 12 MAJOR, 7 MINOR), 20 requirements added (F126-F144, N9) |
 | Challenge round 3 (`.swe-spec/CHALLENGE-ROUND-3.md`) | done — 20 confirmed defects applied (6 BLOCKER, 10 MAJOR, 4 MINOR), 16 requirements added (F145-F160) |
 | Challenge round 4 (`.swe-spec/CHALLENGE-ROUND-4.md`) | done — 22 confirmed defects applied (4 BLOCKER, 12 MAJOR, 6 MINOR), 18 requirements added (F161-F178), plus a systematic sweep of 5 defect-generator patterns across the whole spec |
-| Specification (`docs/specs/0001-ux-gauntlet-mvp.spec.md`) | written + disjoint-reviewed + unknowns-integrated + challenge-round-4-hardened (187 requirements) — awaiting founder approval, freeze withheld |
-| RED acceptance test (`test/acceptance.test.mjs`) | in place, intentionally failing (71 tests, 0 pass, 71 fail) |
+| Challenge round 5 (`.swe-spec/CHALLENGE-ROUND-5.md`) | done — 18 confirmed defects applied (4 BLOCKER, 7 MAJOR, 7 MINOR), 12 requirements added (F179-F190), plus a canonical-token-table sweep closing the "same value spelled differently" defect class across requirements.txt/spec.md/fixtures/tests |
+| Specification (`docs/specs/0001-ux-gauntlet-mvp.spec.md`) | written + disjoint-reviewed + unknowns-integrated + challenge-round-5-hardened (199 requirements) — awaiting founder approval, freeze withheld |
+| RED acceptance test (`test/acceptance.test.mjs`) | in place, intentionally failing (76 tests, 0 pass, 76 fail) |
 | Skill implementation (`SKILL.md` + personas + gates) | pending |
 
 ## Why another one?

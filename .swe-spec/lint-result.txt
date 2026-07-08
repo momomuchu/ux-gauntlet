@@ -53,10 +53,10 @@ PASS: F45: The orchestrator MUST classify two friction records as the same under
 PASS: F46: The orchestrator MUST merge two findings classified as the same underlying finding into one findings.json entry with one evidence-pointer array. # DR-06b
 PASS: F47: When a target-app-side 5xx-or-network-failure event occurs during a walkthrough step, the persona agent MUST record it as a distinct app-error event separate from the friction ledger. # DR-07a
 PASS: F48: The report generator MUST list app-error events in a section separate from the heuristic-tagged friction list. # DR-07b
-PASS: F49: The orchestrator MUST set the machine-readable run-status field, separate from findings.json, to BLOCKED when fewer than 3 persona subagents reach one of the run_status values completed, crashed, timed-out. # DR-08 CR4-B2
+PASS: F49: The orchestrator MUST set the machine-readable run-status field, separate from findings.json, to BLOCKED when fewer than 3 persona subagents reach one of the run_status values completed, crashed, timed-out — patience-exhausted personas, runner-capped personas, never count toward the BLOCKED trigger. # DR-08 CR4-B2 CR5-B3
 PASS: F50: When a persona's step count crosses patience_threshold_steps, the persona subagent MUST abandon the current task. # DR-09a
 PASS: F51: When a persona's step count crosses patience_threshold_steps, the persona subagent MUST record a terminal friction instance tagged with the abandonment step index. # DR-09b
-PASS: F52: When a persona's step count crosses patience_threshold_steps, the persona subagent MUST set the task outcome field to failed-by-patience in its ledger. # DR-09c
+PASS: F52: When a persona's step count crosses patience_threshold_steps, the persona subagent MUST set the task outcome field to failed_by_patience in its ledger, the underscored spelling the frozen ledger fixtures already encode as ground truth. # DR-09c CR5-M1
 PASS: F53: Each persona entry in findings.json MUST include a run_status field with exactly one value from {completed, crashed, timed-out, patience-exhausted, runner-capped}. # DR-10a CR4-B1
 PASS: F54: The report's validity-envelope section MUST state the count of personas with run_status not equal to completed whenever that count is greater than zero. # DR-10b
 PASS: F55: The ledger MUST record a task_completed boolean per persona per task. # DR-11a
@@ -64,7 +64,7 @@ PASS: F56: The ledger MUST record a reason code per persona per task when task_c
 PASS: F57: The runner MUST abort any persona subagent's walkthrough once that persona has executed 50 actions, regardless of the persona's self-declared patience-threshold value. # DR-12a
 PASS: F58: The runner MUST emit the partial ledger of any persona subagent aborted for exceeding the 50-action runner-level cap. # DR-12b
 PASS: F59: The skill MUST source every persona-filled name/email/phone-number field from a pre-declared synthetic-test-domain identity pool instead of freely-generated real-looking values. # DR-13
-PASS: F60: The orchestrator MUST record, in the run ledger, every account-or-resource artifact that a persona subagent creates on the target app during a run, including its identifying key-or-URL, as a distinct created-artifact entry. # DR-14
+PASS: F60: The orchestrator MUST record, in the run ledger, a distinct created-artifact entry for every persona-subagent-initiated HTTP request whose 2xx response contains a Location header / a JSON body field named id / a JSON body field named url, including its identifying key-or-URL, its detection method. # DR-14 CR5-M2
 PASS: F61: The runner MUST hard-stop before starting any crawl when the operator has not explicitly declared the target environment class as one of local, staging, production. # DR-15
 PASS: F62: The task-list schema MUST support an operator-set external-side-effect flag per step. # DR-16a
 PASS: F63: The persona subagent MUST skip any step flagged external-side-effect rather than executing it. # DR-16b
@@ -81,11 +81,11 @@ PASS: F73: CI mode MUST match findings against the baseline solely by finding_id
 PASS: F74: CI mode MUST treat evidence-text/timestamp fields as informational-only, excluded from the diff comparison. # DR-22c
 PASS: F75: The orchestrator MUST terminate any persona subagent still running when the run-level wallclock timeout fires. # DR-23a
 PASS: F76: The orchestrator MUST merge the partial ledger of any persona subagent terminated by the run-level wallclock timeout, as-is, into findings.json. # DR-23b
-PASS: F77: The skill MUST NOT record a transient technical failure (network error, element-not-rendered, navigation timeout) as a friction instance. # DR-24
+PASS: F77: The skill MUST NOT record a transient technical failure (network error, element-not-rendered, navigation timeout) as a friction instance when the retry self-resolves without persona-initiated action per F111; a persona-initiated retry for the same event class is governed by F112/F113, not by this line. # DR-24 CR1-11-note CR5-MIN1
 PASS: F78: A persona subagent MUST terminate its crawl when its step count exceeds the patience threshold declared in its persona file. # DR-25a
 PASS: F79: A persona subagent MUST emit a distinct run-status event of type patience-exceeded, separate from the findings ledger, when its step count exceeds the patience threshold declared in its persona file. # DR-25b
 PASS: F80: The runner CLI MUST exit with distinct code 3, printing a one-line stderr reason, when the target URL is unreachable at crawl start due to a target-unreachable condition (DNS failure, connection refused, TLS handshake error). # DR-26
-PASS: F81: The orchestrator MUST write a status file, updated at least once per completed persona step, recording each persona subagent's current state as one of running, done, failed. # DR-27a
+PASS: F81: Each persona subagent MUST write a per-persona status fragment recording its own current state as one of running, done, failed, at least once per completed step. # DR-27a CR5-MIN3
 PASS: F82: The orchestrator MUST record each persona subagent's last-completed step index in the status file. # DR-27b
 PASS: F83: The skill MUST ship examples/tasks.json, an example happy-path tasks JSON file conforming to the runner's tasks schema, referenced by name in SKILL.md, that an operator can pass directly to the CLI without authoring their own tasks file. # DR-28 CR3-4
 PASS: F84: The runner CLI MUST emit a fixed-path summary.json, distinct from findings.json, on every completed run containing exit status, finding counts per severity level, convergence-tier distribution, the findings.json/markdown-report output paths. # DR-29
@@ -102,7 +102,7 @@ PASS: F94: Each persona file MUST include a top-level schema_version integer fie
 PASS: F95: The report gate script MUST reject any findings.json whose schema_version value is not in the gate's supported-versions list. # DR-36c
 PASS: F96: The persona validator script MUST reject any persona file whose schema_version value is not in the gate's supported-versions list. # DR-36d
 PASS: F97: On a delegation-unsupported runtime, with no Task/subagent delegation, no background-task support, the skill README MUST state that persona execution requires sequential non-parallel fallback, unverified/unsupported in the MVP. # DR-37
-PASS: F98: The runner MUST cap concurrently executing persona subagents at a configurable max-parallelism value (default 5), queuing any additional persona subagents until a running slot frees. # DR-38
+PASS: F98: The runner MUST cap concurrently executing persona subagents at a configurable max-parallelism value with a minimum of 2 (default 5), queuing any additional persona subagents until a running slot frees. # DR-38 CR5-MIN2
 PASS: F99: The orchestrator MUST terminate a persona subagent early when that subagent's LLM tool-call count exceeds a configured per-run maximum, independent of its step-count patience threshold. # DR-39a
 PASS: F100: The orchestrator MUST emit the partial ledger of any persona subagent terminated for exceeding the per-run LLM tool-call maximum. # DR-39b
 PASS: F101: CI mode MUST exit nonzero when the run-level run_status field equals BLOCKED, independent of severity-4 findings. # CR1-2
@@ -168,7 +168,7 @@ PASS: F158: ci-diff.mjs MUST print the rerun-instability caveat, plus a manual-r
 PASS: F159: When severity_factors is stored as 3 numeric values, the frequency factor MUST be computed from the raw within-run re-encounter count via the fixed mapping: 1 encounter=0, 2-3=1, 4-6=2, 7-10=3, 11-plus=4, applied identically by every persona. # CR3-17
 PASS: F160: The validity-envelope section MUST state that cognitive walkthroughs are validated for novel workflows, weaker on standardized, well-learned interaction patterns, whenever any finding carries the F27 lower-confidence label. # CR3-19
 PASS: F161: When severity_factors is stored as 3 numeric values, the impact factor MUST be computed from the persona's terminal recovery outcome for that friction instance via the fixed mapping: self-recovered-no-detour=0, recovered-with-minor-detour=1, recovered-with-major-detour=2, recovered-only-via-support-or-workaround=3, task-abandoned-or-never-resumed=4, applied identically by every persona. # CR4-B3
-PASS: F162: When severity_factors is stored as 3 numeric values, the persistence factor MUST be computed from the same-run recurrence count of the same finding_id via the fixed mapping: resolved-once-never-recurring=0, recurs-2-to-3-times=1, recurs-4-to-6-times=2, recurs-7-to-10-times=3, recurs-11-plus-times-or-never-resolved=4, applied identically by every persona. # CR4-B3
+PASS: F162: When severity_factors is stored as 3 numeric values, the persistence factor MUST be computed from same_run_recurrence_count, defined as F136's raw within-run re-encounter count minus 1, via the fixed mapping: 0=0, 1-2=1, 3-5=2, 6-9=3, 10-plus=4, applied identically by every persona. # CR4-B3 CR5-B4
 PASS: F163: The persona subagent MUST NOT record cognitive-walkthrough answers for a step it skipped under F63. # CR4-M1
 PASS: F164: The task-list step schema validator MUST reject a step object carrying more than one of the 5 D15 per-step boolean fields (payment_step, precondition_step, external_side_effect, denylist_override, audited_terminal_step). # CR4-M2
 PASS: F165: finding_id MUST equal the literal string 'fid-' concatenated with the first 16 hex characters of sha256(`${heuristic_tag}|${step}|${target_element_identifier}`), a normative formula binding on every builder, not an unspecified deterministic hash left to builder discretion. # CR4-M3
@@ -176,7 +176,7 @@ PASS: F166: Before writing any evidence artifact to disk, the evidence capture m
 PASS: F167: Before writing any evidence artifact to disk, the evidence capture module MUST redact from a DOM snippet a substring matching the case-insensitive HTTP cookie-header pattern (Cookie: / Set-Cookie:) followed by semicolon-separated key=value segments. # CR4-M4
 PASS: F168: The shipped examples/tasks.json MUST author its terminal non-idempotent submission step with audited_terminal_step set to true. # CR4-M6
 PASS: F169: The heuristic-set configuration file MUST include exactly one top-level field, naming a designated patience-abandonment tag whose value is one of the tag identifiers present in that same file's heuristic list. # CR4-M7 CR4-MIN1
-PASS: F170: Each finding MUST carry a personas_flagging array field listing the identifiers of every persona that flagged it, used as the sole input for computing convergence_tier (F17). # CR4-M8
+PASS: F170: Each finding MUST carry a personas_flagging array field listing the identifiers of every persona that flagged it, regardless of run_status, distinct from the F17 convergence_tier count which includes only the run_status-completed subset. # CR4-M8 CR5-B1
 PASS: F171: Every report's validity-envelope section MUST state that cognitive walkthroughs are weaker on standardized, well-learned interaction patterns, independent of whether any finding carries the F27 lower-confidence label. # CR4-M10
 PASS: F172: Each stderr line printed for a violated F107/F108 static launch precondition that has a shipped-default remedy MUST include that remedy's file path — examples/tasks.json for the tasks precondition, denylist/default-destructive-labels.json for the denylist precondition. # CR4-MIN3
 PASS: F173: The orchestrator MUST set a persona run_status field to crashed when that persona subagent execution fails unrecoverably before completing its crawl. # CR4-S1
@@ -185,8 +185,20 @@ PASS: F175: The orchestrator MUST set a persona's run_status field to patience-e
 PASS: F176: The orchestrator MUST set a persona run_status field to runner-capped when that persona subagent is force-aborted under a runner-level cap (F57, F154). # CR4-S1 CR4-B1
 PASS: F177: Each finding's friction_type field MUST be exactly one value from {extra_action, ambiguity_resolution, terminal_friction, walkthrough_failure}, matching the friction-producing requirement that generated it: extra_action per F10, ambiguity_resolution per F34, terminal_friction per F51, walkthrough_failure per F33. # CR4-S1
 PASS: F178: The examples/tasks.json terminal-step audited_terminal_step flag MUST be verified by schema validation against schemas/tasks.schema.json. # CR4-M6
+PASS: F179: F117's network-request interception MUST scope the F40 dry-run-boundary decision to only the non-idempotent request whose initiating action is the persona's current-step click-or-key interaction with that step's own target element, matching a same-origin fetch/XHR/navigation request initiated synchronously within that interaction's event-handler continuation. # DR-03 CR5-B2
+PASS: F180: A non-idempotent network request whose initiating action does not satisfy F179's correlation rule MUST NOT be aborted, MUST NOT be exempted, by F40's dry-run boundary. # DR-03 CR5-B2
+PASS: F181: The validity-envelope disclosure section MUST state that the frequency severity factor, the persistence severity factor, are both derived from the same within-run re-encounter observation, not independently verified NN/g inputs, when severity_factors is stored as 3 numeric values. # CR4-B3 CR5-B4
+PASS: F182: The orchestrator MUST record, in the run ledger, a distinct created-artifact entry for every persona self-reported resource creation, tagged with detection method self-report, in addition to F60's network-heuristic entries. # DR-14 CR5-M2
+PASS: F183: When none of the four F103 tiers yield a non-empty value, target_element_identifier MUST equal a structural path computed as nearestAncestorWithStableId>tagName:nth-of-type(ordinalAmongSameTagSiblings), where nearestAncestorWithStableId is the closest ancestor element having a data-testid attribute value, an id attribute value, an ARIA landmark role, walking up from the target element. # DR-06a CR5-M3
+PASS: F184: The severity scale labels, the F12 mean-of-factors formula, the F159/F161/F162 bucket mappings, MUST load from the heuristic-set configuration file, default value: the values currently fixed in F12/F159/F161/F162, with the run manifest (F69) recording the rubric version used. # CR5-M4
+PASS: F185: The runner CLI MUST reject a --max-parallel value below 2 with a nonzero usage-error exit code. # DR-38 CR5-MIN2
+PASS: F186: The orchestrator MUST merge all per-persona status fragments into one status file on each subagent settle event. # DR-27a CR5-MIN3
+PASS: F187: On a delegation-unsupported runtime, the skill README MUST state that report-gate.mjs CI mode is unsupported for a sequential-fallback run, because F134's overlap gate rejects strictly non-overlapping persona execution intervals by construction. # extends F97/DR-37 CR5-MIN4
+PASS: F188: The validity-envelope disclosure section MUST state that a terminal_friction finding's heuristic_tag identifies the designated patience-abandonment tag, not the underlying interaction failure. # CR5-MIN5
+PASS: F189: The personas_flagging array field on a finding produced by the F46 merge MUST equal the set of distinct persona identifiers present in the pre-merge friction records unified under that finding's F45 identity tuple. # CR4-M8 CR5-MIN6
+PASS: F190: ci-diff.mjs MUST print the convergence_tier value of each new-or-escalated severity-4 finding that triggers a nonzero exit, alongside the F158 rerun-instability caveat, to its own stderr. # CR5-MIN7
 ---
-SUMMARY: 187 requirement(s) checked, 0 failed (mechanical check: testable/atomic/binding/unambiguous).
+SUMMARY: 199 requirement(s) checked, 0 failed (mechanical check: testable/atomic/binding/unambiguous).
 MANUAL CHECKLIST (not mechanically checkable — verify by hand before freeze, per CRITERION 1):
   - true stakeholder need: does each line trace to a real stated need, not an assumption?
   - stakeholder vocabulary: does each line use the domain's own words, not implementation jargon?

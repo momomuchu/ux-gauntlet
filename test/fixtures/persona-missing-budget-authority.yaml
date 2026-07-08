@@ -1,0 +1,8 @@
+name: broken-persona-no-budget-authority
+goal: "reach the dashboard on the free tier"
+success_criteria: "dashboard visible without paying"
+patience_threshold_steps: 12
+forbidden_claims:
+  - willingness_to_pay_estimates
+  - population_percentages
+# budget_authority deliberately MISSING (F1/F5 fixture, CR5-M7 — behavioral coverage upgrade)

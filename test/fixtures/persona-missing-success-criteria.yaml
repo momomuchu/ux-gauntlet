@@ -1,0 +1,8 @@
+name: broken-persona-no-success-criteria
+goal: "reach the dashboard on the free tier"
+budget_authority: "none - personal use, refuses to pay"
+patience_threshold_steps: 12
+forbidden_claims:
+  - willingness_to_pay_estimates
+  - population_percentages
+# success_criteria deliberately MISSING (F1/F5 fixture, CR5-M7 — behavioral coverage upgrade)

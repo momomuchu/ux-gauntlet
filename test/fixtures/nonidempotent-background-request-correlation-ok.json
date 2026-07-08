@@ -1,0 +1,13 @@
+{
+  "run": {
+    "target_url": "http://localhost:3000",
+    "task_list": "test/fixtures/tasks.json",
+    "personas": ["free-tier-user"],
+    "full_submission_mode": false
+  },
+  "actions": [
+    { "persona": "free-tier-user", "step": 1, "type": "submit", "http_method": "POST", "detected_via": "network-request-interception", "precondition_step": true, "correlated_to_step_interaction": true, "outcome": "executed" },
+    { "persona": "free-tier-user", "step": 1, "type": "background-request", "http_method": "POST", "target_path": "/analytics/beacon", "detected_via": "network-request-interception", "correlated_to_step_interaction": false, "outcome": "aborted" }
+  ],
+  "narrative": "The step-1 login form submit correlates to the persona's own current-step click, per F179 — a same-origin POST initiated synchronously within that click's event-handler continuation — so it correctly executes under the precondition_step exemption (F127). A concurrent, uncorrelated analytics-beacon POST fires during the same step window, initiated from a background timer, not from the login click; it does NOT satisfy F179's correlation rule, so it is independently dry-run-blocked (F40's default), not silently exempted just because it happened during a precondition_step's window, and its abort is never misreported as the step's own login submission failing (F180, CR5-B2, negative control)."
+}

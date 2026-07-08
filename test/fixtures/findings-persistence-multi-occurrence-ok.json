@@ -1,0 +1,26 @@
+{
+  "run": {
+    "target_url": "http://localhost:3000",
+    "task_list": "test/fixtures/tasks.json",
+    "personas": ["free-tier-user", "willing-to-pay-user", "vp-team-buyer"]
+  },
+  "findings": [
+    {
+      "id": "fr-993",
+      "friction_name": "invite-teammate confirmation toast flashes too briefly to read",
+      "friction_type": "extra_action",
+      "step": 6,
+      "personas_flagging": ["free-tier-user", "willing-to-pay-user"],
+      "convergence_tier": 2,
+      "heuristic_tag": "visibility-of-system-status",
+      "severity": 2,
+      "raw_within_run_reencounter_count": 4,
+      "terminal_recovery_outcome": "recovered-with-major-detour",
+      "same_run_recurrence_count": 3,
+      "severity_factors": { "frequency": 2, "impact": 2, "persistence": 2 },
+      "market_impact": false,
+      "evidence": [{ "type": "screenshot", "path": "runs/fixture/step6-toast.png" }],
+      "narrative": "A genuine multi-occurrence case, kept alongside the corrected fr-992 (CR5-B4) so the persistence-not-equal-to-0 branch is still exercised honestly: raw_within_run_reencounter_count=4 maps frequency=2 (F159's '4-6' bucket). same_run_recurrence_count is defined as F136's raw within-run re-encounter count minus 1, so 4-1=3, mapping persistence=2 (F162's '3-5' bucket). terminal_recovery_outcome='recovered-with-major-detour' maps impact=2 (F161). severity=round(mean(2,2,2))=2, correctly matching, passing the F12 arithmetic gate (CR5-B4 negative control)."
+    }
+  ]
+}

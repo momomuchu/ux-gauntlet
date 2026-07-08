@@ -7,7 +7,7 @@ Exception coverage: F15 defines the zero-evidence exception path (drop, never so
 Security coverage: the skill crawls only the operator-supplied target URL (F6) — no autonomous target discovery; forbidden-claim guardrails per persona (F5) plus F21/F22 prevent the report itself from emitting claims that could mislead downstream users; N6 excludes third-party data egress for localhost runs, keeping audit data on the operator's machine.
 
 ## Concise
-Each line states one testable obligation; req-lint passed 43/43 (F1-F36, N1-N7) with zero compound/vague/unbound findings on the original elicitation pass, and the scrub log (stage 6) cut speculative items rather than carrying them as padding. req-lint passed 133/133 after the unknowns pass plus challenge round 1; 153/153 after challenge round 2; 169/169 after challenge round 3. Current live total (post-challenge-round-4): req-lint passes 187/187 — see lint-result.txt for the up-to-date re-run.
+Each line states one testable obligation; req-lint passed 43/43 (F1-F36, N1-N7) with zero compound/vague/unbound findings on the original elicitation pass, and the scrub log (stage 6) cut speculative items rather than carrying them as padding. req-lint passed 133/133 after the unknowns pass plus challenge round 1; 153/153 after challenge round 2; 169/169 after challenge round 3; 187/187 after challenge round 4. Current live total (post-challenge-round-5): req-lint passes 199/199 — see lint-result.txt for the up-to-date re-run.
 
 ## Consistent
 No requirement contradicts another: the maximum-critique stance (D6) is compatible with the evidence discipline because F14/F15 make every critique artifact-anchored; F26's "block only severity-4" does not contradict F12's full 0–4 scoring because scoring and gating are separate concerns; persona minimum (F16) is consistent with the three shipped defaults (F2–F4).
@@ -210,3 +210,56 @@ exclusivity rule does not contradict any existing D15-family fixture (`audited-t
 flag); F49's rescoped BLOCKED trigger does not contradict F101 (CI mode still exits nonzero on BLOCKED
 independent of severity-4 content) — it only narrows WHEN run_status becomes BLOCKED in the first
 place, which is a stricter, not looser, definition (fewer runs read as BLOCKED, never more).
+
+## Challenge round 5 (2026-07-09)
+
+A fifth independent adversarial challenge pass (`.swe-spec/CHALLENGE-ROUND-5.md`) ran 26 raw attacks
+against the post-round-4 spec (F1-F178/N1-N9), the ADR, and the RED test suite. Verdict:
+CHANGES_REQUIRED. 18 distinct defects confirmed (4 BLOCKER, 7 MAJOR, 7 MINOR — several BLOCKERs the
+panel itself judge-downgraded to MINOR in its own rationale, applied at the judge's stated severity),
+8 attacks rejected as already litigated/closed in a prior round or factually mismatched against the
+frozen files (see CHALLENGE-ROUND-5.md §3). All 18 confirmed defects are applied in this pass: 12 new
+functional requirements (F179-F190, no new N-numbers — every panel-suggested illustrative number this
+round independently guessed "F179" for a DIFFERENT new requirement, since the panel's own parallel
+lenses could not see each other's picks; resolved by assigning the actual next-available sequential
+range), 8 existing lines edited in place (F49, F52, F60, F77, F81, F98, F162, F170), and 5 new
+acceptance-test cases plus 5 extended existing test blocks, plus 12 new fixtures (1 existing fixture,
+`findings-severity-impact-persistence-mapped-ok.json`, edited in place to correct its severity
+arithmetic under the corrected F162 bucket definition) added to `test/acceptance.test.mjs` (71 → 76
+tests) — `node --test test/acceptance.test.mjs`: 76 tests, 0 pass, 76 fail — RED preserved.
+requirements.txt grew from 187 to 199 lines (190 functional, 9 nonfunctional); req-lint 199/199 PASS.
+`coverage-audit.sh --pre-freeze`: 8/8 stages PASS. `test-coverage-audit.sh`: 91/91 CRITICAL PASS, up
+from 87/87 post-round-4 (F179, F180, F181, F188 newly covered as CRITICAL citations). Reconciliation
+decisions — including the directive-vs-directive numbering-collision resolution (a NEW failure mode
+this round: several independent fix_directives guessed the identical illustrative number for
+DIFFERENT new requirements, not just colliding with an already-landed ID as in prior rounds) — are
+recorded in `scrub-log.md` under a dedicated `## CR5` section.
+
+**Root-cause mandate.** The panel named ONE class behind its 2 BLOCKERs and 1 MAJOR: the same
+conceptual value spelled, or claimed, differently across requirements.txt / spec.md / fixtures /
+tests (F170's false "sole input" claim for convergence_tier vs. F17's own join definition; F49's
+requirements.txt text drifting stale behind its own already-applied CR4-B2 fix; F52's hyphenated
+`failed-by-patience` vs. every frozen fixture's underscored `failed_by_patience`). Rather than patch
+the 3 cited instances, this pass ran a full sweep of every closed-enum value family in the spec
+(`run_status`, the task-ledger `outcome` field, `reason_code`, `friction_type`, `convergence_tier`/
+`partial_tier`, the D15 per-step flag family) — recorded as `## CR5 canonical token table` in
+`scrub-log.md` — confirming the 3 cited instances were the only real drifts (one additional
+near-miss, the `robots_disallowed` per-action boolean field vs. the `robots-disallowed` `reason_code`
+value, was checked and confirmed NOT a collision — a distinct concept, documented to preempt a future
+false-positive). A gate-level literal-equality lock was added for the corrected task-ledger-outcome
+family (`F50 F51 F52` test now reads `patience-abandon-with-evidence.json` directly and asserts
+`outcome === 'failed_by_patience'`), and the convergence_tier family's arithmetic-only proof was
+strengthened with a provenance check (F189, CR5-MIN6) so a future respelling or a future
+arithmetic-only-correct-but-provenance-wrong substitution both fail RED.
+
+Boundary/exception/security coverage recorded above for F1-F178/N1-N9 remains valid and unchanged;
+this paragraph extends coverage to the F179-F190 range only. Consistency check: F179/F180's
+correlation rule does not contradict F126/F127 (`precondition_step`) or F145/F146
+(`audited_terminal_step`) — those flags still exempt their own step's correlated submission from
+F40's default exactly as before; F179/F180 only narrow WHICH request counts as "that step's own
+submission" when multiple non-idempotent requests fire in the same step window, closing a gap those
+requirements never addressed. F181's disclosure does not contradict F159/F161/F162's fixed-bucket
+formulas — it discloses their shared observational root, it does not change their arithmetic. F184's
+data-file swappability does not contradict F12's formula — the formula's DEFAULT value is unchanged;
+only its override mechanism is new, mirroring F28/D7's existing heuristic-set pluggability precedent
+exactly.
