@@ -873,3 +873,41 @@ test('F132 F133 F134 CR2-8: persona start_ts/end_ts intervals must show real wal
   const sequential = gate('persona-concurrency-sequential-bad.json');
   assert.notEqual(sequential.code, 0, 'persona subagents whose intervals never overlap (each starts strictly after the previous ends) must fail the gate — this is exactly the "single sequential loop reusing one shared browser context" shape the F30/F31 headline architecture claim forbids (F134)');
 });
+
+test('F173 F174 F175 CR4-S1: the findings schema run_status enum admits every terminal state the orchestrator can set', () => {
+  // Requirement ID: F173, F174, F175 (challenge round 4 — these run_status values were tagged
+  // CRITICAL when the total abort->status mapping was closed, but no test referenced them, so a
+  // builder could ship a run_status enum missing crashed/timed-out/patience-exhausted and a
+  // crashed persona would be unrepresentable — silently mislabeled or schema-invalid).
+  assert.ok(existsSync('schemas/findings.schema.json'), 'schemas/findings.schema.json missing');
+  const s = json('schemas/findings.schema.json');
+  const finding = s.$defs?.finding ?? s.definitions?.finding;
+  const persona = s.$defs?.persona_entry ?? s.definitions?.persona_entry ?? finding;
+  const runStatus = (persona?.properties?.run_status?.enum) ?? (s.$defs?.run_status?.enum) ?? [];
+  assert.ok(runStatus.includes('crashed'), 'run_status enum must admit "crashed" for an unrecoverable subagent failure (F173)');
+  assert.ok(runStatus.includes('timed-out'), 'run_status enum must admit "timed-out" for a wallclock-terminated subagent (F174)');
+  assert.ok(runStatus.includes('patience-exhausted'), 'run_status enum must admit "patience-exhausted" for a patience-threshold abandonment (F175)');
+});
+
+test('F166 CR4-M4: the evidence gate redacts an HTTP cookie header captured in a screenshot sidecar, without redacting ordinary cookie-word prose', () => {
+  // Requirement ID: F166 (challenge round 4 — cookie-header redaction for screenshot captured_text
+  // was CRITICAL but untested; a builder could ship no cookie redaction and leak Set-Cookie session
+  // tokens into committed evidence, or over-redact any text containing the word "cookie").
+  const leak = gate('evidence-cookie-leak.json');
+  assert.notEqual(leak.code, 0, 'a screenshot captured_text sidecar containing a raw "Set-Cookie: sid=..." header must fail the gate as an un-redacted leak (F166)');
+  const ordinary = gate('evidence-not-secret-ordinary-cookie-text-ok.json');
+  assert.equal(ordinary.code, 0, 'ordinary prose mentioning the word "cookie" (no header pattern) must pass — the redaction is shape-qualified, not keyword-blunt (negative control)');
+});
+
+test('F170 CR4-M8: personas_flagging is the sole input to convergence_tier, gate-enforced', () => {
+  // Requirement ID: F170 (challenge round 4 — convergence_tier's derivation was asserted in D12
+  // prose but nothing forced tier == count(personas_flagging), so a builder could compute the tier
+  // any inconsistent way and still pass; findings-bad-tier.json has tier=3 with 2 flagging personas).
+  const s = json('schemas/findings.schema.json');
+  const finding = s.$defs?.finding ?? s.definitions?.finding;
+  assert.ok(finding.required.includes('personas_flagging'), 'every finding must carry personas_flagging (F170)');
+  const bad = gate('findings-bad-tier.json');
+  assert.notEqual(bad.code, 0, 'convergence_tier that does not equal the length of personas_flagging must fail the gate (F170/F17)');
+  const ok = gate('findings-valid.json');
+  assert.equal(ok.code, 0, 'the valid fixture whose tier equals |personas_flagging| passes (negative control)');
+});

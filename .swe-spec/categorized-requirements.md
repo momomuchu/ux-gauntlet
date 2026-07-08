@@ -272,5 +272,6 @@ the existing F53/F123 precedent those lines extend.
 | F175 | functional | enum-producer policy (run_status=patience-exhausted trigger) — CR4-S1 |
 | F176 | functional | enum-producer policy (run_status=runner-capped trigger) — CR4-S1 CR4-B1 |
 | F177 | functional | enum-closure policy (friction_type closed set + producer citation) — CR4-S1 |
+| F178 | functional | example-verification policy (schema-validated terminal flag) — CR4-M6 |
 
 Summary: 177 functional, 9 nonfunctional (186 total).
