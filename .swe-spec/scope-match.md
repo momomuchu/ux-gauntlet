@@ -65,3 +65,25 @@ per-step operator-override family (D14) net-simplifies the eventual implementati
 independently-numbered ad hoc booleans, since all four fields (`payment_step`, `external_side_effect`,
 `precondition_step`, `denylist_override`) now share one documented extension-point pattern instead of
 four one-off designs.
+
+## Challenge round 3 growth (2026-07-08)
+
+Requirement count grew again, from 153 (F1-F144, N1-N9) to 169 (F1-F160, N1-N9), after the
+challenge-round-3 adversarial pass confirmed 20 distinct defects (6 BLOCKER, 10 MAJOR, 4 MINOR) and
+every fix_directive was applied (two research-document edit requests — DECISION-BRIEF.md §8 item 6,
+requested by both the BLOCKER-6 and MAJOR-8 fix_directives — were intentionally NOT applied, same
+`docs/research/*.md` out-of-scope boundary already established at CR2-13; see scrub-log.md CR3 notes).
+`test/fixtures/` grew from 77 to 88 files (11 new fixtures for the new RED test cases; 1 existing
+fixture, `findings-allowlisted-lower-confidence.json`, edited in place to fix a confounded-test
+defect). Build surface addition: one new schema file (`schemas/tasks.schema.json`, F156 —
+requirements-only, following the exact pattern already budgeted for `schemas/run-bundle.schema.json`/
+`schemas/denylist.schema.json`), one new pinned shipped-artifact path (`examples/tasks.json`, F83
+amended in place — requirements-only, mirroring F105's denylist-default pattern), one new CLI flag
+(`--max-tool-calls`, requirements-only, ADR-0001 flag-table row, same pattern as `--timeout`/CR2-7),
+no new build subsystems. The largest structural change is NOT a new build item but a systemic
+simplification: D15 closes the per-step operator-override family at exactly 5 named flags plus the
+implicit default class, and states the ONE precedence order for the whole safety layer in one place —
+this net-REDUCES eventual implementation risk versus the pre-round-3 design, where the same
+safety-vs-completion tension had already produced 3 rounds of independent per-collision patches on the
+identical root cause (F41/F42 alone drew 3 separate confirmed findings across the 3 rounds).
+Verdict unchanged: scope still FITS budget (unconstrained token budget, no external deadline).

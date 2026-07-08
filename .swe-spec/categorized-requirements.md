@@ -206,3 +206,39 @@ behavior policy.
 | N9 | nonfunctional | quality-of-service: wall-clock budget derivation correction (parallel, not sequential) — CR2-8 |
 
 Summary: 144 functional, 9 nonfunctional (153 total).
+
+## Challenge round 3 pass 2026-07-08 (.swe-spec/CHALLENGE-ROUND-3.md, F145-F160)
+
+Same Perfect Technology Filter question applied to each landed line. All 16 new lines resolve to
+`functional`: every one is a refusal/definition/identity/scoring/disclosure/schema policy that a
+live-target crawl, a real payment form, or a nondeterministic parallel pipeline still needs regardless
+of compute speed/memory/cost — none describe a pure QoS/resource attribute of the evaluating machine
+itself. This round adds ZERO new N-numbers, correcting two items the challenge doc's own illustrative
+numbering suggested as `N9`/`N6a`: the `--override-robots` documentation-content requirement (landed as
+F152) is the same category as the existing F86/F91 doc-content-policy precedent, not a QoS attribute —
+a computer with infinite speed/memory/cost still needs to know which flag resolves a robots.txt
+disallow. The localhost technical-definition requirement (landed as F155) is the same category as the
+existing F67/F68 classification-gate precedent it feeds — a perfect computer still needs to know
+exactly which hostnames count as localhost before it can apply F67/F68's third-party-data gate. Both
+corrections are recorded in scrub-log.md under CR3-7/CR3-10.
+
+| ID | Category | Filter note |
+|----|----------|-------------|
+| F145 | functional | schema policy (audited_terminal_step per-step flag, D15 5th member) — CR3-1 |
+| F146 | functional | refusal-exemption policy (F40 boundary does not apply to audited_terminal_step) — CR3-1 |
+| F147 | functional | identity-computation policy (off-path friction step = next-pending happy-path index) — DR-06a CR3-2 |
+| F148 | functional | authorization-gate policy (robots.txt non-2xx treated as allow-all) — DR-04a CR3-3 |
+| F149 | functional | identity-computation policy (patience-abandonment fixed-sentinel target_element_identifier) — DR-09b CR3-5 |
+| F150 | functional | identity-computation policy (patience-abandonment fixed heuristic_tag) — DR-09b CR3-5 |
+| F151 | functional | CI-gate policy (severity-escalation on a matched finding_id) — CR3-6 CR3-14 |
+| F152 | functional | documentation-content policy (--override-robots first-run guidance) — same category as F86/F91 — CR3-7 |
+| F153 | functional | evidence-redaction policy (shape-qualified pattern, no bare-prefix match) — CR3-8 |
+| F154 | functional | default-value policy (250 tool-call maximum when --max-tool-calls absent) — CR3-9 |
+| F155 | functional | classification policy (localhost technical definition) — same category as F67/F68 — CR3-10 |
+| F156 | functional | shipped-artifact policy (tasks.schema.json) — CR3-11 |
+| F157 | functional | disclosure policy (free-text severity non-reproducibility caveat) — CR3-12 |
+| F158 | functional | disclosure-surfacing policy (rerun-instability caveat reaches ci-diff.mjs's own stderr) — CR3-13 |
+| F159 | functional | scoring policy (numeric-branch frequency bucket mapping) — CR3-17 |
+| F160 | functional | disclosure policy (F27 walkthrough-weakness rationale, not just the label) — CR3-19 |
+
+Summary: 160 functional, 9 nonfunctional (169 total).

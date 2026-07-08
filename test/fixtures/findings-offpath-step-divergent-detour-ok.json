@@ -1,0 +1,31 @@
+{
+  "run": {
+    "target_url": "http://localhost:3000",
+    "task_list": "test/fixtures/tasks.json",
+    "personas": ["free-tier-user", "willing-to-pay-user", "vp-team-buyer"]
+  },
+  "findings": [
+    {
+      "id": "fr-701",
+      "finding_id": "fid-offpath-detour-account-modal",
+      "friction_name": "persona detours through an unexpected account-type modal before completing plan selection",
+      "friction_type": "extra_action",
+      "step": 2,
+      "happy_path_progress_at_friction": { "last_completed_step": 1, "next_pending_step": 2 },
+      "target_element_identifier": "data-testid:account-type-modal",
+      "personas_flagging": ["free-tier-user", "willing-to-pay-user"],
+      "convergence_tier": 2,
+      "partial_tier": 0,
+      "heuristic_tag": "user-control-freedom",
+      "severity": 2,
+      "component_severities": [2, 2],
+      "severity_factors": { "frequency": "every first visit", "impact": "extra dismiss click", "persistence": "recurs" },
+      "market_impact": false,
+      "evidence": [
+        { "type": "screenshot", "path": "runs/fixture/step2-free-tier-modal.png", "persona": "free-tier-user" },
+        { "type": "dom", "path": "runs/fixture/step2-wtp-modal.html", "persona": "willing-to-pay-user" }
+      ],
+      "narrative": "free-tier-user detoured through the account-type modal via a direct signup click; willing-to-pay-user reached the identical modal via a back-navigation retry — a structurally different DOM path. Despite the differing paths, both records correctly compute step=2, the index of the NEXT not-yet-completed happy-path step at the time the detour occurred (last_completed_step=1), never the index of the last-completed step (F147, CR3-2). Because both records share the identical (heuristic_tag, step, target_element_identifier) tuple, they correctly merge into one finding at convergence_tier=2 — the exact corroboration the F45/F92 identity tuple exists to produce."
+    }
+  ]
+}

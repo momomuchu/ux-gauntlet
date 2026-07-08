@@ -48,6 +48,20 @@ test('F109 F105 CR1-8/CR1-6: repo ships a run-bundle schema and a denylist schem
   assert.ok(denylistSchema.minItems >= 1, 'denylist schema requires a non-empty array (F106)');
 });
 
+test('F83 F156 CR3-4/CR3-11: repo ships a real examples/tasks.json artifact and a schema authority for task-list steps', () => {
+  // Requirement ID: F83, F156 (challenge round 3 BLOCKER-4, MAJOR-5 — F105's denylist gets an
+  // existsSync assertion pinning a real shipped path; F83's example tasks file had no pinned path
+  // anywhere, and N8's own test self-documented substituting test/fixtures/tasks.json as a "stand-in"
+  // for the real packaged artifact, so a builder could satisfy every frozen test while shipping no
+  // discoverable example tasks file at all. F115/F126/F62/F128/F145 per-step booleans also had no
+  // schema authority — schemas/tasks.schema.json closes both gaps at once.)
+  assert.ok(existsSync('examples/tasks.json'), 'examples/tasks.json missing (F83 shipped default — real packaged artifact, not the test/fixtures/tasks.json stand-in)');
+  assert.ok(existsSync('schemas/tasks.schema.json'), 'schemas/tasks.schema.json missing (F156 — task-list step shape, including the 5 D15 per-step booleans, has zero schema authority without it)');
+  assert.ok(existsSync('SKILL.md'), 'SKILL.md missing');
+  const s = read('SKILL.md').toLowerCase();
+  assert.ok(s.includes('examples/tasks.json'), 'SKILL.md must reference examples/tasks.json by name (F83)');
+});
+
 test('F6 F7 F8 F36: runner refuses to crawl without a happy-path task list, with a named reason', () => {
   // Requirement ID: F6, F7, F8, F36 (CLI per ADR-0001)
   // CR1-7/CR1-10: every other static precondition is satisfied so the "task list" refusal is
@@ -90,6 +104,12 @@ test('F67 F68: a non-localhost target requires third-party-data confirmation; lo
   // Negative control: localhost never requires this confirmation (F67 is explicitly scoped to non-localhost).
   const localhost = run(['scripts/run-gauntlet.mjs', '--url', 'http://localhost:9', '--tasks', 'test/fixtures/tasks.json', '--i-own-this-target', '--env', 'local', '--denylist', 'denylist/default-destructive-labels.json', '--headless']);
   assert.doesNotMatch(localhost.stderr, /third.?party/i, 'localhost target must never be refused for missing third-party-data confirmation (negative control)');
+  // F155/CR3-10 (challenge round 3 MAJOR-4): "localhost" was a bare, undefined term — a literal
+  // hostname-string implementation would classify 127.0.0.1 (Docker/Vite/uvicorn defaults) as
+  // "non-localhost," silently reintroducing a 6th required flag the same way CR2-2/CR2-19 already
+  // fixed once for --env. 127.0.0.1 must get the identical treatment as the literal string "localhost".
+  const loopbackIp = run(['scripts/run-gauntlet.mjs', '--url', 'http://127.0.0.1:9', '--tasks', 'test/fixtures/tasks.json', '--i-own-this-target', '--env', 'local', '--denylist', 'denylist/default-destructive-labels.json', '--headless']);
+  assert.doesNotMatch(loopbackIp.stderr, /third.?party/i, '127.0.0.1 must be classified as localhost per F155/N6a and never require --confirm-third-party-data (negative control, CR3-10)');
 });
 
 test('N8 CR2-2: the exact first-time-operator invocation (shipped tasks, shipped denylist, --i-own-this-target, --env local) is never refused as a flag-validation failure', () => {
@@ -162,6 +182,15 @@ test('F136 CR2-11: the frequency factor is a within-run persona re-encounter cou
   assert.notEqual(populationEstimate.code, 0, 'a frequency value annotated as a cross-persona population/percentage estimate ("38% of users") must fail the gate — the isolated persona subagent cannot observe population-wide commonality (F12/F136)');
   const ok = gate('findings-frequency-recount-ok.json');
   assert.equal(ok.code, 0, 'a frequency value correctly scoped to this persona\'s own within-run re-encounter count must pass the gate (negative control)');
+});
+
+test('F159 CR3-17: the numeric-branch frequency factor maps from the raw re-encounter count via a fixed bucket function', () => {
+  // Requirement ID: F159 (challenge round 3 MINOR-1 — F12's bounded 0-4 severity-factor requirement
+  // had no bucket mapping for the numeric branch when raw frequency counts exceed 4; the dominant
+  // free-text escape hatch already resolves the failure story in practice, so this closes only the
+  // numeric branch's gap.)
+  const ok = gate('findings-frequency-numeric-bucket-ok.json');
+  assert.equal(ok.code, 0, 'a raw within-run re-encounter count of 13 (11-or-more bucket) correctly maps to numeric frequency=4, passing the F12 severity(=round(mean(4,4,4))=4) arithmetic gate (F159)');
 });
 
 test('F110 CR1-9: ambiguity_resolution friction requires >=2 concurrently visible candidates, not self-narrated hesitation', () => {
@@ -237,6 +266,17 @@ test('F92 F45 CR2-6: finding_id equals a deterministic hash of exactly (heuristi
   assert.notEqual(mismatched.code, 0, 'a finding_id that does not equal the deterministic hash of its own (heuristic_tag, step, target_element_identifier) tuple must fail the gate (F92 formula violation)');
 });
 
+test('F147 CR3-2: an off-path friction\'s step field equals the next-pending happy-path step, never the last-completed one', () => {
+  // Requirement ID: F147 (challenge round 3 BLOCKER-2 — F10/F34 mandate friction records for actions
+  // that by definition aren't happy-path steps, but F45/F92's identity tuple never resolved whether an
+  // off-path friction's `step` is the next-pending or last-completed happy-path step; two builders
+  // picking differently silently reintroduces the cross-persona-merge defect CR1-1/CR2-6 already fixed).
+  const merged = gate('findings-offpath-step-divergent-detour-ok.json');
+  assert.equal(merged.code, 0, 'two personas taking structurally different detours to the identical off-path friction, both correctly computing step=2 (the next not-yet-completed happy-path step), merge into one finding at convergence_tier=2 (F147, negative control)');
+  const divergent = gate('findings-offpath-step-divergent-detour-bad.json');
+  assert.notEqual(divergent.code, 0, 'the identical underlying detour recorded with step=2 by one persona and step=1 (the WRONG, last-completed-step convention) by the other must fail the gate — the divergent step field silently collapses convergence_tier=2 to two convergence_tier=1 entries (F147 violation)');
+});
+
 test('F118 F119 CR1-17: a merged finding\'s severity equals the max of its component severities, not the mean', () => {
   // Requirement ID: F118, F119 (challenge round 1 MAJOR-7)
   const bad = gate('findings-merged-severity-bad.json');
@@ -292,6 +332,7 @@ test('F20 F21 F22 F35: validity envelope carries at least the 4 enumerated discl
   assert.match(md, /willingness.to.pay/i, 'disclosure (b) enumerated (F35)');
   assert.match(md, /population|% of users/i, 'disclosure (c) enumerated (F35)');
   assert.match(md, /ISO 9241-11/, 'disclosure (d) enumerated (F35)');
+  assert.match(md, /severity.*(not guaranteed|not comparable).*reproducible/i, 'disclosure (e) enumerated: severity is not guaranteed comparable/reproducible across runs when severity_factors is free-text (F157, CR3-12)');
   const wtp = gate('finding-wtp-claim.json');
   assert.notEqual(wtp.code, 0, 'gate rejects WTP estimates (F21)');
   const pop = gate('finding-population-claim.json');
@@ -319,10 +360,14 @@ test('F27 F121 CR1-19: an allowlisted lower-confidence label still triggers the 
   // Requirement ID: F27, F121 (challenge round 1 MAJOR-8 — previously zero coverage, undefined gate interaction)
   const md = run(['scripts/render-report.mjs', 'test/fixtures/findings-allowlisted-lower-confidence.json']).stdout;
   assert.match(md, /lower.confidence/i, 'an allowlisted standardized-flow finding renders with the lower-confidence label (F27)');
+  // F160/CR3-19 (challenge round 3 MINOR-3): F27 implemented only the LABEL half of the twin
+  // standardized-flow disclosure mandate (DECISION-BRIEF §2.2) — the report must also state WHY the
+  // finding is lower-confidence, not just tag it.
+  assert.match(md, /weaker on (standard|standardized|well-learned)/i, 'the report states the walkthrough-weakness rationale whenever a lower-confidence-labeled finding is present, not just the label itself (F160)');
   const baseline = run(['scripts/ci-diff.mjs', '--baseline', 'test/fixtures/findings-valid.json', '--current', 'test/fixtures/findings-valid.json']);
   assert.equal(baseline.code, 0, 'sanity: identical baseline vs current is a clean CI run');
   const worse = run(['scripts/ci-diff.mjs', '--baseline', 'test/fixtures/findings-valid.json', '--current', 'test/fixtures/findings-allowlisted-lower-confidence.json']);
-  assert.notEqual(worse.code, 0, 'a NEW severity-4 finding must still block CI even though it carries the lower-confidence label (F121 — the label is cosmetic, not a CI suppression channel)');
+  assert.notEqual(worse.code, 0, 'a NEW severity-4 finding must still block CI even though it carries the lower-confidence label (F121 — the label is cosmetic, not a CI suppression channel), isolated to that single variable now that run_status is aligned with the baseline (CR3-16 fixes the CR1-19 confounded-fixture defect)');
 });
 
 test('F140 F141 F142 CR2-14: the standardized-flow-allowlist supply channel is gate-enforced, not just renderable from a pre-labeled fixture', () => {
@@ -366,6 +411,20 @@ test('F26: CI mode blocks on a NEW severity-4 finding vs baseline', () => {
   const worse = run(['scripts/ci-diff.mjs', '--baseline', 'test/fixtures/findings-valid.json', '--current', 'test/fixtures/findings-new-sev4.json']);
   assert.notEqual(worse.code, 0, 'a NEW severity-4 finding must exit nonzero');
   assert.match(worse.stderr + worse.stdout, /severity.?4|catastrophe/i, 'CI output names the blocking finding class');
+});
+
+test('F151 CR3-6/CR3-14: CI mode also blocks when an ALREADY-KNOWN finding_id escalates from severity <4 to severity 4', () => {
+  // Requirement ID: F151 (challenge round 3 BLOCKER-6, reinforced MAJOR-8 — finding_id excludes
+  // severity from its identity tuple (F92), and the spec's own worked scenario says a matched
+  // finding_id is "already-known, not new"; a baseline finding at severity 2 that reproduces
+  // identically but now at severity 4 is literally "already-known" per F92/F73, so CI would stay
+  // green through exactly the regression F26/N4 exist to catch, absent this gate.)
+  const escalated = run(['scripts/ci-diff.mjs', '--baseline', 'test/fixtures/findings-valid.json', '--current', 'test/fixtures/findings-escalated-to-sev4.json']);
+  assert.notEqual(escalated.code, 0, 'a finding whose finding_id matches a baseline entry, but whose severity escalated from 2 (baseline) to 4 (current), must exit nonzero — an already-known finding_id match must never suppress a genuine catastrophic regression (F151)');
+  assert.match(escalated.stderr + escalated.stdout, /severity.?4|catastrophe|escalat/i, 'CI output names the severity-escalation blocking reason');
+  const stderrCaveat = run(['scripts/ci-diff.mjs', '--baseline', 'test/fixtures/findings-valid.json', '--current', 'test/fixtures/findings-new-sev4.json']);
+  assert.match(stderrCaveat.stderr, /rerun/i, 'F158: ci-diff.mjs prints the rerun-instability caveat directly to its OWN stderr, not only via render-report.mjs\'s markdown output — a headless CI consumer (N4) typically only surfaces the failing command\'s own stderr (CR3-13)');
+  assert.match(stderrCaveat.stderr, /manually re-run/i, 'F158: ci-diff.mjs\'s own stderr also carries the manual-re-run instruction (CR3-13)');
 });
 
 test('F101 CR1-2: CI mode also exits nonzero when run_status is BLOCKED, independent of severity-4 content', () => {
@@ -425,6 +484,19 @@ test('F126 F127 CR2-1: precondition_step exempts only its own step from F40, not
   assert.notEqual(scoped.code, 0, 'a non-precondition non-idempotent step in the SAME run still fails the gate under the same mode — the exemption is step-scoped, not a global bypass (F40/F126/F127)');
 });
 
+test('F145 F146 CR3-1 D15: audited_terminal_step exempts only its own step from F40, not the whole run', () => {
+  // Requirement ID: F145, F146 (challenge round 3 BLOCKER-1 — F40's default dry-run boundary made the
+  // spec's own flagship signup scenario, F10-F14, unbuildable: literally every task's own terminal
+  // submission halted under F40's default, since D14's original 4-flag family covered preconditions,
+  // payments, side effects, and denylist overrides, but never "the task's own final submission". D15
+  // closes the family with a 5th flag, distinct from precondition_step, which exempts a LEADING setup
+  // step, never the task's own terminal outcome.)
+  const ok = gate('audited-terminal-step-ok.json');
+  assert.equal(ok.code, 0, 'an audited_terminal_step-flagged submission passes the gate under full_submission_mode=false, with no --full-submission needed for the whole run (F146)');
+  const scoped = gate('audited-terminal-step-scoped-not-global-bad.json');
+  assert.notEqual(scoped.code, 0, 'a non-audited non-idempotent step in the SAME run still fails the gate under the same mode — the exemption is step-scoped, not a global bypass (F40/F145/F146, D15)');
+});
+
 test('F39 F40 F115 F116 F117: payment and non-idempotent submit steps executed outside their explicit modes fail the gate', () => {
   // Requirement ID: F39, F40, F115, F116, F117 (challenge round 1 MAJOR-3, CR1-13)
   const payment = gate('payment-no-testmode.json');
@@ -447,6 +519,25 @@ test('F41 F42: navigation to a robots.txt-disallowed path without an override fl
   assert.equal(ok.code, 0, 'a navigation to a robots-allowed path must pass the gate (negative control, CR2-3)');
 });
 
+test('F148 CR3-3: a missing-or-erroring robots.txt on an otherwise-reachable target is treated as allow-all, never a refusal', () => {
+  // Requirement ID: F148 (challenge round 3 BLOCKER-3 — no requirement stated what happens when
+  // robots.txt returns 404 on an otherwise-reachable target, the default for most local dev servers;
+  // N8's own acceptance test always points at a fully unreachable port, so the ambiguity was
+  // structurally invisible to the frozen suite and would only detonate on a founder's real machine).
+  const allowAll = gate('robots-404-allow-all-ok.json');
+  assert.equal(allowAll.code, 0, 'a target whose robots.txt fetch 404\'d (absent) must be treated as allow-all and crawled, never refused (F148)');
+});
+
+test('F152 CR3-7 D15: --override-robots is documented as the resolution for a local/staging robots.txt disallow-all', () => {
+  // Requirement ID: F152 (challenge round 3 MAJOR-1 — F67/F68 explicitly scope their gate to
+  // "non-localhost target"; F41/F42 apply unconditionally and correctly so, but the existing escape
+  // hatch --override-robots was absent from all first-run guidance, so a blanket Disallow: / on a
+  // dev/staging deployment silently aborted every persona's navigation with no discoverable fix).
+  assert.ok(existsSync('SKILL.md'), 'SKILL.md missing');
+  const s = read('SKILL.md').toLowerCase();
+  assert.ok(s.includes('override-robots'), 'SKILL.md must name --override-robots as the resolution for a local/staging robots.txt disallow-all (F152)');
+});
+
 test('F44: an unredacted credential-shaped string in a DOM evidence snippet fails the gate', () => {
   // Requirement ID: F44
   const leak = gate('evidence-secret-leak.json');
@@ -459,6 +550,11 @@ test('F44: an unredacted credential-shaped string in a DOM evidence snippet fail
   // Bearer-shaped regex — a bare sk- prefixed key with no Bearer wrapper must also be caught.
   const apikey = gate('evidence-secret-leak-apikey.json');
   assert.notEqual(apikey.code, 0, 'a bare sk- prefixed API key (no Bearer wrapper) surviving in a DOM snippet must fail the gate (F44 enumerated pattern, CR2-9)');
+  // CR3-8 (challenge round 3 MAJOR-2): the shipped pattern set was a bare 3-char prefix match with no
+  // minimum-length/character-class qualifier — a literal includes('sk-') implementation would mangle
+  // ordinary UI text ("Task-42", "Risk-level", "Desk-booking") before it's ever written to disk.
+  const ordinary = gate('evidence-not-secret-ordinary-text-ok.json');
+  assert.equal(ordinary.code, 0, 'ordinary UI text merely containing the bare substring "sk-" ("risk-assessment", "desk-booking") without a qualifying trailing character run must survive to disk unmodified — the redaction pattern is shape-qualified, not a bare-prefix match (F153, negative control)');
 });
 
 test('F43 F102 CR1-3: an unredacted credential-shaped string in a screenshot evidence captured_text sidecar fails the gate (own RED test, distinct from F44)', () => {
@@ -552,6 +648,19 @@ test('F114 F125 CR1-12/CR1-26: a correctly abandoned task carries a heuristic-ta
   assert.equal(ok.code, 0, 'a terminal friction instance carrying both a heuristic_tag and a captured screenshot evidence artifact survives the F14/F15 zero-evidence gate (positive control, no exemption from F11/F14/F15)');
 });
 
+test('F149 F150 CR3-5: patience-abandonment identity is fixed (sentinel + designated tag), not narrative/DOM-derived, so it corroborates across personas', () => {
+  // Requirement ID: F149, F150 (challenge round 3 BLOCKER-5 — F51/F125 required only "some"
+  // heuristic_tag from the configured set, and F103's target_element_identifier fallback was defined
+  // only for a rendered DOM interaction, not a step-count threshold crossing; two personas abandoning
+  // the identical task at the identical step for the identical reason could hash to two different
+  // finding_ids, defeating the exact reliability signal the 3-persona architecture exists to produce
+  // for the friction class that most needs corroboration.)
+  const merged = gate('patience-identity-divergent-personas-merged-ok.json');
+  assert.equal(merged.code, 0, 'two personas independently abandoning the identical task at the identical step, via different simulated DOM/path state, merge into one finding at convergence_tier=2 because target_element_identifier is a fixed per-step sentinel (F149) and heuristic_tag is the one designated patience-abandonment tag (F150) — negative control');
+  const divergent = gate('patience-identity-divergent-values-bad.json');
+  assert.notEqual(divergent.code, 0, 'the identical step-11 abandonment recorded with a DOM-derived target_element_identifier for one persona, instead of the fixed sentinel F149 mandates, must fail the gate — the divergence silently collapses convergence_tier=2 to two convergence_tier=1 entries');
+});
+
 test('F55 F56 F123: the ledger must record task_completed and an enumerated reason code independent of the friction list', () => {
   // Requirement ID: F55, F56, F123 (challenge round 1 MINOR-1)
   assert.ok(existsSync('scripts/report-gate.mjs'), 'scripts/report-gate.mjs missing');
@@ -569,6 +678,15 @@ test('F57 F58: a persona past the runner-level 50-action cap must be force-abort
   const overCap = gate('persona-exceeds-action-cap.json');
   assert.notEqual(overCap.code, 0, 'a persona with action_count > 50 still marked run_status completed (not force-aborted) must fail the gate');
   assert.match(overCap.stderr + overCap.stdout, /action|cap/i, 'gate output names the action-cap rule');
+});
+
+test('F154 CR3-9: a persona past the configured per-run LLM tool-call maximum (default 250) must be force-terminated', () => {
+  // Requirement ID: F154 (challenge round 3 MAJOR-3 — F99/F100's "configured" per-run tool-call
+  // maximum had no CLI flag, no stated default, and zero test coverage anywhere in the frozen suite,
+  // the identical defect class already fixed once for F75/F76 -> F131 in round 2.)
+  const overCap = gate('persona-exceeds-tool-call-cap.json');
+  assert.notEqual(overCap.code, 0, 'a persona with tool_call_count > 250 (the F154 default) still marked run_status completed (not force-terminated) must fail the gate');
+  assert.match(overCap.stderr + overCap.stdout, /tool.?call|cap/i, 'gate output names the tool-call-cap rule');
 });
 
 // --- Challenge round 2 pass 2026-07-08 (.swe-spec/CHALLENGE-ROUND-2.md, 23 confirmed defects) ---

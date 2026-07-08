@@ -5,6 +5,7 @@
     "personas": ["free-tier-user", "willing-to-pay-user", "vp-team-buyer"],
     "standardized_flow_allowlist": ["login"]
   },
+  "run_status": "completed",
   "findings": [
     {
       "id": "fr-901",
@@ -21,7 +22,7 @@
       "severity_factors": { "frequency": 4, "impact": 4, "persistence": 4 },
       "market_impact": true,
       "evidence": [{ "type": "screenshot", "path": "runs/fixture/step1-login-error.png" }],
-      "narrative": "The login flow is operator-allowlisted as standardized, so this finding renders with the lower-confidence label (F27); the label is cosmetic only and must still trigger the F26 CI gate at severity 4 (F121)."
+      "narrative": "The login flow is operator-allowlisted as standardized, so this finding renders with the lower-confidence label (F27); the label is cosmetic only and must still trigger the F26 CI gate at severity 4 (F121). run_status: completed matches findings-valid.json's baseline run_status (CR3-16 — isolates the single substantive delta between baseline and current to the new severity-4 finding itself, not an unrelated run_status/run-config diff, per the CR1-19 confounded-fixture defect)."
     }
   ]
 }

@@ -1,13 +1,13 @@
 # Validation — SWEBOK KA1 §5 set criteria (ux-gauntlet MVP, 2026-07-08)
 
 ## Complete
-The set is complete against the decision brief: every MUST in brief §2 (methodology), §3 (validity envelope), §5 (skill format) and §7 (MVP scope) maps to at least one requirement (F1–F27, N1–N7); the brief's non-goals map to the spec's non-goals section rather than silent omission.
+The set is complete against the decision brief: every MUST in brief §2 (methodology), §3 (validity envelope), §5 (skill format) and §7 (MVP scope) maps to at least one requirement (F1–F36, N1–N7); the brief's non-goals map to the spec's non-goals section rather than silent omission.
 Boundary coverage: F8 fixes the lower input boundary (no task list → refuse); F16 fixes the minimum persona count (≥3); severity is bounded to the closed 0–4 ordinal scale (F12); N5 bounds run time (45 min) and N2 bounds SKILL.md size (500 lines).
 Exception coverage: F15 defines the zero-evidence exception path (drop, never soften); F23–F25 define gate failure behavior (exit nonzero, no report ships); F26 defines the CI failure condition precisely (new severity-4 only) so every other finding is a non-exception informational path.
 Security coverage: the skill crawls only the operator-supplied target URL (F6) — no autonomous target discovery; forbidden-claim guardrails per persona (F5) plus F21/F22 prevent the report itself from emitting claims that could mislead downstream users; N6 excludes third-party data egress for localhost runs, keeping audit data on the operator's machine.
 
 ## Concise
-Each line states one testable obligation; req-lint passed 43/43 (F1-F36, N1-N7) with zero compound/vague/unbound findings on the original elicitation pass, and the scrub log (stage 6) cut speculative items rather than carrying them as padding. req-lint passed 133/133 after the unknowns pass plus challenge round 1. Current live total (post-challenge-round-2): req-lint passes 153/153 — see lint-result.txt for the up-to-date re-run.
+Each line states one testable obligation; req-lint passed 43/43 (F1-F36, N1-N7) with zero compound/vague/unbound findings on the original elicitation pass, and the scrub log (stage 6) cut speculative items rather than carrying them as padding. req-lint passed 133/133 after the unknowns pass plus challenge round 1; 153/153 after challenge round 2. Current live total (post-challenge-round-3): req-lint passes 169/169 — see lint-result.txt for the up-to-date re-run.
 
 ## Consistent
 No requirement contradicts another: the maximum-critique stance (D6) is compatible with the evidence discipline because F14/F15 make every critique artifact-anchored; F26's "block only severity-4" does not contradict F12's full 0–4 scoring because scoring and gating are separate concerns; persona minimum (F16) is consistent with the three shipped defaults (F2–F4).
@@ -94,3 +94,44 @@ override family (F126, F128) does not contradict the run-global safety defaults 
 override is logged, step-scoped, and every non-flagged step in the same run stays fully subject to the
 existing refusal rules (D14; proven by the `*-scoped-not-global-bad` fixture pairs in the acceptance
 test).
+
+Complete/concise/consistent/feasible coverage recorded above for F1-F100/N1-N7 remains valid and
+unchanged; combined with the Challenge round 1 and round 2 passes, every requirement through
+F144/N9 maps to at least one brief/audit source (F101-F125/N8 per CHALLENGE-ROUND-1.md;
+F126-F144/N9 per CHALLENGE-ROUND-2.md) — no line was added without a corresponding defect citation
+or elicitation-lens source.
+
+## Challenge round 3 (2026-07-08)
+
+A third independent adversarial challenge pass (`.swe-spec/CHALLENGE-ROUND-3.md`) ran 23 raw attacks
+against the post-round-2 spec (F1-F144/N1-N9), the ADR, and the RED test suite. Verdict:
+CHANGES_REQUIRED. 20 distinct defects confirmed (6 BLOCKER, 10 MAJOR, 4 MINOR), 3 attacks rejected as
+already litigated/closed in a prior round or factually contradicted by the frozen files (see
+CHALLENGE-ROUND-3.md §3). All 20 confirmed defects are applied in this pass: 16 new functional
+requirements (F145-F160, no new N-numbers — the Perfect Technology Filter recategorized the two items
+the challenge doc's own illustrative numbering suggested as N-series), 5 existing lines edited in place
+(F35, F43, F44, F83, the N5 derivation comment), one new unified Decision D15 (per-step
+operator-override flag family, CLOSED — supersedes D14 with a 5th flag `audited_terminal_step` plus a
+single system-wide precedence statement), and 18 new acceptance-test cases plus 11 new fixtures (one
+existing fixture, `findings-allowlisted-lower-confidence.json`, edited in place to fix a confounded-test
+defect) added to `test/acceptance.test.mjs` — every new [CRITICAL] requirement citation is now covered
+by a non-constant assertion (`test-coverage-audit.sh`: 73/73 CRITICAL PASS, up from 63/63
+post-round-2). requirements.txt grew from 153 to 169 lines (160 functional, 9 nonfunctional); req-lint
+169/169 PASS. `node --test test/acceptance.test.mjs`: 61 tests, 0 pass, 61 fail — RED preserved.
+Reconciliation decisions made where the challenge round left a choice open, where a directive's
+suggested requirement number collided with an already-used ID, or where a directive's literal
+instruction conflicted with this pass's own scope boundary, are recorded in `scrub-log.md` with the
+`CR3-N` prefix and a dedicated `## CR3 systemic resolution` note (the D15 closed-family design and its
+single system-wide precedence statement, resolving the recurring safety-vs-completion tension named
+across all three challenge rounds).
+
+Boundary/exception/security coverage recorded above for F1-F144/N1-N9 remains valid and unchanged;
+this paragraph extends coverage to the F145-F160 range only. Consistency check: the new 5th per-step
+override field (`audited_terminal_step`, F145) does not contradict the run-global default dry-run
+boundary (F40) or the existing `precondition_step` field (F126) — it is scoped to exactly ONE step
+(the task's own terminal submission, never a leading precondition step), logged the same way as every
+other D15-family flag, and every non-flagged step in the same run stays fully subject to F40's default
+(proven by the `audited-terminal-step-scoped-not-global-bad.json` fixture, mirroring the existing
+`*-scoped-not-global-bad` convention). The off-path `step` definition (F147) does not contradict the
+F45/F92 identity tuple it feeds — it resolves an ambiguity the tuple's own field never closed, it does
+not change the tuple's shape or field names.

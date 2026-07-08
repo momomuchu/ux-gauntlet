@@ -39,20 +39,23 @@ F31: Persona subagents MUST execute in parallel as background tasks.
 F32: The orchestrator MUST merge all per-persona ledgers into the single JSON findings file.
 F33: A No answer to any of the 4 walkthrough questions at a step MUST produce a friction instance for that step.
 F34: The persona agent MUST record one friction instance for every ambiguity resolution that the happy-path task list does not require.
-F35: The validity-envelope section MUST contain at least these 4 disclosures: not a replacement for real user research, no willingness-to-pay claims, no population-rate claims, no ISO-9241-11 compliance claim. # CR1-20
+F35: The validity-envelope section MUST contain at least these 5 disclosures: not a replacement for real user research, no willingness-to-pay claims, no population-rate claims, no ISO-9241-11 compliance claim, no guarantee that severity values are comparable across runs when severity_factors is free-text. # CR1-20 CR3-12
 F36: The runner command-line interface MUST conform to the contract recorded in docs/adr/0001-runner-cli-contract.md.
 N1: The skill package MUST conform to the Anthropic agent-skills format with a SKILL.md entry file carrying name plus description frontmatter.
 N2: The SKILL.md body MUST stay under 500 lines, with personas, schemas, templates in bundled resource files.
 N3: The project license MUST be MIT.
 N4: A CI run MUST complete headless without interactive operator input.
 # N5 provenance: agent-set assumption (2026-07-08), not founder-stated, not brief-sourced; validate empirically during build.
-# N5 derivation (CR1-25, corrected CR2-8): under F30/F31 parallel execution, wall-clock cost is ~1x a
-# single persona's time, not personas x actions — the original derivation multiplied 3 personas x
-# 50-action runner cap (F57) x ~18s per-action budget as if sequential. Corrected derivation: ONE
-# persona's 50-action runner cap (F57) x ~18s per-action budget (agentic round-trip plus evidence
-# capture plus redaction) roughly equals a 45-minute upper bound, with headroom against F26/N4
-# CI-latency variance, per N9's parallel-derivation rule; the per-action-budget figure is itself
-# pending empirical measurement at build time, not independently sourced.
+# N5 derivation (CR1-25, corrected CR2-8, reworded CR3-18): under F30/F31 parallel execution, wall-clock
+# cost is ~1x a single persona's time, not personas x actions — the original derivation multiplied 3
+# personas x 50-action runner cap (F57) x ~18s per-action budget as if sequential. Corrected derivation:
+# ONE persona's 50-action runner cap (F57) x ~18s per-action budget (agentic round-trip plus evidence
+# capture plus redaction) computes to ~15 minutes of raw per-persona compute; the 45-minute N5 bound
+# therefore adds ~3x margin for LLM-latency variance, retries, and CI-runner contention (per N9's
+# parallel-derivation rule), not itself empirically derived — the per-action-budget figure remains
+# pending empirical measurement at build time. (CR3-18: the prior wording claimed the arithmetic
+# "roughly equals" 45 minutes when the actual product is 15 minutes; this restates the real computed
+# figure and separates it from the enforced bound. No change to the enforceable N5/N9 requirement lines.)
 N5: A 3-persona run against a 5-step task list MUST complete within 45 minutes on one machine. # CR1-25 CR2-8
 N6: A run against a localhost target URL MUST succeed without any third-party network service beyond the agent runtime itself.
 N7: All shipped artifacts MUST be written in English.
@@ -68,8 +71,8 @@ F39: The skill MUST refuse to execute any payment-submission step in the operato
 F40: The persona agent MUST default to stopping short of submitting any form whose action is a non-idempotent HTTP method, unless the operator has explicitly configured full-submission mode. # DR-03
 F41: The runner MUST load the target's robots.txt before crawling begins. # DR-04a
 F42: Each persona subagent MUST abort navigation to a path disallowed for its user-agent in robots.txt, unless the operator passes an explicit override flag. # DR-04b
-F43: Before writing any evidence artifact to disk, the evidence capture module MUST redact substrings matching any of: a Bearer/JWT token, a cookie header value, a cloud API-key prefix among AKIA, sk-, ghp_, gh_pat_, a 13-19 digit Luhn-valid card-number sequence, from a screenshot-type evidence entry's captured_text sidecar field. # DR-05a CR1-3 CR2-9
-F44: Before writing any evidence artifact to disk, the evidence capture module MUST redact substrings matching any of: a Bearer/JWT token, a cookie header value, a cloud API-key prefix among AKIA, sk-, ghp_, gh_pat_, a 13-19 digit Luhn-valid card-number sequence, from DOM snippets. # DR-05b CR2-9
+F43: Before writing any evidence artifact to disk, the evidence capture module MUST redact substrings matching any of: a Bearer/JWT token, a cookie header value, a cloud API-key pattern among AKIA[A-Z0-9]{16}, sk-[A-Za-z0-9]{20,}, ghp_[A-Za-z0-9]{36}, gh_pat_[A-Za-z0-9_]{20,}, a 13-19 digit Luhn-valid card-number sequence, from a screenshot-type evidence entry's captured_text sidecar field. # DR-05a CR1-3 CR2-9 CR3-8
+F44: Before writing any evidence artifact to disk, the evidence capture module MUST redact substrings matching any of: a Bearer/JWT token, a cookie header value, a cloud API-key pattern among AKIA[A-Z0-9]{16}, sk-[A-Za-z0-9]{20,}, ghp_[A-Za-z0-9]{36}, gh_pat_[A-Za-z0-9_]{20,}, a 13-19 digit Luhn-valid card-number sequence, from DOM snippets. # DR-05b CR2-9 CR3-8
 F45: The orchestrator MUST classify two friction records as the same underlying finding when they share an identical (heuristic_tag, step, target_element_identifier) tuple, using the JSON field name step for the happy-path step index. # DR-06a CR2-6
 F46: The orchestrator MUST merge two findings classified as the same underlying finding into one findings.json entry with one evidence-pointer array. # DR-06b
 F47: When a target-app-side 5xx-or-network-failure event occurs during a walkthrough step, the persona agent MUST record it as a distinct app-error event separate from the friction ledger. # DR-07a
@@ -108,7 +111,7 @@ F79: A persona subagent MUST emit a distinct run-status event of type patience-e
 F80: The runner CLI MUST exit with distinct code 3, printing a one-line stderr reason, when the target URL is unreachable at crawl start due to a target-unreachable condition (DNS failure, connection refused, TLS handshake error). # DR-26
 F81: The orchestrator MUST write a status file, updated at least once per completed persona step, recording each persona subagent's current state as one of running, done, failed. # DR-27a
 F82: The orchestrator MUST record each persona subagent's last-completed step index in the status file. # DR-27b
-F83: The skill MUST ship an example happy-path tasks JSON file conforming to the runner's tasks schema, referenced by name in SKILL.md, that an operator can pass directly to the CLI without authoring their own tasks file. # DR-28
+F83: The skill MUST ship examples/tasks.json, an example happy-path tasks JSON file conforming to the runner's tasks schema, referenced by name in SKILL.md, that an operator can pass directly to the CLI without authoring their own tasks file. # DR-28 CR3-4
 F84: The runner CLI MUST emit a fixed-path summary.json, distinct from findings.json, on every completed run containing exit status, finding counts per severity level, convergence-tier distribution, the findings.json/markdown-report output paths. # DR-29
 F85: The runner CLI MUST verify target URL reachability before delegating any subagent. # DR-30a
 F86: The runner CLI MUST emit a single actionable stderr message identifying the unreachable URL when the reachability check fails. # DR-30b
@@ -191,3 +194,36 @@ F142: The report gate script MUST exit nonzero when a finding carries the F27 lo
 F143: A finding carrying the F27 lower-confidence label together with the F124 degraded-confidence value MUST store them as two independent fields: confidence_label, confidence. # CR2-17
 F144: Storing both confidence_label, confidence on the same finding MUST NOT alter the F121 CI-gate outcome for that finding. # CR2-17
 N9: The run-level wallclock budget derivation MUST use a single persona's action-count budget under parallel execution, excluding the sequential persona-count multiplication used in N5's original derivation comment. # CR2-8
+
+# --- Challenge round 3 pass 2026-07-08 (.swe-spec/CHALLENGE-ROUND-3.md, 20 confirmed defects) ---
+# Trailing "# CR3-NN" comments trace each new line back to the challenge-round-3 defect entry
+# (BLOCKER 1-6 = CR3-1..CR3-6, MAJOR 1-10 = CR3-7..CR3-16, MINOR 1-4 = CR3-17..CR3-20). Edits to
+# existing lines (F35, F43, F44, F83, the N5 derivation comment) are made in place above rather
+# than appended here; this section holds only new F lines — no new N lines this round: every CR3
+# addition is a refusal/definition/scoring/disclosure POLICY (Perfect Technology Filter: still
+# needed on a computer with infinite speed/memory/cost), including the two items a challenge
+# fix_directive's own illustrative numbering suggested as "N9"/"N6a" — categorized-requirements.md
+# corrects that to F152 (doc-content policy, same category as the existing F86/F91 precedent) and
+# F155 (classification policy, same category as the existing F67/F68 gate it feeds) respectively.
+# D15 (spec.md) declares the per-step operator-override flag family CLOSED: precondition_step
+# (F126), payment_step (F115), external_side_effect (F62), denylist_override (F128),
+# audited_terminal_step (F145 below) — plus the implicit default class (an ordinary step carrying
+# none of the 5 flags) — is now the complete, closed enumeration; any future step-class need is a
+# spec change, not a new ad hoc flag.
+
+F145: The task-list step schema MUST support an operator-set audited_terminal_step boolean per step, distinct from the precondition_step field, distinct from the payment_step field, distinct from the external_side_effect field, distinct from the denylist_override field. # CR3-1
+F146: The persona agent's default dry-run boundary from F40 MUST NOT apply to a step flagged audited_terminal_step, exempting only that step's own non-idempotent submission within the audited task. # CR3-1
+F147: For an off-path friction instance whose friction_type is one of extra_action / ambiguity_resolution, the step field in the F45 identity tuple MUST equal the index of the next not-yet-completed happy-path step at the time the friction occurred, never the index of the last-completed happy-path step. # DR-06a CR3-2
+F148: When a target's robots.txt fetch returns any response outside the 2xx success range on an otherwise-reachable target, the runner MUST treat the target as allow-all for robots.txt purposes, proceeding with crawling. # DR-04a CR3-3
+F149: The target_element_identifier for a patience-abandonment terminal friction MUST equal a fixed sentinel string computed only from the step value, identical regardless of the persona's path to abandonment. # DR-09b CR3-5
+F150: The heuristic_tag for a patience-abandonment terminal friction MUST equal one fixed value declared as the designated patience-abandonment tag in the heuristic-set configuration file. # DR-09b CR3-5
+F151: CI mode MUST exit nonzero when a finding matched by finding_id to a baseline entry has current-run severity 4 with matched baseline severity below 4. # CR3-6 CR3-14
+F152: The runner's usage help text, plus the shipped documentation, MUST reference --override-robots as the resolution when a run against a local-or-staging target aborts every persona's navigation due to a robots.txt disallow rule. # CR3-7
+F153: The evidence capture module MUST NOT redact a substring that matches only the literal prefix of a redaction pattern without a qualifying trailing character run of that pattern's specified minimum length. # CR3-8
+F154: The orchestrator MUST default the per-run LLM tool-call maximum to 250 when the operator has not supplied a --max-tool-calls value. # CR3-9
+F155: A target MUST be classified as localhost when its --url hostname matches any of: the literal string 'localhost', an address in the 127.0.0.0/8 range, the address ::1. # CR3-10
+F156: The repo MUST ship schemas/tasks.schema.json defining task-list steps as a plain string / object carrying the optional per-step boolean fields payment_step, precondition_step, external_side_effect, denylist_override, audited_terminal_step. # CR3-11
+F157: The validity-envelope disclosure section MUST state that a finding's severity value is not guaranteed comparable, not guaranteed reproducible, across runs for the same finding_id when severity_factors is stored as free-text rationale, distinct from the F138 new-finding rerun-instability caveat. # CR3-12
+F158: ci-diff.mjs MUST print the rerun-instability caveat, plus a manual-re-run instruction, to its own stderr when it exits nonzero due to a new-or-escalated severity-4 finding. # CR3-13
+F159: When severity_factors is stored as 3 numeric values, the frequency factor MUST be computed from the raw within-run re-encounter count via the fixed mapping: 1 encounter=0, 2-3=1, 4-6=2, 7-10=3, 11-plus=4, applied identically by every persona. # CR3-17
+F160: The validity-envelope section MUST state that cognitive walkthroughs are validated for novel workflows, weaker on standardized, well-learned interaction patterns, whenever any finding carries the F27 lower-confidence label. # CR3-19

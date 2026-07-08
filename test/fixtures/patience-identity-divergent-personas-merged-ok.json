@@ -1,0 +1,42 @@
+{
+  "run": {
+    "target_url": "http://localhost:3000",
+    "task_list": "test/fixtures/tasks.json",
+    "personas": ["free-tier-user", "willing-to-pay-user", "vp-team-buyer"]
+  },
+  "personas": [
+    { "name": "free-tier-user", "patience_threshold_steps": 10 },
+    { "name": "willing-to-pay-user", "patience_threshold_steps": 10 }
+  ],
+  "walkthrough_progress": [
+    { "persona": "free-tier-user", "task": "upgrade plan", "step_count": 11 },
+    { "persona": "willing-to-pay-user", "task": "upgrade plan", "step_count": 11 }
+  ],
+  "tasks_ledger": [
+    { "persona": "free-tier-user", "task": "upgrade plan", "task_completed": false, "outcome": "failed_by_patience", "reason_code": "patience-exhausted" },
+    { "persona": "willing-to-pay-user", "task": "upgrade plan", "task_completed": false, "outcome": "failed_by_patience", "reason_code": "patience-exhausted" }
+  ],
+  "findings": [
+    {
+      "id": "fr-906",
+      "finding_id": "fid-patience-abandon-upgrade-plan-step11",
+      "friction_name": "persona abandoned the upgrade-plan task past its patience threshold",
+      "friction_type": "terminal_friction",
+      "step": 11,
+      "target_element_identifier": "patience-abandonment:step-11",
+      "personas_flagging": ["free-tier-user", "willing-to-pay-user"],
+      "convergence_tier": 2,
+      "partial_tier": 0,
+      "heuristic_tag": "flexibility-efficiency-of-use",
+      "severity": 3,
+      "component_severities": [3, 3],
+      "severity_factors": { "frequency": "every attempt past threshold", "impact": "task abandoned", "persistence": "recurs" },
+      "market_impact": true,
+      "evidence": [
+        { "type": "screenshot", "path": "runs/fixture/step11-abandon-free-tier.png", "persona": "free-tier-user" },
+        { "type": "screenshot", "path": "runs/fixture/step11-abandon-wtp.png", "persona": "willing-to-pay-user" }
+      ],
+      "narrative": "free-tier-user reached step 11 via the direct upgrade-plan flow; willing-to-pay-user reached the identical abandonment point via a different retry path with a different simulated page state. Despite the differing DOM/path state, both terminal frictions share the identical fixed-sentinel target_element_identifier (F149, computed only from step=11, never from either persona's rendered DOM) and the identical designated patience-abandonment heuristic_tag (F150, drawn from the heuristic-set config, not narrative-derived) — so the two independently-authored records correctly merge into one finding at convergence_tier=2 (CR3-5), the exact corroboration signal the 3-persona architecture (F16/N5) exists to produce for the friction class that most needs it."
+    }
+  ]
+}

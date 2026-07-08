@@ -16,16 +16,17 @@ A CLI is a public interface — a material decision per decision-record discipli
 | Flag | Required | Meaning |
 |---|---|---|
 | `--url <target>` | yes | target application base URL |
-| `--tasks <file>` | yes | happy-path task list (JSON) |
+| `--tasks <file>` | yes | happy-path task list (JSON), validated against `schemas/tasks.schema.json` (F156, CR3-11); `examples/tasks.json` ships as the copyable default (F83, CR3-4) |
 | `--i-own-this-target` | yes | explicit operator-authority confirmation (F65) — no flag, no crawl |
 | `--env <local\|staging\|production>` | yes | target environment class declaration (F61) — hard-stop without it |
 | `--denylist <file>` | yes | action-level denylist of destructive element labels, validated as a non-empty JSON array of strings against `schemas/denylist.schema.json` (F37/F38/F106); `denylist/default-destructive-labels.json` ships as the copyable default (F105) |
 | `--test-mode` | conditional | declares payment flows sandboxed; payment-submission steps refuse without it (F39) |
-| `--confirm-third-party-data` | conditional | required for any non-localhost target: acknowledges evidence may contain third-party data (F67/F68) |
-| `--full-submission` | no | disables the default dry-run boundary on non-idempotent requests (F40) — does NOT affect a step flagged `precondition_step` in the task list, which submits regardless (F126/F127, CR2-1) |
-| `--override-robots` | no | overrides robots.txt disallow-abort (F41/F42); off by default |
+| `--confirm-third-party-data` | conditional | required for any non-localhost target: acknowledges evidence may contain third-party data (F67/F68); localhost = hostname `localhost`, `127.0.0.0/8`, or `::1` — see F155 (CR3-10) |
+| `--full-submission` | no | disables the default dry-run boundary on non-idempotent requests (F40) — does NOT affect a step flagged `precondition_step` or `audited_terminal_step` in the task list, both of which submit regardless (F126/F127 CR2-1; F145/F146 CR3-1, D15) |
+| `--override-robots` | no | overrides robots.txt disallow-abort (F41/F42); off by default; commonly needed against local/staging targets that ship a blanket `Disallow: /` robots.txt for search-index exclusion (F152, CR3-7) — see D15 for the full localhost/staging relaxation enumeration |
 | `--personas <paths...>` | no | persona data files; default = every file in `personas/` |
 | `--max-parallel <n>` | no | concurrent persona subagent cap; default 5 (F98) |
+| `--max-tool-calls <n>` | no | per-persona-per-run LLM tool-call cap; default 250 (F99/F100/F154, CR3-9 — ties to F57's 50-action cap x ~5 tool-calls/action) |
 | `--headless` | no | forces headless browser mode; redundant with the auto-default below but kept for explicit CI invocations |
 | `--no-headless` | no | forces a visible-browser launch, overriding the auto-headless default (F135, CR2-10) |
 | `--timeout <minutes>` | no | run-level wallclock timeout; default 50 (F131, CR2-7) |
@@ -87,9 +88,32 @@ headless, so the prior error-and-instruct behavior made N8's "zero failed prior 
 false a second way; `--no-headless` (F135) is the explicit escape hatch for a forced visible
 browser.
 
+**Revision 2026-07-08 (challenge round 3, CR3-1, D15 — systemic resolution):** a 5th per-step
+task-list schema field, `audited_terminal_step` (F145), joins `payment_step` (F115),
+`external_side_effect` (F62), `precondition_step` (F126), `denylist_override` (F128) as the
+identical narrowly-scoped, operator-set, per-step override shape — see spec.md D15, which
+supersedes D14 and declares this 5-field family (plus the implicit default class of an ordinary
+step carrying none of the 5 flags) CLOSED. `audited_terminal_step` exempts ONLY the task's own
+final non-idempotent submission from F40's default dry-run boundary (F146) — this is what makes
+the spec's own flagship signup scenario (F10-F14) buildable under F40's default without passing
+`--full-submission` for the whole run, and distinct from `precondition_step` (which exempts a
+*leading* login/setup step, not the task's own terminal outcome). D15 also states the ONE
+system-wide precedence order (per-step flags beat run-global flags; run-global safety defaults
+beat completion) and the exhaustive list of localhost/`--env local` relaxations — there is exactly
+one: F67/F68's third-party-data confirmation is skipped for a localhost target per F155 (CR3-10).
+No other gate (F37/F38 denylist, F39 payment, F40 dry-run, F41/F42 robots.txt) is auto-relaxed by
+localhost or `--env local`; their only escape hatches remain their own explicit per-step/run flags.
+`--override-robots` (existing, unweakened) is the one documented, discoverable resolution for a
+robots.txt `Disallow: /` blocking a local/staging target (F152, CR3-7) — first-run guidance and
+`--help` text must name it. Separately, `--max-tool-calls <n>` (F154, CR3-9) closes the same
+"configured limit with no CLI surface" defect class already fixed once for `--timeout` (F131,
+CR2-7), applied here to F99/F100's per-run LLM tool-call cap.
+
 Companion scripts share the convention: `report-gate.mjs [--check-fixture <file>|<findings.json>]`,
 `render-report.mjs <findings.json>`, `validate-persona.mjs <persona-file>` — each exits nonzero on
-violation with a stderr reason.
+violation with a stderr reason. `ci-diff.mjs` additionally prints the F138/F139 rerun-instability
+caveat directly to its own stderr, not only via `render-report.mjs`'s markdown output, whenever it
+exits nonzero due to a new-or-escalated severity-4 finding (F158, CR3-13).
 
 ## Alternatives considered
 

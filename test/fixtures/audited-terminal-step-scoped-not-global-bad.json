@@ -1,0 +1,17 @@
+{
+  "run": {
+    "target_url": "http://localhost:3000",
+    "task_list": "test/fixtures/tasks.json",
+    "personas": ["free-tier-user"],
+    "full_submission_mode": false
+  },
+  "task_list_steps": [
+    { "step": 3, "audited_terminal_step": true },
+    { "step": 5, "audited_terminal_step": false }
+  ],
+  "actions": [
+    { "persona": "free-tier-user", "step": 3, "type": "submit", "http_method": "POST", "detected_via": "network-request-interception", "audited_terminal_step": true, "outcome": "executed" },
+    { "persona": "free-tier-user", "step": 5, "type": "submit", "http_method": "POST", "detected_via": "network-request-interception", "audited_terminal_step": false, "outcome": "executed" }
+  ],
+  "findings": []
+}
