@@ -90,7 +90,7 @@ Verdict unchanged: scope still FITS budget (unconstrained token budget, no exter
 
 ## Challenge round 4 growth (2026-07-09)
 
-Requirement count grew again, from 169 (F1-F160, N1-N9) to 186 (F1-F177, N1-N9), after the
+Requirement count grew again, from 169 (F1-F160, N1-N9) to 187 (F1-F178, N1-N9), after the
 challenge-round-4 adversarial pass confirmed 22 distinct defects (4 BLOCKER, 12 MAJOR, 6 MINOR) and
 every fix_directive was applied, PLUS a mandated systematic sweep of the panel's own 5 named
 defect-generator patterns across the whole spec (traced via `# CR4-S<n>`). `test/fixtures/` grew from

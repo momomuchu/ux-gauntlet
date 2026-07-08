@@ -139,3 +139,61 @@ producer closure) plus the F111-F113/F43/F44 fixture-pair additions (control-pai
 README/spec.md/validation.md/scope-match.md count-consistency edits made in the SAME pass that changed
 the counts (SSOT/count-drift prevention). No sibling-completeness gap beyond F12's impact/persistence
 (already a named BLOCKER-3 confirmed defect) was found elsewhere in the spec on inspection.
+
+### Repair cycle (2026-07-09, same pass) — atomicity + coverage regressions
+
+A verification re-run (`req-lint.sh` + `test-coverage-audit.sh`) caught 2 classes of self-introduced
+regression in the first CR4 landing, both fixed in the same pass before this file was finalized:
+
+1. **req-lint atomicity (8 lines).** `F35`, `F49`, `F157`, `F166`, `F167`, `F168`, `F169`, `F173`,
+   `F176` each tripped the mechanical "compound and/or" check — most were literal-word artifacts (a
+   list rendered as "X or Y" instead of "X, Y" / "X/Y"), reworded without semantic loss. `F168` was the
+   one genuine two-decision line (content-authoring MUST + schema-verification MUST) and was split into
+   `F168` (content) + `F178` (verification) rather than reworded, since collapsing two independent MUST
+   clauses into a comma list would have hidden a real atomicity violation, not just a wording one. This
+   is why the round's final count is `F161`-`F178` (18 new lines), one more than the `F161`-`F177` (17)
+   figure recorded in the CR4-numbering entry above — that entry accurately describes the numbering
+   decision AT THE TIME IT WAS MADE (before the repair cycle); this note is the forward pointer to the
+   later split so a reader following `F161`-`F177` upward is not left with a stale range.
+2. **test-coverage-audit gaps (5 CRITICAL IDs).** `F170`, `F172`, `F173`, `F174`, `F176` were cited in
+   [CRITICAL] spec.md bullets by the first landing but not yet referenced by a non-constant assertion in
+   `test/acceptance.test.mjs` (the Requirement-ID citation existed before the test case did). Closed by
+   extending the existing gate()-routed test blocks for the D12/personas_flagging, F107/F108-remedy-path,
+   and run_status-producer areas — no new fixtures were needed beyond what CR4-B1/CR4-B2/CR4-M8 already
+   shipped; these were assertion-coverage gaps, not fixture gaps. `node --test` grew from 68 to 71 as a
+   result (61 pre-CR4 + 10 net-new test cases this round, not 68 total — 68 was itself a
+   mid-repair-cycle snapshot number that this same edit corrects downstream in README/validation.md).
+
+Post-repair, fresh re-runs from repo root: `req-lint.sh .swe-spec/requirements.txt` → 187/187 PASS;
+`coverage-audit.sh --pre-freeze` → 8/8 stages PASS; `test-coverage-audit.sh docs/specs/0001-ux-gauntlet-mvp.spec.md test/acceptance.test.mjs`
+→ 87/87 CRITICAL PASS; `node --test test/acceptance.test.mjs` → 71 tests, 0 pass, 71 fail (RED
+preserved, exit 1).
+
+## CR4 closure sweep
+
+Full abort/terminal-state → `run_status` → `reason_code` mapping (Pattern A closure, BLOCKER-1 plus the
+mandated systematic sweep). Every terminal or forced-abort path named in the task instruction is listed;
+"—" means the axis does not apply to that path (the path never reaches a persona-level `run_status` or
+never produces a `task_completed:false` ledger entry, and the table states why).
+
+| Terminal / abort path | `run_status` (F53) | `reason_code` (F123) | Producer requirement(s) | BLOCKED trigger (F49)? |
+|---|---|---|---|---|
+| Patience-threshold exhaustion | `patience-exhausted` | `patience-exhausted` | F50-F52, F175 | No — designed, successful methodology outcome (CR4-B2) |
+| Runner-level action cap (50 actions, F57/F58) | `runner-capped` | `runner-capped` | F57, F58, F176, F123 | No — counted set is exactly `{completed, crashed, timed-out}` (F49); a capped persona still delivered a valid partial ledger, not an infra failure |
+| Runner-level tool-call cap (250 calls default, F99/F100/F154) | `runner-capped` | `runner-capped` | F99, F100, F154, F176, F123 | No — same enum member and same BLOCKED-exclusion as the action cap; F176 unifies both caps' producer under one `run_status` value since the founder-facing consequence (force-abort, partial ledger) is identical |
+| Run-level wallclock timeout (F75/F76) | `timed-out` | — (no single in-flight task reason code beyond the persona-level `timed-out` status; the partial ledger is merged as-is, F76) | F75, F76, F174 | Yes — `timed-out` is one of the 3 counted values |
+| Persona crash (unhandled exception / browser death) | `crashed` | — (crash is an infra fault at the persona-execution level, not a per-task refusal reason; F56's reason-code axis is for a *deliberate* per-task non-completion, not an unplanned fault) | F173 | Yes — `crashed` is one of the 3 counted values |
+| Target-unreachable at crawl start (F80, exit code 3) | — (no persona is ever delegated; findings.json may not exist at all — this is a pre-crawl CLI refusal, not a persona terminal state) | `target-unreachable` | F80, F85, F86, F123 | N/A — the run never starts; F49's BLOCKED trigger is a post-crawl findings.json concept that presupposes at least an attempted delegation |
+| Denylist-abort (F37/F38) | `completed` (the persona continues; only the one flagged step is aborted) | `denylist-abort` | F38, F123 | No — per-step refusal, not a persona-terminal state |
+| Robots.txt disallow (F41/F42) | `completed` (persona continues; only that navigation is aborted) | `robots-disallowed` | F42, F123 | No — per-step refusal, not a persona-terminal state |
+| Default dry-run boundary stop (F40, non-`audited_terminal_step`/`precondition_step`) | `completed` (persona continues; only that submission is withheld) | `dry-run-boundary-stop` | F40, F123 | No — per-step refusal, not a persona-terminal state |
+| Successful completion (implicit default) | `completed` | (no reason code — `task_completed:true`, F56 only fires when `task_completed` is `false`) | — (absence of every other trigger) | N/A — counts toward the "3 completed" floor |
+
+Every `run_status` member (F53's now-5-value closed enum) has exactly one producer citation in
+`docs/specs/0001-ux-gauntlet-mvp.spec.md`'s "Enum / flag-family → producers" table (F173-F176 plus the
+implicit `completed` default), closing the mapping totality Pattern A required. `reason_code` (F123)
+stays an explicitly OPEN "at minimum" enumerated set (unlike `run_status`, which is closed) because a
+future refusal class (a new D15-family flag, for instance) can add its own reason code without a spec
+revision to the closed `run_status` axis — this asymmetry is intentional, not a residual gap: `run_status`
+answers "what happened to this persona," a small closed taxonomy; `reason_code` answers "why did this
+specific task not complete," an open taxonomy that grows with the refusal layer (D11).

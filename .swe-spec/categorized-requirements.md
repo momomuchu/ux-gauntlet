@@ -243,15 +243,16 @@ corrections are recorded in scrub-log.md under CR3-7/CR3-10.
 
 Summary: 160 functional, 9 nonfunctional (169 total).
 
-## Challenge round 4 pass 2026-07-09 (.swe-spec/CHALLENGE-ROUND-4.md, F161-F177)
+## Challenge round 4 pass 2026-07-09 (.swe-spec/CHALLENGE-ROUND-4.md, F161-F178)
 
-Same Perfect Technology Filter question applied to each landed line. All 17 new lines resolve to
+Same Perfect Technology Filter question applied to each landed line. All 18 new lines resolve to
 `functional`: every one is a scoring/enum-closure/refusal-scoping/identity/disclosure/schema policy
 that a live-target crawl, a real payment form, or a nondeterministic parallel pipeline still needs
 regardless of compute speed/memory/cost — none describe a pure QoS/resource attribute of the
 evaluating machine itself. This round adds ZERO new N-numbers (same pattern as round 3): the
 enum-producer-closure lines (F173-F176) are refusal/output-contract policy, not a QoS bound, matching
-the existing F53/F123 precedent those lines extend.
+the existing F53/F123 precedent those lines extend. F178 (the round-4 repair pass's atomicity split of
+the original combined F168) is the same shipped-artifact-verification policy category as its sibling.
 
 | ID | Category | Filter note |
 |----|----------|-------------|
@@ -274,4 +275,4 @@ the existing F53/F123 precedent those lines extend.
 | F177 | functional | enum-closure policy (friction_type closed set + producer citation) — CR4-S1 |
 | F178 | functional | example-verification policy (schema-validated terminal flag) — CR4-M6 |
 
-Summary: 177 functional, 9 nonfunctional (186 total).
+Summary: 178 functional, 9 nonfunctional (187 total).

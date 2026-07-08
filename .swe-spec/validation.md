@@ -7,7 +7,7 @@ Exception coverage: F15 defines the zero-evidence exception path (drop, never so
 Security coverage: the skill crawls only the operator-supplied target URL (F6) — no autonomous target discovery; forbidden-claim guardrails per persona (F5) plus F21/F22 prevent the report itself from emitting claims that could mislead downstream users; N6 excludes third-party data egress for localhost runs, keeping audit data on the operator's machine.
 
 ## Concise
-Each line states one testable obligation; req-lint passed 43/43 (F1-F36, N1-N7) with zero compound/vague/unbound findings on the original elicitation pass, and the scrub log (stage 6) cut speculative items rather than carrying them as padding. req-lint passed 133/133 after the unknowns pass plus challenge round 1; 153/153 after challenge round 2; 169/169 after challenge round 3. Current live total (post-challenge-round-4): req-lint passes 186/186 — see lint-result.txt for the up-to-date re-run.
+Each line states one testable obligation; req-lint passed 43/43 (F1-F36, N1-N7) with zero compound/vague/unbound findings on the original elicitation pass, and the scrub log (stage 6) cut speculative items rather than carrying them as padding. req-lint passed 133/133 after the unknowns pass plus challenge round 1; 153/153 after challenge round 2; 169/169 after challenge round 3. Current live total (post-challenge-round-4): req-lint passes 187/187 — see lint-result.txt for the up-to-date re-run.
 
 ## Consistent
 No requirement contradicts another: the maximum-critique stance (D6) is compatible with the evidence discipline because F14/F15 make every critique artifact-anchored; F26's "block only severity-4" does not contradict F12's full 0–4 scoring because scoring and gating are separate concerns; persona minimum (F16) is consistent with the three shipped defaults (F2–F4).
@@ -142,13 +142,22 @@ A fourth independent adversarial challenge pass (`.swe-spec/CHALLENGE-ROUND-4.md
 against the post-round-3 spec (F1-F160/N1-N9), the ADR, and the RED test suite. Verdict:
 CHANGES_REQUIRED. 22 distinct defects confirmed (4 BLOCKER, 12 MAJOR, 6 MINOR), 3 attacks rejected as
 already litigated/closed in a prior round or factually contradicted by the frozen files (see
-CHALLENGE-ROUND-4.md §3). All 22 confirmed defects are applied in this pass: 17 new functional
-requirements (F161-F177, no new N-numbers), 8 existing lines edited in place (F9, F24, F35, F49, F53,
+CHALLENGE-ROUND-4.md §3). All 22 confirmed defects are applied in this pass: 18 new functional
+requirements (F161-F178, no new N-numbers — F178 split out of the original combined F168 during the
+same-pass atomicity repair described below), 8 existing lines edited in place (F9, F24, F35, F49, F53,
 F123, F157, N8), the D12/D15 decision rows amended (personas_flagging as the sole convergence_tier
 input; the D15 per-step flag family gains a 4th precedence clause closing flag-vs-flag mutual
-exclusivity), and 26 new acceptance-test cases plus 19 new fixtures added to `test/acceptance.test.mjs`
-— `node --test test/acceptance.test.mjs`: 68 tests, 0 pass, 68 fail — RED preserved.
-requirements.txt grew from 169 to 186 lines (177 functional, 9 nonfunctional); req-lint 186/186 PASS.
+exclusivity), and 10 new acceptance-test cases plus 19 new fixtures added to `test/acceptance.test.mjs`
+(61 → 71 tests) — `node --test test/acceptance.test.mjs`: 71 tests, 0 pass, 71 fail — RED preserved.
+requirements.txt grew from 169 to 187 lines (178 functional, 9 nonfunctional); req-lint 187/187 PASS.
+A same-pass repair cycle (`test-coverage-audit.sh` + `req-lint.sh` re-run) found and fixed 8 lines that
+tripped req-lint's atomic (compound and/or) check — F35, F49, F157, F166, F167, F168, F169, F173, F176
+— by rewording to comma/slash-list style consistent with the rest of the document (F168 was split into
+F168 + F178 rather than reworded, since its two MUST clauses — content authoring and schema
+verification — are genuinely distinct decisions), plus 5 CRITICAL requirement IDs (F170, F172, F173,
+F174, F176 producer citations) that `test-coverage-audit.sh` initially found uncovered, closed with
+additional assertions in the existing gate()-routed test blocks. `req-lint.sh`: 187/187 PASS;
+`coverage-audit.sh --pre-freeze`: 8/8 stages PASS; `test-coverage-audit.sh`: 87/87 CRITICAL PASS.
 Reconciliation decisions — including the numbering-collision resolution where the panel's own
 illustrative "e.g." numbers (F160, F161, F108a, F92a, F43a, F44a, F64a, F17a) collided with
 already-assigned IDs — are recorded in `scrub-log.md` under a dedicated `## CR4` section.
@@ -174,12 +183,15 @@ panel to find:
    (the apikey/cardnumber RED fixtures each had zero dedicated `-ok` counterpart — 2 new fixtures
    added), and F9 (walkthrough answer-completeness gained its own gate()-routed bad/ok pair).
 4. **SSOT/count drift** — README.md, spec.md traceability, validation.md (this section), and
-   scope-match.md all updated to the current 186-requirement/107-fixture/68-test state in the same
-   pass that changed the counts, closing the exact one-round-behind drift class CR4 itself found in
-   README (MAJOR-12).
+   scope-match.md all updated to the current 187-requirement/107-fixture/71-test state, closing the
+   exact one-round-behind drift class CR4 itself found in README (MAJOR-12). This count itself moved
+   twice within the same pass (186→187, 68→71) once the atomicity-repair cycle above split F168 into
+   F168+F178 and added 3 more test assertions to close the 5 initially-uncovered CRITICAL IDs — an
+   instance of the identical drift pattern, closed as evidence-collector rather than left stale, per
+   the fresh req-lint/coverage-audit/test-coverage-audit re-run this same pass.
 5. **Traceability sweep** — every new requirement carries a `# CR4-Bn`/`# CR4-Mn`/`# CR4-MINn`/
    `# CR4-Sn` trace comment; the "Known verification gaps" section's gate-routed-ID list and
-   zero-coverage-tier list were both extended to include every new F161-F177 ID, so the disclosed
+   zero-coverage-tier list were both extended to include every new F161-F178 ID, so the disclosed
    residual-risk boundary does not itself drift one round behind (the same defect class as CR4's own
    README finding, applied preemptively here).
 6. **Pluggability-commitment wording regression (panel §4 systemic observation 5)** — swept every
@@ -192,7 +204,7 @@ panel to find:
    confirmed as the sole instance of this pattern in the current spec.
 
 Boundary/exception/security coverage recorded above for F1-F160/N1-N9 remains valid and unchanged;
-this paragraph extends coverage to the F161-F177 range only. Consistency check: F164's mutual-
+this paragraph extends coverage to the F161-F178 range only. Consistency check: F164's mutual-
 exclusivity rule does not contradict any existing D15-family fixture (`audited-terminal-step-ok.json`,
 `precondition-step-login-ok.json`, `denylist-override-used-ok.json` — each already carries exactly one
 flag); F49's rescoped BLOCKED trigger does not contradict F101 (CI mode still exits nonzero on BLOCKED
