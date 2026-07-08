@@ -7,7 +7,7 @@ Exception coverage: F15 defines the zero-evidence exception path (drop, never so
 Security coverage: the skill crawls only the operator-supplied target URL (F6) — no autonomous target discovery; forbidden-claim guardrails per persona (F5) plus F21/F22 prevent the report itself from emitting claims that could mislead downstream users; N6 excludes third-party data egress for localhost runs, keeping audit data on the operator's machine.
 
 ## Concise
-Each line states one testable obligation; req-lint passed 34/34 with zero compound/vague/unbound findings on the first pass (see lint-result.txt), and the scrub log (stage 6) cut speculative items rather than carrying them as padding.
+Each line states one testable obligation; req-lint passed 43/43 (F1-F36, N1-N7) with zero compound/vague/unbound findings on the original elicitation pass, and the scrub log (stage 6) cut speculative items rather than carrying them as padding. Current live total (post-unknowns-pass, post-challenge-round-1): req-lint passes 133/133 — see lint-result.txt for the up-to-date re-run.
 
 ## Consistent
 No requirement contradicts another: the maximum-critique stance (D6) is compatible with the evidence discipline because F14/F15 make every critique artifact-anchored; F26's "block only severity-4" does not contradict F12's full 0–4 scoring because scoring and gating are separate concerns; persona minimum (F16) is consistent with the three shipped defaults (F2–F4).
@@ -45,3 +45,22 @@ only. Consistency check: the new refusal-layer lines (F37-F44) do not contradict
 design (F10/F34) — refusal fires on a narrow denylisted/financial/unauthorized/robots-disallowed
 subset of actions, not on exploratory "extra actions" generally, so F10's friction-accounting mandate
 and the refusal layer apply to disjoint action classes.
+
+## Challenge round 1 (2026-07-08)
+
+An independent adversarial challenge pass (`.swe-spec/CHALLENGE-ROUND-1.md`, 6 lenses: contradictions,
+operator-hostility, methodology, evidence-fidelity, plus 2 more) ran 29 attacks against the frozen-pending
+spec (F1-F100/N1-N7), the ADR, and the RED test suite. Verdict: CHANGES_REQUIRED. 26 distinct defects
+confirmed (10 BLOCKER, 12 MAJOR, 4 MINOR; 5 raw attacks independently converged on one F92 defect), 2
+attacks rejected as already-covered by an existing decision. All 26 confirmed defects are applied in
+this pass: 25 new functional requirements (F101-F125) plus 1 nonfunctional requirement (N8), 7 existing
+lines edited in place (F12, F17, F26, F35, F43, F92, N5), the runner CLI validation model changed from
+implicit fail-fast to explicit aggregate-check-all-then-report (ADR-0001), the F92 finding_id identity
+function collapsed onto the F45/F46 dedup tuple (D12, the single highest-priority fix — 4 independently
+converged lenses), and 24 new RED test cases plus 26 new/extended fixtures added to
+`test/acceptance.test.mjs` — every new [CRITICAL] requirement is now covered by a non-constant
+assertion (`test-coverage-audit.sh`: 59/59 CRITICAL PASS). requirements.txt grew from 107 to 133 lines
+(125 functional, 8 nonfunctional); req-lint 133/133 PASS. `node --test test/acceptance.test.mjs`: 40
+tests, 0 pass, 40 fail — RED preserved. Reconciliation decisions made where the challenge round left a
+choice open are recorded in `scrub-log.md` with the `CR1-N` prefix (identity-unification field drop,
+CI-flag validation-order-vs-aggregation merge, allowlist-confidence-label-is-cosmetic-not-suppressive).

@@ -5,8 +5,11 @@
     "personas": ["willing-to-pay-user"],
     "test_mode": false
   },
+  "task_list_steps": [
+    { "step": 4, "payment_step": true }
+  ],
   "actions": [
-    { "persona": "willing-to-pay-user", "step": 4, "type": "submit", "form_kind": "payment", "outcome": "executed" }
+    { "persona": "willing-to-pay-user", "step": 4, "type": "submit", "payment_step": true, "outcome": "executed" }
   ],
   "findings": []
 }

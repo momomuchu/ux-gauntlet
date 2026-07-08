@@ -129,6 +129,46 @@ functional — they stay functional, not QoS.
 | F99 | functional | behavioral cost cap (real-world LLM spend bound) — DR-39a |
 | F100 | functional | partial-ledger-emission policy paired with F99 — DR-39b |
 
-Summary: 100 functional, 7 nonfunctional (107 total). Borderline calls recorded: F6, F30/F31 (original
+Summary (post-unknowns-pass): 100 functional, 7 nonfunctional (107 total). Borderline calls recorded: F6, F30/F31 (original
 pass, see notes above); F57/F58, F98, F99/F100 (unknowns pass — resource/action caps kept functional
 per the F16/F31 hard-count-and-execution-model precedent, see note above table).
+
+## Challenge round 1 pass 2026-07-08 (.swe-spec/CHALLENGE-ROUND-1.md, F101-F125, N8)
+
+Same Perfect Technology Filter question applied to each landed line. All 25 new F-lines resolved to
+`functional`: every one is a refusal/safety/detection/scoring/disclosure policy that a live-target
+crawl, a real payment form, or a nondeterministic parallel pipeline still needs regardless of compute
+speed/memory/cost — none describe a pure QoS/resource attribute of the evaluating machine itself. N8
+(first-run-under-one-invocation) is `nonfunctional`, same category as N5 (quality-of-service /
+onboarding-time bound), consistent with the DR-28 provenance it traces to.
+
+| ID | Category | Filter note |
+|----|----------|-------------|
+| F101 | functional | CI gate policy (BLOCKED run_status independent trigger) — CR1-2 |
+| F102 | functional | evidence-schema policy (screenshot captured_text sidecar) — CR1-3 |
+| F103 | functional | identity-computation policy (selector fallback) — DR-06a CR1-4 |
+| F104 | functional | disclosure policy (undercount on unstable selectors) — DR-06a CR1-4 |
+| F105 | functional | shipped-artifact policy (denylist default + schema) — DR-01a CR1-6 |
+| F106 | functional | gate policy (denylist file validation) — DR-01a CR1-6 |
+| F107 | functional | refusal-aggregation policy (check all before failing) — CR1-7 CR1-14 |
+| F108 | functional | refusal-reporting policy (fixed-order multi-line output) — CR1-7 CR1-14 |
+| F109 | functional | shipped-artifact policy (run-bundle schema) — CR1-8 |
+| F110 | functional | evidence-sufficiency policy (ambiguity_resolution) — CR1-9 |
+| F111 | functional | error-classification policy (transient exclusion) — DR-24 CR1-11 |
+| F112 | functional | error-classification policy (persona-actioned retry = friction) — DR-24 CR1-11 |
+| F113 | functional | error-classification policy (persona-actioned retry + 5xx = app-error) — DR-24 CR1-11 |
+| F114 | functional | evidence-capture policy (terminal friction) — DR-09b CR1-12 CR1-26 |
+| F115 | functional | schema policy (payment_step flag) — DR-02 CR1-13 |
+| F116 | functional | refusal-mechanism policy (schema-gated, not runtime judgment) — DR-02 CR1-13 |
+| F117 | functional | detection-mechanism policy (network interception) — DR-03 CR1-13 |
+| F118 | functional | merge-provenance policy (component_severities) — DR-06b CR1-17 |
+| F119 | functional | merge-scoring policy (severity = max) — DR-06b CR1-17 |
+| F120 | functional | reliability-signal policy (partial_tier) — CR1-18 |
+| F121 | functional | CI-gate-interaction policy (confidence label is cosmetic) — CR1-19 |
+| F122 | functional | output-contract policy (finding_id field-name distinctness) — CR1-22 |
+| F123 | functional | ledger policy (reason-code enum) — CR1-23 |
+| F124 | functional | disclosure policy (per-finding confidence degradation) — CR1-24 |
+| F125 | functional | evidence-tagging policy (terminal friction heuristic_tag) — CR1-26 |
+| N8 | nonfunctional | quality-of-service: first-run onboarding-time bound — DR-28 CR1-15 |
+
+Summary: 125 functional, 8 nonfunctional (133 total).

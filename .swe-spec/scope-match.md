@@ -35,3 +35,15 @@ first and defer mvp-medium items (F91-F100) to fast-follow, since scrub-log conf
 ship-blocking; 2) add capacity — parallelize persona runs up to the F98 max-parallelism cap (default
 5); 3) negotiate — founder may relax N5 to a nightly-only run where wall-clock is irrelevant, or may
 raise F98's default concurrency cap if the target app can tolerate more simultaneous sessions.
+
+## Challenge round 1 growth (2026-07-08)
+
+Requirement count grew again, from 107 (F1-F100, N1-N7) to 133 (F1-F125, N1-N8), after the challenge-round-1
+adversarial pass confirmed 26 distinct defects (10 BLOCKER, 12 MAJOR, 4 MINOR) and every fix_directive was
+applied. test/fixtures/ grew from 24 to 48 files (24 new/extended fixtures for the new RED test cases).
+Build surface addition: 2 new schema files (schemas/run-bundle.schema.json, schemas/denylist.schema.json),
+1 new shipped resource (denylist/default-destructive-labels.json) — all three are requirements-only in this
+pass (F105/F109/F106), not yet built, consistent with the rest of the pre-freeze spec phase. Verdict
+unchanged: scope still FITS budget (unconstrained token budget, no external deadline); the identity-
+unification fix (F92 collapsed onto the F45/F46 tuple) net-simplifies the eventual CI-diff implementation
+versus the pre-challenge-round design, since dedup and CI-diff now share one function instead of two.

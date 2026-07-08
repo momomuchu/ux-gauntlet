@@ -1,0 +1,30 @@
+{
+  "run": {
+    "target_url": "http://localhost:3000",
+    "task_list": "test/fixtures/tasks.json",
+    "personas": ["free-tier-user", "willing-to-pay-user", "vp-team-buyer"]
+  },
+  "run_status": "BLOCKED",
+  "personas": [
+    { "name": "free-tier-user", "run_status": "completed" },
+    { "name": "willing-to-pay-user", "run_status": "completed" },
+    { "name": "vp-team-buyer", "run_status": "crashed" }
+  ],
+  "findings": [
+    {
+      "id": "fr-803",
+      "friction_name": "checkout dead-ends with a blank page after payment submit",
+      "friction_type": "extra_action",
+      "step": 5,
+      "personas_flagging": ["free-tier-user", "willing-to-pay-user", "vp-team-buyer"],
+      "convergence_tier": 3,
+      "partial_tier": 0,
+      "heuristic_tag": "help-users-recognize-recover-errors",
+      "severity": 4,
+      "severity_factors": { "frequency": 4, "impact": 4, "persistence": 4 },
+      "market_impact": true,
+      "evidence": [{ "type": "screenshot", "path": "runs/fixture/step5-blank.png" }],
+      "narrative": "vp-team-buyer crashed before completing its crawl, yet convergence_tier still counts all 3 personas (should be 2 completed, partial_tier 1) — F17/F120 violation."
+    }
+  ]
+}

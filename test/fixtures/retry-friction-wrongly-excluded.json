@@ -1,0 +1,11 @@
+{
+  "run": {
+    "target_url": "http://localhost:3000",
+    "task_list": "test/fixtures/tasks.json",
+    "personas": ["free-tier-user"]
+  },
+  "actions": [
+    { "persona": "free-tier-user", "step": 2, "type": "retry", "auto_recovered": false, "within_wait_timeout": false, "persona_initiated": true, "http_status": null }
+  ],
+  "findings": []
+}

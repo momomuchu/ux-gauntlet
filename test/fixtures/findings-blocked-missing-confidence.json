@@ -1,0 +1,32 @@
+{
+  "run": {
+    "target_url": "http://localhost:3000",
+    "task_list": "test/fixtures/tasks.json",
+    "personas": ["free-tier-user", "willing-to-pay-user", "vp-team-buyer"]
+  },
+  "run_status": "BLOCKED",
+  "personas": [
+    { "name": "free-tier-user", "run_status": "completed" },
+    { "name": "willing-to-pay-user", "run_status": "crashed" },
+    { "name": "vp-team-buyer", "run_status": "completed" }
+  ],
+  "validity_envelope_text": "This report is not a replacement for real user research. It contains no willingness-to-pay estimates. It contains no population percentage extrapolations. It makes no ISO 9241-11 compliance claim. 1 of 3 personas did not complete: willing-to-pay-user.",
+  "findings": [
+    {
+      "id": "fr-906",
+      "finding_id": "fid-blocked-missing-confidence",
+      "friction_name": "signup CTA hidden below the fold on the pricing page",
+      "friction_type": "walkthrough_failure",
+      "step": 2,
+      "personas_flagging": ["free-tier-user"],
+      "convergence_tier": 1,
+      "partial_tier": 0,
+      "heuristic_tag": "visibility-of-system-status",
+      "severity": 3,
+      "severity_factors": { "frequency": 3, "impact": 3, "persistence": 3 },
+      "market_impact": true,
+      "evidence": [{ "type": "screenshot", "path": "runs/fixture/step2-free-tier.png" }],
+      "narrative": "This finding came from a BLOCKED run but carries no confidence field naming it degraded-below-persona-floor (F124 violation)."
+    }
+  ]
+}

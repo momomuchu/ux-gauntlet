@@ -1,0 +1,26 @@
+{
+  "run": {
+    "target_url": "http://localhost:3000",
+    "task_list": "test/fixtures/tasks.json",
+    "personas": ["free-tier-user"]
+  },
+  "actions": [
+    { "persona": "free-tier-user", "step": 2, "type": "retry", "auto_recovered": true, "within_wait_timeout": true, "persona_initiated": false, "http_status": null }
+  ],
+  "findings": [
+    {
+      "id": "fr-601",
+      "friction_name": "dashboard widget briefly failed to render",
+      "friction_type": "walkthrough_failure",
+      "step": 2,
+      "personas_flagging": ["free-tier-user"],
+      "convergence_tier": 1,
+      "heuristic_tag": "visibility-of-system-status",
+      "severity": 1,
+      "severity_factors": { "frequency": "rare", "impact": "cosmetic", "persistence": "self-resolves" },
+      "market_impact": false,
+      "evidence": [{ "type": "screenshot", "path": "runs/fixture/step2-transient.png" }],
+      "narrative": "A widget failed to render once and the automatic retry succeeded within the wait timeout with no persona action; this transient technical failure was wrongly recorded as friction (F111 violation)."
+    }
+  ]
+}
