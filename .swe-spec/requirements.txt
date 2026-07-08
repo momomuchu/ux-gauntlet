@@ -1,0 +1,46 @@
+# Candidate requirements — ux-gauntlet MVP (elicited 2026-07-08)
+# Sources (incl. non-person): founder verbatim intent (2026-07-08 session); docs/research/DECISION-BRIEF.md
+# (18 indexed sources, 7 adversarially-verified load-bearing claims); NN/g severity + heuristics articles;
+# cognitive-walkthrough literature; UXAgent / UXCascade papers; anthropics/skills webapp-testing packaging
+# pattern; competitive gap table (ncklrs plugin, web-eval-agent).
+# One requirement per line. F = functional, N = nonfunctional.
+
+F1: The skill MUST load each persona from a structured data file that conforms to the persona schema.
+F2: The skill MUST ship a default free-tier-user persona file.
+F3: The skill MUST ship a default willing-to-pay-user persona file.
+F4: The skill MUST ship a default VP-team-buyer persona file.
+F5: The persona schema MUST require these 5 fields: goal statement, success criteria, budget-authority context, patience threshold in step count, forbidden-claim guardrails.
+F6: The skill MUST drive a real browser session against the operator-supplied target URL.
+F7: The skill MUST consume an operator-supplied happy-path task list before the crawl starts.
+F8: The skill MUST refuse to start a crawl when no happy-path task list is supplied.
+F9: At each task step the persona agent MUST record an answer to each of the 4 cognitive-walkthrough questions before advancing.
+F10: The persona agent MUST record one friction instance for every action performed beyond the happy-path task list.
+F11: Each friction instance MUST carry exactly one criterion tag drawn from the configured heuristic set.
+F12: Each friction instance MUST carry a severity score on the 0-4 ordinal scale computed from the 3-factor rubric of frequency, impact, persistence.
+F13: Each friction instance MUST carry a market-impact flag that is stored separately from the severity score.
+F14: Each friction instance MUST reference at least one captured evidence artifact.
+F15: The report generator MUST drop every finding that references zero evidence artifacts.
+F16: A standard audit run MUST execute at least 3 personas against the same task list.
+F17: The report MUST assign each finding a convergence tier equal to the count of personas that flagged it.
+F18: The primary run output MUST be a JSON findings file that validates against the findings schema.
+F19: The markdown report MUST be generated from the JSON findings file.
+F20: Every generated report MUST contain the validity-envelope disclosure section.
+F21: The report generator MUST NOT emit willingness-to-pay estimates.
+F22: The report generator MUST NOT emit population-percentage extrapolations.
+F23: The report gate script MUST exit nonzero when the JSON findings file violates the findings schema.
+F24: The report gate script MUST exit nonzero when any finding lacks a Nielsen-heuristic tag.
+F25: The persona validator script MUST exit nonzero when a persona file violates the persona schema.
+F26: CI mode MUST exit nonzero only when the run produces a severity-4 finding absent from the committed baseline.
+F27: The report MUST label findings from operator-allowlisted standardized flows as lower-confidence.
+F28: The heuristic set MUST load from a data file, with the Nielsen 10-heuristic list shipped as the default set.
+F29: The operator MUST be able to add a persona by adding one data file, with zero edits to skill logic.
+F30: Each persona MUST execute as an independent delegated subagent with its own browser session.
+F31: Persona subagents MUST execute in parallel as background tasks.
+F32: The orchestrator MUST merge all per-persona ledgers into the single JSON findings file.
+N1: The skill package MUST conform to the Anthropic agent-skills format with a SKILL.md entry file carrying name plus description frontmatter.
+N2: The SKILL.md body MUST stay under 500 lines, with personas, schemas, templates in bundled resource files.
+N3: The project license MUST be MIT.
+N4: A CI run MUST complete headless without interactive operator input.
+N5: A 3-persona run against a 5-step task list MUST complete within 45 minutes on one machine.
+N6: A run against a localhost target URL MUST succeed without any third-party network service beyond the agent runtime itself.
+N7: All shipped artifacts MUST be written in English.

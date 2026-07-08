@@ -1,0 +1,2 @@
+docs/specs/0001-ux-gauntlet-mvp.spec.md
+test/acceptance.test.mjs
