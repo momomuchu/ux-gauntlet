@@ -563,3 +563,101 @@ Fresh re-runs from repo root: `req-lint.sh .swe-spec/requirements.txt` → **208
 CRITICAL PASS** (unchanged — F199-F201 landed HIGH, no CRITICAL id added/removed); `node --test
 test/acceptance.test.mjs` → **83 tests, 0 pass, 83 fail** (RED preserved; CR8 added assertions to the
 existing F148/F191/F194 blocks, no new test block). validation.md updated in the same pass.
+
+## CR9 class-closure + freeze-readiness
+
+**Diagnosis (panel + arbiter concur):** 9 rounds, confirmed-defect count flat at ~17. Root, in the
+panel's own words: "tested on one instance of an N-way rule" — an enumerated requirement lists N cases
+but only M<N are pinned by a concrete regex/rule+fixture, so each round finds the next unpinned case.
+Fixing 17 instances does not converge; CLOSING THE CLASS does. This pass is class-closure, not
+instance-patching: for every N-way rule, ALL remaining cases are pinned in ONE pass, then the class is
+audited to totality so round 10 can verify the closure held.
+
+### N-way class-closure audit — cases pinned BEFORE vs AFTER (round 10 verifies these)
+
+| N-way class | Enumerated cases | Pinned before CR9 | Pinned after CR9 | How closed |
+|---|---|---|---|---|
+| **Redaction credential classes** (F43/F44) | 6: Bearer-opaque, standalone-JWT, cookie, AKIA, sk-/ghp_/gh_pat_, card-number | 4 (cookie, sk-/ghp_/gh_pat_, card-number regex+leak; JWT-in-Bearer literal only) — Bearer-opaque + standalone-JWT had **prose-only shape, zero regex** | **6/6** — each now has: normative regex in F43/F44 text + leak fixture + `-ok` redacted fixture + survive negative-control fixture | Added Bearer regex `[Bb]earer [A-Za-z0-9_.~+/=-]{20,}` + standalone-JWT regex `eyJ...\.…\.…`; added 8 fixtures (bearer-opaque leak/-ok, bearer-word survive, jwt-standalone leak, cookie -ok, AKIA leak/-ok, card-number survive) closing the leak/-ok/survive triad gaps the audit found in cookie/AKIA/card-number too |
+| **Per-step D15 flag-pair exclusivity** (F164) | 10 pairs + 3-flag combos of the 5 D15 booleans | 1 pair (audited_terminal_step+external_side_effect) | **general rule proven**: 1 pair + a 2nd distinct pair (payment_step+denylist_override) + a 3-flag combo — single-pair hardcode now provably insufficient | Added task-step-second-pair-flags-bad.json + task-step-three-flags-bad.json + assertions |
+| **finding_id normative-hash formula** (F165) | shape-check vs real sha256 recompute | shape-only ("bad" fixture failed even a bare `/^fid-[0-9a-f]{16}$/`) | **recompute forced**: a SHAPE-VALID-but-WRONG id (reversed-order sha256, verified != correct hash) must fail | F203 requirement + findings-finding-id-wrong-formula-shape-valid-bad.json + assertion |
+| **F108 fixed stderr print order** | 6-slot order url<tasks<i-own-this-target<env<denylist<persona-count | presence-only (independent assert.match, no position) | **order proven**: strictly-increasing index assertion over all six | New F108 fixed-print-order test block (six-violation invocation) |
+| **F142 flow-gate type match** | integer `step` vs string flow-name | mismatch — F142 compared `step` (int) to flow-name strings; frozen fixtures gate on `standardized_flow` (string), so literal F142 broke its own suite | **type-matched**: F142 gates on `standardized_flow`; F202 declares the field normatively | F142 rewrite + F202 + test wording fix |
+| **--env value domain** (F61) | missing flag vs present-but-invalid value | missing only | **both**: present-but-invalid (`--env prod`) = exit-1 gate refusal naming the value (F204/F205) | F204/F205 + ADR + test |
+| **run_status producers** (F173-F176, CR4-S1) | 4 terminal states each need a producer | **4/4 already closed at CR4** (crashed/timed-out/patience-exhausted/runner-capped) | confirmed still 4/4 — no gap | verified, no change |
+| **severity bucket mappings** (F159/F161/F162) | frequency/impact/persistence each a fixed table | **3/3 already closed at CR4-B3** | confirmed; CR9 adds only the disclosure that the default buckets cap terminal_friction at severity 1 (F206) | verified; disclosure added |
+
+### Applied (17 confirmed round-9 defects)
+
+- **BLOCKER F43/F44 Bearer/JWT** → APPLIED. Bearer + standalone-JWT regex in F43/F44 + spec.md:203; 4 fixtures + F44/F43 assertions. (class 1a)
+- **BLOCKER F142 standardized_flow contradiction** → APPLIED. Real integer-vs-string type mismatch vs frozen fixtures (verified against findings-allowlist-supplied-*.json). F142 rewritten, F202 declares the field, spec.md:253 + test fixed. (class 1d)
+- **BLOCKER F92/F165 finding_id shape-only** → APPLIED. F203 + shape-valid-but-wrong fixture forces sha256 recompute; hash values independently verified (correct fid-33382de94ebe9883, reversed-order fid-a3e2967e02bf24b0). (class 1c)
+- **MAJOR F60 created-artifact unscoped by method** → APPLIED. Scoped to POST/PUT/PATCH/DELETE via F117 interception + F40 idempotency class (no parallel def); over-report disclosure added. spec.md:222. (class 1b)
+- **MAJOR F105 SKILL.md denylist coverage** → APPLIED. Assertion added in F83 block (test-only, F105 text already stated the clause).
+- **MAJOR F61 invalid --env** → APPLIED. F204/F205 + ADR exit-code paragraph + test (coin-flip class).
+- **MAJOR patience severity-1 cap** → APPLIED as disclosure F206 + spec.md:191 (the stronger deterministic fact F181's comparative wording never stated).
+- **MAJOR F201 identity-drift matches step alone** → APPLIED. F201 narrowed to (step, target_element_identifier) + spec.md:231.
+- **MAJOR 3-persona grounding undisclosed** → APPLIED as F207 + spec.md:191.
+- **MAJOR single-rater tier-1 reliability undisclosed** → APPLIED as F208 + spec.md:191.
+- **MAJOR ~45% agreement ceiling per-persona** → APPLIED. F35 widened 6->7 + spec.md:191 + disclosure-test assert.
+- **MAJOR F164 1-of-10 flag pairs** → APPLIED. 2nd pair + 3-flag fixtures + assertions.
+- **MAJOR F108 order never verified** → APPLIED. New fixed-print-order test with index assertions.
+- **MINOR F154 provenance hedge** → APPLIED as comment above F154 + ADR flag.
+- **MINOR F185 --max-parallel exit code** → APPLIED. Exit 2 explicit in F185 + ADR + spec.md:260 + test.
+- **MINOR F13 market-impact trigger** → APPLIED as F209 (persona TRUE trigger) + spec.md:215. Gate-assertion portion deferred as a build-phase/zero-coverage-tier residual (a fixture cannot generically self-declare "contains a first-load defect"; forcing a gate here would be a mock test — disclosed, consistent with the F60/F182 disclose-don't-overtest precedent).
+- **MINOR stale "6 enumerated sub-disclosures"** → APPLIED. spec.md:191 lead-in reworded open-ended; test title 6->7.
+
+### Rejected (5 — panel already rejected on verification; arbiter concurs, no re-litigation applied)
+
+The panel's own §3 rejected 5 attacks; this arbiter re-verified and applied none of them: D3-vs-F101/F191
+(misread doc order — the two-trigger rule appears 39 lines before D3); F49/F53 field collision (CR7
+already-triaged hygiene, spec.md scopes the enum to persona-level only); F149 cross-task step collision
+(false premise — one task list per run, F7/F8/F16; scrub-log rejected multi-task-list); F179 unobservable
+causality (spec.md CR8-MIN3 already discloses + mandates the same fallback, fail-safe direction is
+over-blocking not under-protection); F67/F68 static-aggregate exclusion (CR-D15 already adjudicated as a
+deliberate scope decision). No durable CR5/CR6/CR7/CR8 disposition was reopened.
+
+### RED-safety note (why the 3 new standalone test blocks keep the suite 0-pass)
+
+The 3 new test() blocks (F108 fixed-print-order, F204/F205 invalid --env, F185 exit-2) each fail as
+required against the missing scripts: F108-order's `assert.equal(r.code,1)` passes (missing module exits
+1) but its stderr index assertions fail (the module-not-found stderr contains none of the six tokens);
+F204/F205's `assert.equal(r.code,1)` passes but `assert.match(stderr,/env/)`/`/prod/` fail; F185's
+`assert.equal(one.code,2)` fails immediately (missing module exits 1, not 2). NONE is a `notEqual(code,0)`-
+only block (the CR7/CR8 RED-safety trap). Every block with new gate() assertions also retains an existing
+`equal(okFixture.code,0)` that fails on the missing report-gate.mjs. node --test confirms: 86 tests, 0
+pass, 86 fail.
+
+### FREEZE-READINESS: **FREEZE-READY** (no blocking item)
+
+After class-closure, is there any REMAINING defect that would make the BUILT product emit
+categorically-wrong / leaking output — as opposed to disclosure-debt, re-litigation, or an even-deeper
+Nth instance that class-closure now structurally prevents? **No blocking item.** The two behaviors that
+could emit categorically-wrong output — a credential leak past redaction (F43/F44) and a false
+"new-finding" regression call (finding_id) — are the two the panel's own BLOCKERs targeted and this pass
+closed to totality (regex + recompute + audited fixtures across all classes). Remaining open items are
+disclosure-completeness (F206/F207/F208 report text), a documented build-phase residual (F209's gate
+portion), and the standing zero-coverage fixture-only tier (spec.md:280) already disclosed at freeze. The
+class-closure structure means round 10 verifies the closure HELD (each N-way class pinned to totality)
+rather than finding an (N+1)th instance of the same rule. Freeze is withheld only pending founder
+approval, per the standing NO-freeze instruction.
+
+### N-way classes audited to TOTALITY this pass (round 10 closure checklist)
+
+1. 6 redaction credential classes (Bearer-opaque, standalone-JWT, cookie, AKIA, sk-/ghp_/gh_pat_, card-number) — each has regex + leak + -ok + survive fixture.
+2. D15 per-step flag-pair/combo exclusivity (F164) — general rule, not one hardcoded pair.
+3. finding_id sha256 formula (F165/F203) — recompute forced, shape-only rejected.
+4. F108 six-slot fixed stderr print order — position-verified.
+5. F142 flow-gate type match (standardized_flow, F202) — string-vs-string.
+6. --env value domain (F61/F204/F205) — missing + present-but-invalid.
+7. run_status producers (F173-F176) — confirmed 4/4 already closed at CR4, no gap.
+8. severity bucket mappings (F159/F161/F162) — confirmed 3/3 already closed at CR4-B3; CR9 adds only the terminal_friction severity-1-cap disclosure.
+
+### CR9 count sync
+
+Fresh re-runs from repo root: `req-lint.sh .swe-spec/requirements.txt` → **216/216 PASS** (207 functional
++ 9 nonfunctional; F202-F209 added — net +8); `coverage-audit.sh --pre-freeze` → **8/8 stages PASS**;
+`test-coverage-audit.sh docs/specs/0001-ux-gauntlet-mvp.spec.md test/acceptance.test.mjs` → **99/99
+CRITICAL PASS** (+4: F203/F206/F207/F208 landed on CRITICAL bullets, each referenced by a non-constant
+assertion; F202/F204/F205/F209 landed MEDIUM/HIGH); `node --test test/acceptance.test.mjs` → **86 tests,
+0 pass, 86 fail** (RED preserved; +3 new test blocks + 7 new fixtures). categorized-requirements.md +
+spec.md changelog + lint-result.txt updated in the same pass.

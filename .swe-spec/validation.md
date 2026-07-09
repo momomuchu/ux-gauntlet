@@ -352,3 +352,27 @@ CRITICAL PASS** (unchanged — F199-F201 landed HIGH, no CRITICAL id added/remov
 `node --test test/acceptance.test.mjs` → **83 tests, 0 pass, 83 fail — RED preserved** (CR8 added
 assertions to the existing F148/F191/F194 blocks, no new test block). This is the current file of record
 for the RED baseline count (83).
+
+## CR9 validation (class-closure pass, 2026-07-09)
+
+Completeness/consistency/feasibility re-checked after the enumerated-pattern class-closure pass. The
+redaction credential-class set is now complete and consistent — all 6 classes (Bearer-opaque,
+standalone-JWT, cookie, AKIA, sk-/ghp_/gh_pat_, card-number) carry a normative regex plus a
+leak/`-ok`/survive fixture triad, eliminating the boundary-case gap where a JWT-only redaction would
+leak opaque OAuth2 bearer tokens (the DR-05 credential-leak exception). The F142 flow-gate
+inconsistency (integer `step` compared against flow-name strings, contradicting its own frozen
+fixtures) is resolved: gate now compares `standardized_flow` string against string, feasible against
+the existing findings-allowlist-supplied-*.json fixtures. finding_id recompute (F203) closes the
+security-relevant gaming path where a shape-only validator silently breaks CI baseline matching. No
+new exception/boundary case is introduced by the disclosure additions (F206/F207/F208) — they are
+report-content only.
+
+Fresh re-runs from repo root: `req-lint.sh .swe-spec/requirements.txt` → **216/216 PASS** (207
+functional + 9 nonfunctional; F202-F209 added — net +8); `coverage-audit.sh --pre-freeze` → **8/8
+stages PASS**; `test-coverage-audit.sh docs/specs/0001-ux-gauntlet-mvp.spec.md
+test/acceptance.test.mjs` → **99/99 CRITICAL PASS** (+4: F203/F206/F207/F208 landed on CRITICAL
+bullets, each covered by a non-constant assertion); `node --test test/acceptance.test.mjs` → **86
+tests, 0 pass, 86 fail — RED preserved** (3 new test blocks: F108 fixed-print-order, F204/F205
+invalid --env, F185 exit-2; each fails against the missing scripts, none is a notEqual-only block).
+This is the current file of record for the RED baseline count (86). Full disposition in
+`scrub-log.md ## CR9 class-closure + freeze-readiness`.

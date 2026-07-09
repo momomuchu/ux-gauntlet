@@ -348,3 +348,30 @@ deletions). M-A's proposed F103-identifier strip mechanism was DECLINED as a bui
 (disclosure-only landed in the widened F104); 3 MAJOR/MINOR were re-litigations of durable CR7
 dispositions and were rejected — see scrub-log.md `## CR8 tail cleanup`. Every new line passes the
 Perfect Technology Filter.
+
+## Challenge round 9 pass 2026-07-09 (.swe-spec/CHALLENGE-ROUND-9.md, F202-F209) — ENUMERATED-PATTERN CLASS CLOSURE
+
+Same Perfect Technology Filter applied. All 8 new lines resolve to `functional`: each is a schema
+declaration, gate rule, refusal policy, scoring/detection policy, or report-content disclosure a real
+tool still needs regardless of machine speed/memory/cost — none describes a QoS/resource attribute.
+Zero new N-numbers (same pattern as rounds 3-8). In-place edits (F43/F44 Bearer+JWT regex, F60
+method-scope, F142 standardized_flow gate, F35 6->7 disclosures, F185 exit-2, F201 target narrowing,
+the F154 provenance comment) do not change any line's category.
+
+| ID | Category | Filter note |
+|----|----------|-------------|
+| F202 | functional | schema-field declaration (findings.standardized_flow, the field the frozen fixtures gate on) — CR9-3 |
+| F203 | functional | gate rule (finding_id sha256 recompute, reject shape-valid-but-wrong) — CR9-8 |
+| F204 | functional | refusal policy (invalid --env value = exit-1 gate refusal) — CR9-9 |
+| F205 | functional | message policy (stderr names the offending --env value) — CR9-9 |
+| F206 | functional | disclosure policy (default-rubric terminal_friction capped at severity 1, never trips F26) — CR9-10 |
+| F207 | functional | disclosure policy (3-persona floor rationale is NN/g human-evaluator research, not LLM-verified) — CR9-11 |
+| F208 | functional | disclosure policy (tier-1 finding severity is a single-rater rating per the NN/g citation) — CR9-12 |
+| F209 | functional | scoring policy (market-impact flag TRUE trigger for workaroundable first-load visual defect) — CR9-13 |
+
+Summary: 207 functional, 9 nonfunctional (216 total). Net requirement delta +8 (F202-F209 added; no
+deletions). Class-closure pass: closes the "tested on one instance of an N-way rule" root defect shape
+rather than patching the Nth instance — the 6-credential-class redaction set, the D15 flag-pair
+exclusivity, the finding_id formula, the F142 flow-gate type match are each pinned to totality. 5
+attacks rejected as re-litigation or misread structure — see scrub-log.md `## CR9 class-closure +
+freeze-readiness`. Every new line passes the Perfect Technology Filter.

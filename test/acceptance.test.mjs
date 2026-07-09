@@ -66,6 +66,11 @@ test('F83 F156 F168 CR3-4/CR3-11/CR4-M6: repo ships a real examples/tasks.json a
   assert.ok(existsSync('SKILL.md'), 'SKILL.md missing');
   const s = read('SKILL.md').toLowerCase();
   assert.ok(s.includes('examples/tasks.json'), 'SKILL.md must reference examples/tasks.json by name (F83)');
+  // CR9 (challenge round 9 MAJOR — F105 requires the entry-point doc to NAME the denylist default file,
+  // mirroring F83's tested clause, but nothing asserted it: a builder could ship a SKILL.md that never
+  // mentions the safety-default denylist, leaving an operator unaware it exists until a failed launch's
+  // stderr surfaces it. F105's text already states the clause; only this assertion was missing.)
+  assert.ok(s.includes('denylist/default-destructive-labels.json'), 'SKILL.md must reference denylist/default-destructive-labels.json by name (F105, CR9)');
   // F168 (CR4-M6): the shipped example's own content is verified, not merely its existence — its
   // terminal non-idempotent submission step MUST carry audited_terminal_step: true.
   const tasksSchema = json('schemas/tasks.schema.json');
@@ -114,6 +119,48 @@ test('F108a/F172 CR4-MIN3: a violated precondition with a shipped-default remedy
   assert.equal(r.code, 1, 'refusal for missing --tasks and --denylist only is exit 1');
   assert.match(r.stderr, /examples\/tasks\.json/i, 'stderr names the tasks-precondition\'s shipped-default remedy path (F172)');
   assert.match(r.stderr, /denylist\/default-destructive-labels\.json/i, 'stderr names the denylist-precondition\'s shipped-default remedy path (F172)');
+});
+
+test('F108 CR9: the static-precondition stderr lines print in the fixed documented order, not merely all-present', () => {
+  // Requirement ID: F108 (challenge round 9 MAJOR — the CRITICAL "fixed print order" guarantee was only
+  // presence-checked via independent assert.match calls with no position comparison; a builder detecting
+  // every violation but printing them in reverse or random order passed every prior assertion, defeating
+  // the precedence-clarity goal ADR-0001 states F108 fixes. Assert strictly-increasing indices in the
+  // documented order url < tasks < i-own-this-target < env < denylist < persona-count, using an invocation
+  // that violates all six static preconditions at once — omit url/tasks/i-own-this-target/env/denylist and
+  // supply a single persona (1 < 3) to trip persona-count.)
+  const r = run(['scripts/run-gauntlet.mjs', '--personas', 'test/fixtures/persona-missing-goal.yaml', '--headless']);
+  assert.equal(r.code, 1, 'all six static preconditions violated at once is still an aggregate exit-1 refusal (F107/F108)');
+  const order = ['url', 'tasks', 'i-own-this-target', 'env', 'denylist', 'persona-count'];
+  const s = r.stderr.toLowerCase();
+  const idx = order.map((k) => s.indexOf(k));
+  order.forEach((k, i) => assert.ok(idx[i] >= 0, `stderr must name the "${k}" precondition when all six are violated (F108 aggregation)`));
+  for (let i = 1; i < idx.length; i++) {
+    assert.ok(idx[i] > idx[i - 1], `stderr precondition lines must print in the fixed order url < tasks < i-own-this-target < env < denylist < persona-count; "${order[i]}" appeared at or before "${order[i - 1]}" (F108 fixed-order guarantee, CR9)`);
+  }
+});
+
+test('F204 F205 CR9: a present-but-invalid --env value is an exit-1 gate refusal naming the value, not a silent accept or usage error', () => {
+  // Requirement ID: F204, F205 (challenge round 9 MAJOR — F61 hard-stops on MISSING --env but said nothing
+  // about a present-but-invalid value like "--env prod" (a plausible typo); one reading silently accepts any
+  // string, another folds it into the aggregate env violation with no message differentiation — reopening the
+  // coin-flip ambiguity ADR-0001 lines 59-70 exist to prevent, scoped to one flag.)
+  const r = run(['scripts/run-gauntlet.mjs', '--url', 'http://localhost:9', '--tasks', 'test/fixtures/tasks.json', '--i-own-this-target', '--env', 'prod', '--denylist', 'denylist/default-destructive-labels.json', '--headless']);
+  assert.equal(r.code, 1, 'a present-but-invalid --env value (prod) is an exit-1 gate refusal, not a silent accept (code 0), not an exit-2 usage error (F204)');
+  assert.match(r.stderr, /env/i, 'stderr names the env precondition slot (F204/F108)');
+  assert.match(r.stderr, /prod/, 'stderr names the offending value "prod", distinguishing it from the missing-flag refusal wording (F205)');
+});
+
+test('F185 CR9: --max-parallel below 2 is rejected with exit code 2 (usage error), not exit 1', () => {
+  // Requirement ID: F185 (challenge round 9 MINOR — F185 borrowed the label "usage-error" without stating the
+  // literal digit; the ambiguity plus zero test coverage left room to reason toward exit 1 by analogy to F106.
+  // Pin exit 2 explicitly for both 1 and 0.)
+  const base = ['scripts/run-gauntlet.mjs', '--url', 'http://localhost:9', '--tasks', 'test/fixtures/tasks.json', '--i-own-this-target', '--env', 'local', '--denylist', 'denylist/default-destructive-labels.json', '--headless'];
+  const one = run([...base, '--max-parallel', '1']);
+  assert.equal(one.code, 2, '--max-parallel 1 is rejected with exit code 2, the ADR-0001 usage-error code (F185, CR9)');
+  assert.match(one.stderr, /max-parallel/i, 'stderr names --max-parallel (F185)');
+  const zero = run([...base, '--max-parallel', '0']);
+  assert.equal(zero.code, 2, '--max-parallel 0 is likewise rejected with exit code 2 (F185, CR9)');
 });
 
 test('F61: runner hard-stops on missing --env even when every other required flag is present', () => {
@@ -222,6 +269,14 @@ test('F164 CR4-M2 D15: a task-list step carrying more than one of the 5 D15 per-
   // elsewhere in this suite) rather than duplicating a near-identical fixture.
   const singleFlag = gate('audited-terminal-step-ok.json');
   assert.equal(singleFlag.code, 0, 'a step carrying exactly one D15 flag (audited_terminal_step alone) is unaffected by the mutual-exclusivity rule and still passes the gate (negative control, F164)');
+  // CR9 (challenge round 9 MAJOR — F164's rule is a general 10-pair-plus-combos exclusivity rule, but only
+  // ONE pair (audited_terminal_step + external_side_effect) was tested; a builder could hardcode that single
+  // pair and pass 100% while every other pair and every 3-flag combo stayed unenforced, reintroducing the
+  // contradictory-MUSTs defect on an untested pair. Broaden to make single-pair hardcoding provably wrong.)
+  const secondPair = gate('task-step-second-pair-flags-bad.json');
+  assert.notEqual(secondPair.code, 0, 'a DIFFERENT flag pair (payment_step:true + denylist_override:true) on one step must also be rejected — proving F164 is a general rule, not a single hardcoded (audited_terminal_step, external_side_effect) special case (F164, CR9)');
+  const threeFlags = gate('task-step-three-flags-bad.json');
+  assert.notEqual(threeFlags.code, 0, 'a 3-flag combination (payment_step + precondition_step + denylist_override) on one step must be rejected too — F164 rejects MORE THAN ONE of the 5 D15 flags, not just exactly-two pairs (F164, CR9)');
 });
 
 test('F10 F11 F12 F28 F34: findings schema enforces friction shape; heuristic set is pluggable data (default: Nielsen 10)', () => {
@@ -422,6 +477,14 @@ test('F92 F45 F165 CR2-6/CR4-M3: finding_id equals a deterministic hash of exact
   assert.equal(b.code, 0, 'the identical formula applied to a differently-shaped merge (accessible-name-plus-role tier, no data-testid) must independently pass the gate too, proving the identity function is tier-agnostic, not one hand-matched literal (F92/F103)');
   const mismatched = gate('findings-finding-id-mismatched-bad.json');
   assert.notEqual(mismatched.code, 0, 'a finding_id that does not equal the deterministic hash of its own (heuristic_tag, step, target_element_identifier) tuple must fail the gate (F92 formula violation)');
+  // Requirement ID: F203 (challenge round 9 BLOCKER — the mismatched-bad fixture above fails even a bare
+  // /^fid-[0-9a-f]{16}$/ SHAPE check ("fid-completely-hand-picked-value"), so a builder could implement
+  // finding_id validation as pure shape-check, never call sha256, and pass 100%. This SHAPE-VALID-but-WRONG
+  // fixture reuses formula-a's exact tuple but sets finding_id to fid-a3e2967e02bf24b0 (sha256 of the same
+  // fields in REVERSED order, verified != the correct fid-33382de94ebe9883) — it is a well-formed fid- + 16
+  // hex value, so ONLY a gate that actually RECOMPUTES the hash rejects it.
+  const wrongFormula = gate('findings-finding-id-wrong-formula-shape-valid-bad.json');
+  assert.notEqual(wrongFormula.code, 0, 'a finding_id that is shape-valid (fid- + 16 hex chars) but not equal to the F165 normative hash of its own tuple must fail the gate, proving report-gate.mjs actually recomputes sha256 rather than only checking format (F165/F203 formula enforcement, CR9-8)');
 });
 
 test('F183 CR5-M3: an icon-only element with no testid/aria-label/id/innerText resolves via a fully-specified 5th (structural-path) tier, merging identically across personas', () => {
@@ -493,7 +556,7 @@ test('F137 CR2-12: a merged finding\'s component_severities array renders adjace
   assert.doesNotMatch(uniform, /\[3,\s*3\]/, 'component_severities [3, 3] (1 distinct value, full agreement) need not render the array — F137 only mandates rendering when more than one distinct value exists');
 });
 
-test('F20 F21 F22 F35: validity envelope carries at least the 6 enumerated disclosures; forbidden claims blocked separately', () => {
+test('F20 F21 F22 F35: validity envelope carries at least the 7 enumerated disclosures; forbidden claims blocked separately', () => {
   // Requirement ID: F20, F21, F22, F35 (review findings #5, #17; CR1-20 "at least" reword)
   const md = run(['scripts/render-report.mjs', 'test/fixtures/findings-valid.json']).stdout;
   assert.match(md, /validity envelope/i, 'validity-envelope disclosure section is mandatory (F20)');
@@ -511,6 +574,20 @@ test('F20 F21 F22 F35: validity envelope carries at least the 6 enumerated discl
   // CR4-M10: disclosure (f) — the F27 walkthrough-weakness rationale is now unconditional, not gated
   // on any finding carrying the lower-confidence label; findings-valid.json carries no such label.
   assert.match(md, /weaker on (standard|standardized|well-learned)/i, 'disclosure (f) enumerated: cognitive walkthroughs are weaker on standardized patterns, stated unconditionally on every report (F171, CR4-M10)');
+  // CR9-4 (challenge round 9 MAJOR): disclosure (7) — F35 widened 6->7; per-persona task-outcome/walkthrough
+  // verdicts (the atomic "No" answer / task_completed:false every finding is built from) carry a demonstrated
+  // real-user agreement ceiling as low as ~45% even under best-aligned conditions ("Lost in Simulation").
+  assert.match(md, /45%|agreement ceiling|simulated judgment/i, 'disclosure (7) enumerated: per-persona task-outcome/walkthrough verdicts are simulated judgments with a ~45% real-user agreement ceiling (F35 item 7, CR9-4)');
+  // CR9-10 (F206): the STRONGER deterministic fact (not F181's comparative "can invert") that under the
+  // default rubric every terminal_friction has frequency=0/persistence=0 by construction, severity fixed at 1,
+  // so it can never trip the F26 severity-4 CI gate even after MAX-based corroboration.
+  assert.match(md, /terminal_friction|patience-abandon|severity is fixed|capped at (severity )?1|round\(mean/i, 'F206: every default-rubric terminal_friction finding is capped at severity 1 and can never trigger the F26 gate — the deterministic cap, disclosed (CR9-10)');
+  // CR9-11 (F207): the 3-persona floor's reliability rationale is NN/g human-evaluator research, extrapolated
+  // cross-domain, not independently verified for LLM-simulated personas.
+  assert.match(md, /human (usability )?evaluator|not independently verified for LLM|persona.agent evidence/i, 'F207: 3-persona floor reliability rationale derives from NN/g human-evaluator research, not verified for LLM personas (CR9-11)');
+  // CR9-12 (F208): a convergence_tier==1 finding's severity is a single-rater rating the tool's own NN/g
+  // citation says not to trust — the report must connect "flagged by only 1" to "known-unreliable single rater".
+  assert.match(md, /single rater|assigned by exactly one persona|single-rater/i, 'F208: a tier-1 finding severity was assigned by exactly one persona, a single-rater rating not treated as trustworthy per the NN/g citation (CR9-12)');
   const wtp = gate('finding-wtp-claim.json');
   assert.notEqual(wtp.code, 0, 'gate rejects WTP estimates (F21)');
   const pop = gate('finding-population-claim.json');
@@ -553,10 +630,13 @@ test('F140 F141 F142 CR2-14: the standardized-flow-allowlist supply channel is g
   // operator-maintained allowlist, but ADR-0001's CLI contract had no flag and the task-list schema
   // had no field to receive it; the prior test only proved render-report.mjs COULD render a
   // pre-labeled fixture, never that the allowlist reaches it end-to-end).
+  // CR9-3 (challenge round 9 BLOCKER): F142 previously compared the integer `step` field against the set of
+  // flow-name STRINGS — a type mismatch that could never be true against these very fixtures, which gate on a
+  // `standardized_flow` string field (now declared normatively by F202). Assertions match the fixtures' field.
   const applied = gate('findings-allowlist-supplied-applied-ok.json');
-  assert.equal(applied.code, 0, 'a lower-confidence-labeled finding whose step matches a flow-name entry recorded in the run configuration\'s standardized_flow_allowlist must pass the gate (F140/F141/F142)');
+  assert.equal(applied.code, 0, 'a lower-confidence-labeled finding whose standardized_flow value matches a flow-name entry recorded in the run configuration\'s standardized_flow_allowlist must pass the gate (F140/F141/F142/F202, CR9-3)');
   const notApplied = gate('findings-allowlist-supplied-not-applied-bad.json');
-  assert.notEqual(notApplied.code, 0, 'a lower-confidence-labeled finding whose step matches no allowlist entry recorded in the run configuration must fail the gate — the label has no supply channel to justify it (F142)');
+  assert.notEqual(notApplied.code, 0, 'a lower-confidence-labeled finding whose standardized_flow value matches no allowlist entry recorded in the run configuration must fail the gate — the label has no supply channel to justify it (F142/F202, CR9-3)');
 });
 
 test('F25 F29: persona validator rejects a malformed persona and names the missing field', () => {
@@ -798,6 +878,33 @@ test('F44: an unredacted credential-shaped string in a DOM evidence snippet fail
   assert.match(cookieLeak.stderr + cookieLeak.stdout, /redact|secret|credential|cookie/i, 'gate output names the redaction rule');
   const cookieOrdinary = gate('evidence-not-secret-ordinary-cookie-text-ok.json');
   assert.equal(cookieOrdinary.code, 0, 'ordinary UI text merely mentioning the word "cookie" (a cookie-consent banner, no literal Cookie:/Set-Cookie: HTTP-header-shaped prefix) must survive to disk unmodified (negative control, CR4-M4)');
+  // CR9-1 (challenge round 9 BLOCKER): the Bearer/JWT class was the last credential class with prose-only
+  // shape — every fixture exercising it hard-coded the same JWT-dot literal, so a builder could ship a
+  // JWT-only regex and leak every opaque OAuth2/session bearer token. Close the class to totality:
+  // (leak) an OPAQUE bearer token (gho_ prefix, NO dot structure) must be caught by the shape-qualified
+  // Bearer regex, not only JWT-dot tokens.
+  const bearerOpaque = gate('evidence-secret-leak-bearer-opaque.json');
+  assert.notEqual(bearerOpaque.code, 0, 'an opaque "Authorization: Bearer gho_..." token with NO JWT dot structure surviving in a DOM snippet must fail the gate — a JWT-only regex would miss it; the CR9-1 shape-qualified Bearer pattern [Bb]earer [A-Za-z0-9_.~+/=-]{20,} must catch it (F43/F44 Bearer class)');
+  // (-ok) the same opaque bearer token correctly redacted must pass — the missing -ok companion.
+  const bearerOpaqueOk = gate('evidence-secret-redacted-bearer-opaque-ok.json');
+  assert.equal(bearerOpaqueOk.code, 0, 'the same opaque bearer token correctly redacted must pass the gate (Bearer-class -ok negative control, CR9-1)');
+  // (survive) plain English word "bearer" with no 20-char token run must survive unmodified.
+  const bearerWord = gate('evidence-not-secret-bearer-word-ok.json');
+  assert.equal(bearerWord.code, 0, 'ordinary UI copy using the word "bearer" ("bearer of good news") with no 20-plus-char token run following the scheme word must survive to disk unmodified — the Bearer-class survive negative control, shape-qualified like sk- (F43/F44/F153, CR9-1)');
+  // (leak) a standalone JWT (eyJ + 3 dot-segments) OUTSIDE any Authorization header — the URL/localStorage
+  // exposure case the Bearer-scheme regex alone cannot catch.
+  const jwtStandalone = gate('evidence-secret-leak-jwt-standalone.json');
+  assert.notEqual(jwtStandalone.code, 0, 'a standalone eyJ-prefixed three-dot JWT in a localStorage dump (no "Bearer " wrapper preceding it) surviving in a DOM snippet must fail the gate — the standalone-JWT pattern eyJ[A-Za-z0-9_-]+.[A-Za-z0-9_-]+.[A-Za-z0-9_-]+ must catch it (F43/F44 JWT class, CR9-1)');
+  // CR9 class-closure audit — the OTHER credential classes were audited to the same leak/-ok/survive
+  // totality; the audit found the cookie class missing its redacted -ok companion and the AKIA class
+  // missing any dedicated leak/-ok fixture at all (the apikey fixtures only exercised sk-). Add them so
+  // every one of the 6 credential classes is pinned to totality, not just Bearer/JWT.
+  const cookieOk = gate('evidence-cookie-redacted-ok.json');
+  assert.equal(cookieOk.code, 0, 'a correctly redacted Set-Cookie header must pass the gate — the cookie class -ok companion that was missing (F166/F167, CR9 class-closure audit)');
+  const akiaLeak = gate('evidence-secret-leak-akia.json');
+  assert.notEqual(akiaLeak.code, 0, 'an AWS AKIA access-key id (AKIA[A-Z0-9]{16}) surviving in a DOM snippet must fail the gate — the AKIA class had a regex but no dedicated leak fixture until now (F43/F44, CR9 class-closure audit)');
+  const akiaOk = gate('evidence-secret-redacted-akia-ok.json');
+  assert.equal(akiaOk.code, 0, 'the same AKIA key correctly redacted must pass the gate — the AKIA class -ok companion (F43/F44, CR9 class-closure audit)');
 });
 
 test('F43 F102 CR1-3: an unredacted credential-shaped string in a screenshot evidence captured_text sidecar fails the gate (own RED test, distinct from F44)', () => {
@@ -815,6 +922,11 @@ test('F43 F102 CR1-3: an unredacted credential-shaped string in a screenshot evi
   // CR4-S3 (pattern-3 sweep): F43's cardnumber RED fixture had zero '-ok' companion.
   const cardnumberOk = gate('evidence-secret-redacted-cardnumber-ok.json');
   assert.equal(cardnumberOk.code, 0, 'the same 16-digit Luhn-valid card number correctly redacted must pass the gate (negative control, CR4-S3)');
+  // CR9 class-closure audit: the card-number class had leak + -ok but no SURVIVE control proving an
+  // ordinary 13-19 digit run that is NOT Luhn-valid (an order/tracking number) is left untouched — an
+  // over-broad any-13-19-digit redaction would corrupt ordinary order copy. Close the class to totality.
+  const cardSurvive = gate('evidence-not-secret-cardnumber-survive-ok.json');
+  assert.equal(cardSurvive.code, 0, 'a 16-digit NON-Luhn-valid order/tracking number (plus a short reference id) must survive to disk unmodified — the card-number pattern requires Luhn validity, so ordinary numeric UI copy is not redacted (F43/F153, CR9 class-closure survive control)');
 });
 
 test('F45 F46: two findings sharing the (heuristic tag, step, target) identity but left unmerged fail the gate', () => {

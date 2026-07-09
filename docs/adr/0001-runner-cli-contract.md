@@ -25,8 +25,8 @@ A CLI is a public interface — a material decision per decision-record discipli
 | `--full-submission` | no | disables the default dry-run boundary on non-idempotent requests (F40) — does NOT affect a step flagged `precondition_step` or `audited_terminal_step` in the task list, both of which submit regardless (F126/F127 CR2-1; F145/F146 CR3-1, D15) |
 | `--override-robots` | no | overrides robots.txt disallow-abort (F41/F42); off by default; commonly needed against local/staging targets that ship a blanket `Disallow: /` robots.txt for search-index exclusion (F152, CR3-7) — see D15 for the full localhost/staging relaxation enumeration |
 | `--personas <paths...>` | no | persona data files; default = every file in `personas/` |
-| `--max-parallel <n>` | no | concurrent persona subagent cap, minimum 2; default 5 (F98/F185, CR5-MIN2 — a value below 2 is rejected as a usage error) |
-| `--max-tool-calls <n>` | no | per-persona-per-run LLM tool-call cap; default 250 (F99/F100/F154, CR3-9 — ties to F57's 50-action cap x ~5 tool-calls/action) |
+| `--max-parallel <n>` | no | concurrent persona subagent cap, minimum 2; default 5 (F98/F185, CR5-MIN2 — a value below 2 is rejected with exit code 2, the usage-error code, F185/CR9-6) |
+| `--max-tool-calls <n>` | no | per-persona-per-run LLM tool-call cap; default 250 (F99/F100/F154, CR3-9 — ties to F57's 50-action cap x ~5 tool-calls/action; the ~5 ratio is an UNVALIDATED agent-set estimate pending build-time measurement, F154 provenance/CR9-5, not an empirically-derived figure) |
 | `--headless` | no | forces headless browser mode; redundant with the auto-default below but kept for explicit CI invocations |
 | `--no-headless` | no | forces a visible-browser launch, overriding the auto-headless default (F135, CR2-10) |
 | `--timeout <minutes>` | no | run-level wallclock timeout; default 50 (F131, CR2-7) |
@@ -37,7 +37,12 @@ A CLI is a public interface — a material decision per decision-record discipli
 
 Exit codes: `0` = run completed and gates passed; `1` = gate/validation failure (incl. refusal to
 start: missing task list, <3 personas, malformed persona, invalid denylist file, missing safety
-flags per F37/F39/F61/F65/F67/F106); `2` = usage error (unknown flag, missing required flag); `3` =
+flags per F37/F39/F61/F65/F67/F106; a present-but-invalid `--env` value such as `--env prod` is an
+exit-1 gate refusal in the `env` precondition slot — treated identically to a missing `--env` flag,
+its stderr line naming the offending value, NOT an exit-2 usage error, F204/F205/CR9-9 — `env` is a
+static precondition SLOT (F107/F108), so a bad value in it refuses like a missing flag, distinct from
+`--max-parallel` below 2 which is a pure config-value usage error at exit 2, F185); `2` = usage error
+(unknown flag, missing required flag, a `--max-parallel` value below 2 per F185); `3` =
 target unreachable at crawl start — DNS failure, connection refused, TLS handshake error (F80,
 distinct from gate refusals so CI can tell "new severity-4" from "app down"). Refusals print a
 one-line reason to stderr naming the violated rule (F108 governs the multi-violation case). In CI
