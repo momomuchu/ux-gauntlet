@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "lane": "structural",
+  "run": {
+    "route": "/pricing",
+    "url": "http://localhost:3000/pricing",
+    "run_status": "completed"
+  },
+  "metadata": {
+    "axe_version": "4.12.1",
+    "ruleset_tags": [
+      "wcag2a",
+      "wcag2aa",
+      "wcag21aa",
+      "wcag22aa",
+      "best-practice"
+    ],
+    "wcag_target": "AA",
+    "browser_version": "chromium/1179",
+    "render_environment_id": "ubuntu-22.04-fontconfig-2.13.1@sha256:3f1a9c",
+    "timestamp": "2026-07-09T12:00:00Z",
+    "expected_main_content": {
+      "/pricing": "#pricing-detail"
+    }
+  },
+  "validity_envelope": {
+    "criteria_count_pct": 32,
+    "criteria_count": "16 of 50",
+    "issue_volume_pct": 57,
+    "vendor_reported": true,
+    "independently_audited": false,
+    "disclaimer": "Both the ~32 percent criteria-count figure and the ~57 percent issue-volume figure are vendor-reported by Deque, not independently audited. A structural pass is not usable, is not good UI. This is not a WCAG conformance certification.",
+    "non_automatable_classes": [
+      "focus order",
+      "focus visible",
+      "keyboard operability"
+    ],
+    "best_practice_labeled": [
+      "heading-order"
+    ]
+  },
+  "violation_ids": [
+    "button-name"
+  ],
+  "incomplete_ids": [],
+  "findings": [
+    {
+      "lane": "structural",
+      "source": "axe",
+      "finding_id": "f-pricing-axe-button-name-1",
+      "code": "axe:button-name",
+      "rule_id": "button-name",
+      "impact": "serious",
+      "severity": 3,
+      "target_element_identifier": "button#buy",
+      "target_selector": "button#buy",
+      "route": "/pricing",
+      "help": "axe button-name (serious impact)"
+    },
+    {
+      "lane": "structural",
+      "source": "axe",
+      "finding_id": "f-pricing-axe-button-name-2",
+      "code": "axe:button-name",
+      "rule_id": "button-name",
+      "impact": "serious",
+      "severity": 3,
+      "target_element_identifier": "button#buy",
+      "target_selector": "button.cta-primary",
+      "route": "/pricing",
+      "help": "axe button-name (serious impact)"
+    }
+  ],
+  "scenario": "M7: two axe findings share target_element_identifier button#buy but differ in target_selector; dedup keys on target_element_identifier, so these MUST collapse to one \u2014 undeduplicated is a violation."
+}

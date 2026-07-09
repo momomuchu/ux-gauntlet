@@ -40,34 +40,36 @@
     ]
   },
   "violation_ids": [
-    "landmark-one-main"
+    "image-alt"
   ],
   "incomplete_ids": [],
   "findings": [
     {
       "lane": "structural",
       "source": "axe",
-      "finding_id": "f-signup-axe-landmark-one-main",
-      "code": "axe:landmark-one-main",
-      "rule_id": "landmark-one-main",
-      "impact": "moderate",
-      "severity": 2,
-      "target_element_identifier": "html",
-      "target_selector": "html",
+      "finding_id": "f-signup-axe-image-alt-1",
+      "code": "axe:image-alt",
+      "rule_id": "image-alt",
+      "impact": "serious",
+      "severity": 3,
+      "target_element_identifier": "img.hero",
+      "target_selector": "img.hero",
       "route": "/signup",
-      "detail": "axe whole-document 'landmark-one-main' rule (moderate -> severity 2) — S55/CR4-M1 requires this to be SUPPRESSED whenever its paired non-axe cannot-evaluate-ambiguous-main appears for the same route, keyed on the rule-code pair alone (note axe targets 'html' here, NOT ':root' — the dropped selector-equality condition would have silently missed this)"
+      "help": "axe image-alt (serious impact)"
     },
     {
       "lane": "structural",
-      "source": "dom-check",
-      "finding_id": "f-signup-cannot-evaluate-ambiguous-main",
-      "code": "cannot-evaluate-ambiguous-main",
+      "source": "axe",
+      "finding_id": "f-signup-axe-image-alt-2",
+      "code": "axe:image-alt",
+      "rule_id": "image-alt",
+      "impact": "serious",
       "severity": 3,
-      "target_element_identifier": ":root",
-      "target_selector": ":root",
+      "target_element_identifier": "img.hero",
+      "target_selector": "img.hero",
       "route": "/signup",
-      "detail": "non-axe cannot-evaluate-ambiguous-main (severity 3) — the sole live cross-namespace pair (S55/CR3-2/CR4-M1): this MUST be the only emitted finding for the route, the axe landmark-one-main finding suppressed on the paired rule-code identity regardless of differing selectors"
+      "help": "axe image-alt (serious impact)"
     }
   ],
-  "main_landmark_count": 2
+  "scenario": "S20: two axe findings share rule_id image-alt + target_element_identifier img.hero -> must dedup to one."
 }

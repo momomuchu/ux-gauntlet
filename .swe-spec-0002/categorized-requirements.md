@@ -21,6 +21,7 @@ sibling is SN1 (the reproducibility *quality attribute* across repeated runs).
 | S8 | functional | region-containment is a semantic-structure rule |
 | S9 | functional | landmark-validity is a semantic-structure rule (8 ARIA types) |
 | S10 | functional | heading-order labeling policy (best-practice, not WCAG) is a reporting rule |
+| S10a | functional | CR4-Mi2 — the heading-order detection algorithm (level jump > 1 in DOM order) is the behavior that makes S10's best-practice label real, not envelope-text-only |
 | S11 | functional | positive-tabindex anti-pattern is a deterministic DOM rule |
 | S12 | functional | expected-main-content containment is the lane's headline differentiator (ties audit to app intent) |
 | S13 | functional | refuse-without-selector is a guard behavior (input contract), same class as persona-lane happy-path refusal |
@@ -37,6 +38,7 @@ sibling is SN1 (the reproducibility *quality attribute* across repeated runs).
 | S24 | functional | cross-reference-by-shared-identifier is a report-composition rule |
 | S25 | functional | validity-envelope disclosure is a mandatory reporting rule |
 | S26 | functional | naming non-automatable classes is a mandatory reporting rule |
+| S26b | functional | CR4-M6 — naming the contrast-exemption categories (logotype/incidental/inactive-UI text) is the brief §3 disclosure reporting rule that replaced the killed "no human judgment" framing |
 | S27 | functional | best-practice labeling in the envelope is a reporting rule |
 | S28 | functional | metadata disclosure of version/ruleset is a reporting rule |
 | S29 | functional | not-a-certification disclaimer is a mandatory reporting rule |
@@ -67,6 +69,10 @@ sibling is SN1 (the reproducibility *quality attribute* across repeated runs).
 | S54 | functional | CR2-M3 — CI blocking on the S40 route-level refused status is a gate policy so an unmapped route can never go silently unaudited |
 | S55 | functional | CR2-M10 / CR3-2 — the cross-namespace equivalence-table suppression is a finding-identity policy reconciling S20/S41 across the axe/non-axe boundary; CR3 dropped the dead tabindex pair (S1 disables the axe tabindex rule), leaving the one live landmark-one-main <-> cannot-evaluate-ambiguous-main pair pinned to :root |
 | S56 | functional | CR3-1 — CI blocking on the fail-closed cannot-evaluate-ambiguous-main code is a gate policy: a severity-3 "could-not-evaluate" containment result is unmergeable like a refused run, closing the CR3-B1 inversion where it merged clean while a narrower severity-4 defect blocked |
+| S57 | functional | CR4-B5 — the ci-diff gate self-validating its own trust boundary (axe_version/schema_version/lane) before route predicates is a gate-correctness rule so the diff gate cannot merge-evaluate an unpinned/misrouted bundle alone |
+| S58 | functional | CR4-M8 — recording run_status axe-execution-degraded for a resolve-with-zero-results on a non-trivial DOM is a fail-closed reporting rule, the resolve-path twin of S45's throw-path |
+| S59 | functional | CR4-M8 — CI blocking on axe-execution-degraded is a gate policy composed with S46/S48 so a silently-degraded axe run cannot advisory-pass clean |
+| S60 | functional | CR4-M9 — persisting a raw impact string on every axe-sourced finding record is a schema-completeness rule that keeps the S53 critical-impact predicate reachable |
 | SN1 | nonfunctional | reproducibility quality attribute — a perfect machine removes the sampling variance this line guards, so it is a real-world tech-property requirement |
 | SN2 | nonfunctional | versioned-schema robustness is a maintainability/evolution quality, not a domain behavior |
 | SN3 | nonfunctional | no-third-party-egress is a data-locality quality constraint |
@@ -76,7 +82,11 @@ sibling is SN1 (the reproducibility *quality attribute* across repeated runs).
 | SN7 | nonfunctional | CR1-M12 — pinned browser-binary version in metadata is a rendering-environment reproducibility property (sibling of SN4/S2) |
 | SN8 | nonfunctional | CR2-M20 — the pinned OS/font-rendering container render_environment_id is a rendering-environment reproducibility property closing the cross-machine glyph-shaping variance (sibling of SN7) |
 
-Summary: 56 functional (S1-S56), 8 nonfunctional (SN1-SN8). CHALLENGE-ROUND-1 appended S35-S46 + SN7;
+Summary: 62 functional (S1-S60 plus S10a + S26b), 8 nonfunctional (SN1-SN8). CHALLENGE-ROUND-4 appended
+S57 (ci-diff trust-boundary self-validation), S58/S59 (axe-execution-degraded record + CI block), S60
+(persisted raw impact), S10a (heading-order detection algorithm), S26b (contrast-exemption disclosure),
+and edited S1/S12/S20/S21/S41/S45/S50/S55 in place (infinite-animation settle, ancestor+descendant+zero-text
+S12 exclusions, render_environment_id-scoped S21, target_element_identifier keys, S55 :root drop). CHALLENGE-ROUND-1 appended S35-S46 + SN7;
 CHALLENGE-ROUND-2 appended S47-S55 + SN8 (the settle-timeout fail-closed + CI pair, the accname-engine
 source, the deterministic finding_id derivation + double-invoke proof, the raw-impact predicate, the
 incomplete-critical CI block, the route-refused CI block, the cross-namespace dedup table, the

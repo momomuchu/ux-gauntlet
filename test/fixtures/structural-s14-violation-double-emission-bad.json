@@ -39,24 +39,9 @@
       "heading-order"
     ]
   },
-  "violation_ids": [
-    "landmark-one-main"
-  ],
+  "violation_ids": [],
   "incomplete_ids": [],
   "findings": [
-    {
-      "lane": "structural",
-      "source": "axe",
-      "finding_id": "f-signup-axe-landmark-one-main",
-      "code": "axe:landmark-one-main",
-      "rule_id": "landmark-one-main",
-      "impact": "moderate",
-      "severity": 2,
-      "target_element_identifier": "html",
-      "target_selector": "html",
-      "route": "/signup",
-      "detail": "axe whole-document 'landmark-one-main' rule (moderate -> severity 2) — S55/CR4-M1 requires this to be SUPPRESSED whenever its paired non-axe cannot-evaluate-ambiguous-main appears for the same route, keyed on the rule-code pair alone (note axe targets 'html' here, NOT ':root' — the dropped selector-equality condition would have silently missed this)"
-    },
     {
       "lane": "structural",
       "source": "dom-check",
@@ -66,7 +51,18 @@
       "target_element_identifier": ":root",
       "target_selector": ":root",
       "route": "/signup",
-      "detail": "non-axe cannot-evaluate-ambiguous-main (severity 3) — the sole live cross-namespace pair (S55/CR3-2/CR4-M1): this MUST be the only emitted finding for the route, the axe landmark-one-main finding suppressed on the paired rule-code identity regardless of differing selectors"
+      "detail": "main-landmark count = 2 -> fail closed; this MUST suppress every S12-derived finding"
+    },
+    {
+      "lane": "structural",
+      "source": "dom-check",
+      "finding_id": "f-signup-main-content-missing",
+      "code": "main-content-missing",
+      "severity": 4,
+      "target_element_identifier": "#audiobook-text",
+      "target_selector": "#audiobook-text",
+      "route": "/signup",
+      "detail": "S14 VIOLATION: emitted alongside cannot-evaluate-ambiguous-main on the same route; S14 fail-closed suppression forbids any S12-derived finding here"
     }
   ],
   "main_landmark_count": 2

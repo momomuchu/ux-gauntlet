@@ -52,18 +52,36 @@ const structure = await page.evaluate((mainWanted) => {
       mainEl = q('h1,h2,p,article,section,main,div').find(e => e.innerText && e.innerText.toLowerCase().includes(mainWanted.toLowerCase())) || null;
     }
   }
-  // largest visible text block on the page
-  const blocks = q('main,article,section,div,p,h1').map(e => ({ e, len: (e.innerText || '').trim().length }))
-    .filter(b => b.len > 0).sort((a, b) => b.len - a.len);
-  const largest = blocks[0]?.e || null;
+  // prominence: rendered bounding-box AREA (getBoundingClientRect width*height, never char count — S12).
+  const area = (el) => { const r = el.getBoundingClientRect(); return r.width * r.height; };
+  const visible = (el) => { const s = getComputedStyle(el); return s.display !== 'none' && s.visibility !== 'hidden'; };
   const insideMain = (el) => !!el && !!el.closest('main,[role=main]');
+  // The anchor is prominent when its own box is >= every candidate in the OPPOSING pool. The opposing
+  // pool excludes: the anchor itself, every ANCESTOR of the anchor (a container it sits in must not win),
+  // every DESCENDANT of the anchor (a larger full-bleed overlay it contains must not disqualify it — S12
+  // ancestor+descendant exclusion, CR4-B1/B2), any display:none/visibility:hidden/zero-area candidate,
+  // and any candidate with zero rendered text (a decorative container cannot outrank the text anchor — M3).
+  let isLargestBlock = null;
+  if (mainEl) {
+    const anchorArea = area(mainEl);
+    const opposing = q('main,article,section,div,p,h1').filter(e =>
+      e !== mainEl
+      && !e.contains(mainEl)                       // exclude ancestors of the anchor
+      && !mainEl.contains(e)                       // exclude descendants of the anchor
+      && visible(e)
+      && area(e) > 0
+      && (e.innerText || '').trim().length > 0,    // exclude zero-text candidates
+    );
+    const maxOpposing = opposing.reduce((mx, e) => Math.max(mx, area(e)), 0);
+    isLargestBlock = anchorArea >= maxOpposing;    // ties resolve in favor of the declared anchor
+  }
   return {
     landmarks, h1count, headingOrderOk: orderOk, headingCount: headings.length, skipLink,
     mainContent: mainWanted ? {
       declared: mainWanted,
       found: !!mainEl,
       insideMainLandmark: insideMain(mainEl),
-      isLargestBlock: !!mainEl && !!largest && (mainEl === largest || largest.contains(mainEl) || mainEl.contains(largest)),
+      isLargestBlock,
     } : null,
   };
 }, mainWanted);

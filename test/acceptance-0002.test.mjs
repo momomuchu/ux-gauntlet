@@ -96,6 +96,12 @@ test('S12: the operator-declared expected-main-content anchor is verified found 
   assert.notEqual(notInMain.code, 0, 'a declared main content sitting outside the single main landmark must fail the gate with a non-zero exit (S12)');
   const ok = sgate('structural-main-content-contained-ok.json');
   assert.equal(ok.code, 0, 'a declared main content found inside the single main landmark and the largest visible block by area passes the gate (negative control, S12)');
+  // CR4-B1/B2: the anchor's comparison pool excludes BOTH its ancestors AND its descendants, so a
+  // larger-bounding-box descendant (e.g. an absolutely-positioned full-bleed overlay div nested inside
+  // the anchor) does NOT disqualify the anchor — it still passes as prominent. Ancestor-only exclusion
+  // (the pre-CR4 rule) left this descendant in-pool where it out-measured and wrongly disqualified the anchor.
+  const descendantOverflow = sgate('structural-dom-sev-main-content-descendant-overflow-ok.json');
+  assert.equal(descendantOverflow.code, 0, 'an anchor containing a larger-bounding-box descendant (full-bleed overlay div) still passes S12 as prominent — descendants are excluded from the comparison pool (negative control, S12/CR4-B1/CR4-B2)');
 });
 
 test('S13: the lane refuses a gated result when no expected-main-content selector is supplied', () => {
@@ -116,10 +122,17 @@ test('S17 S18 S19: axe-violation severity is a pure function of axe impact; inco
   const finding = s.$defs?.finding ?? s.definitions?.finding ?? s.properties?.findings?.items;
   assert.ok(finding, 'schema must define a finding object with a bounded severity (S17)');
   assert.deepEqual([finding.properties.severity.minimum, finding.properties.severity.maximum], [0, 4], 'severity is bounded 0-4 (S17)');
-  // impact->severity must be a pure mapping for axe violations: a severity contradicting axe impact fails.
-  const wrongMap = sgate('structural-severity-not-impact-mapped-bad.json');
-  assert.match(out(wrongMap), /impact|severity/i, 'an axe-violation severity that is not the pure critical=4/serious=3/moderate=2/minor=1 mapping of axe impact fails the gate (S17/S19)');
-  assert.notEqual(wrongMap.code, 0, 'a severity contradicting axe impact must fail the gate with a non-zero exit (S17/S19)');
+  // impact->severity must be a pure mapping for axe violations. CR4-M12: exercise ALL 4 impact levels
+  // (mirroring the S35 9-code loop) — one undifferentiated minor fixture let a builder key the mapping to
+  // one impact/rule pair and ship 3 of 4 levels broken. Each fixture pins severity one BELOW its correct value.
+  const S17_IMPACTS = [['critical', 4], ['serious', 3], ['moderate', 2], ['minor', 1]];
+  for (const [impact, pinned] of S17_IMPACTS) {
+    const r = sgate(`structural-axe-severity-${impact}-bad.json`);
+    assert.match(out(r), /impact|severity/i, `an axe ${impact}-impact violation carrying severity ${pinned - 1} instead of the pure-mapping ${pinned} fails the gate (S17/S19)`);
+    assert.notEqual(r.code, 0, `an axe ${impact}-impact violation whose severity is ${pinned - 1} instead of ${pinned} must fail the gate with a non-zero exit (S17/S19/M12)`);
+  }
+  const allCorrect = sgate('structural-axe-severity-all-correct-ok.json');
+  assert.equal(allCorrect.code, 0, 'a report with all 4 axe impact levels each at their correctly pinned severity passes the gate (negative control, S17/M12)');
   const incompleteDropped = sgate('structural-incomplete-dropped-bad.json');
   assert.match(out(incompleteDropped), /incomplete|manual.?review|severity 0/i, 'an axe incomplete result reported as a pass or dropped fails the gate — it must surface at severity 0 (S18)');
   assert.notEqual(incompleteDropped.code, 0, 'an incomplete result reported as a pass or dropped must fail the gate with a non-zero exit (S18)');
@@ -199,6 +212,16 @@ test('M9 (S22 D6): structural + persona schemas are one family — identical top
     assert.ok(stF.properties[prop], `structural finding must carry the shared property ${prop} (D6)`);
     assert.ok(peF.properties[prop], `persona finding must carry the shared property ${prop} (D6)`);
   }
+  // CR4-M9 (S60): a raw `impact` string must be a persisted, REQUIRED property on axe-sourced finding
+  // records, distinct from the derived `severity` integer — otherwise a builder emitting
+  // {code:'incomplete', severity:0} with no impact field makes the S53 critical-impact CI predicate
+  // (which reads impact, not severity) permanently unreachable. Locked here so the schema cannot be built without it.
+  assert.ok(stF.properties.impact, 'structural finding schema must define a raw impact property for axe-sourced records (S60)');
+  // impact must be REQUIRED (top-level required array, or a required in any allOf/anyOf/oneOf branch that
+  // covers axe-sourced records) so the schema cannot be built without persisting it.
+  const requiredSets = [stF.required, ...(stF.allOf ?? []).map((s) => s.required), ...(stF.anyOf ?? []).map((s) => s.required), ...(stF.oneOf ?? []).map((s) => s.required)];
+  const impactRequired = requiredSets.some((r) => Array.isArray(r) && r.includes('impact'));
+  assert.ok(impactRequired, 'a raw impact string is listed in the structural finding schema required array for axe-sourced entries, distinct from the derived severity integer (S60/M9)');
   assert.deepEqual(
     [stF.properties.severity.minimum, stF.properties.severity.maximum],
     [peF.properties.severity.minimum, peF.properties.severity.maximum],
@@ -206,16 +229,20 @@ test('M9 (S22 D6): structural + persona schemas are one family — identical top
   );
 });
 
-test('B4 (S24 D6): a structural finding cross-references a persona finding by target_element_identifier + run.route', () => {
+test('B4 (S24 D6, CR4-M11): the cross-lane join is computed by the real structural-cross-ref.mjs script, not reimplemented in-test', () => {
   // Requirement ID: S24 — the join key is the field that ACTUALLY exists in the 0001 schema (CR1-B4).
-  assert.ok(existsSync('schemas/structural-findings.schema.json'), 'schemas/structural-findings.schema.json missing (S24) — gate the join behind the built contract so this stays RED');
-  const structural = json('test/fixtures/structural-join-0002.json');
-  const persona = json('test/fixtures/join-persona-0001.json');
-  const key = (f, route) => `${route}::${f.target_element_identifier}`;
-  const personaKeys = new Set(persona.findings.map((f) => key(f, persona.run.route)));
-  const matches = structural.findings.filter((f) => personaKeys.has(key(f, structural.run.route)));
-  assert.equal(matches.length, 1, 'exactly one structural finding joins a persona finding on shared target_element_identifier + run.route (S24)');
-  assert.equal(matches[0].target_element_identifier, 'button#buy', 'the join is on the real target_element_identifier field, never the non-existent target_element (B4)');
+  // CR4-M11: the old test defined its own key()/filter and ran it against two pre-matched fixtures — no
+  // production code was invoked, so a builder shipping target_element_identifier:null everywhere still
+  // passed at 100%. Now the ACTUAL script is invoked (like sci/srender invoke their scripts) and its own
+  // stdout/exit is asserted. RED until scripts/structural-cross-ref.mjs is built.
+  const scref = (structuralFx, personaFx) => run(['scripts/structural-cross-ref.mjs', `test/fixtures/${structuralFx}`, `test/fixtures/${personaFx}`]);
+  const match = scref('structural-join-0002.json', 'join-persona-0001.json');
+  assert.equal(match.code, 0, 'the cross-ref script exits 0 when a match exists (S24) — RED until scripts/structural-cross-ref.mjs is built');
+  assert.match(out(match), /button#buy/, "the script's own output reports the button#buy match on the real target_element_identifier + route, not the non-existent target_element (S24/B4/M11)");
+  // S24 second clause: disclose "no cross-lane match found" rather than a silent empty join — previously
+  // uncovered. Disjoint target_element_identifier values on both sides must surface the disclosure.
+  const noMatch = scref('structural-join-no-match-0002.json', 'join-persona-no-match-0001.json');
+  assert.match(out(noMatch), /no cross-lane match found/i, "the script discloses 'no cross-lane match found' for disjoint identifiers rather than emitting an empty join array (S24/M11)");
 });
 
 test('S25 S26 S27 S29: every report prints the validity envelope with vendor-reported caveats on BOTH figures', () => {
@@ -424,6 +451,12 @@ test('S51 (B16): the finding_id generator is invoked twice on one synthetic inpu
   const a = gen();
   const b = gen();
   assert.deepEqual([...a].sort(), [...b].sort(), 'two invocations of computeFindingId on the same synthetic input produce a set-equal finding-id set (S51)');
+  // CR4-Mi1: uniqueness — the same route + rule/code but a DIFFERENT selector must yield a DIFFERENT
+  // finding_id (selector is a real input to S50's derivation, not a self-consistency-only artifact).
+  const baseId = mod.computeFindingId({ route: '/signup', rule_id: 'button-name', selector: 'button.cta' });
+  const differentSelectorId = mod.computeFindingId({ route: '/signup', rule_id: 'button-name', selector: 'button.other' });
+  assert.notEqual(differentSelectorId, baseId, 'two records identical but for their selector produce DIFFERENT finding_ids — selector is load-bearing in the S50 derivation, not ignored (S51/S50/Mi1)');
+  assert.ok(!a.has(differentSelectorId), 'the differing-selector id is not a member of the original synthetic id set (real uniqueness check, not self-consistency, S51/Mi1)');
 });
 
 test('S52 (B17): the CI critical-impact predicate reads raw impact, never the derived severity integer', () => {
@@ -476,20 +509,28 @@ test('Mn11 (S14 S12): ambiguous main (count != 1) suppresses the entire S12 eval
   const gate = sgate('structural-ambiguous-main-suppresses-s12-bad.json');
   assert.match(out(gate), /ambiguous|cannot-evaluate-ambiguous-main|fail.?closed|suppress/i, 'the gate names the ambiguous-main fail-closed rule (S14)');
   assert.notEqual(gate.code, 0, 'an ambiguous-main page must fail the gate closed with a non-zero exit (S14/Mn11)');
+  // CR4-M10: a page that emits BOTH cannot-evaluate-ambiguous-main AND main-content-missing for the same
+  // route violates S14's fail-closed suppression (the ambiguous-main result must SUPPRESS every S12-derived
+  // finding). The gate must reject that double-emission with a message naming the S14 suppression violation,
+  // distinct from the generic S56 block. The pre-CR4 suite had no fixture pairing the two codes on one route.
+  const doubleEmit = sgate('structural-s14-violation-double-emission-bad.json');
+  assert.match(out(doubleEmit), /S14|suppress|ambiguous|main-content-missing/i, 'the gate names the S14 fail-closed suppression violation when both cannot-evaluate-ambiguous-main and main-content-missing are emitted for one route (S14/M10)');
+  assert.notEqual(doubleEmit.code, 0, 'a route double-emitting cannot-evaluate-ambiguous-main and a main-content-missing (S12-derived) finding must fail the gate — S14 suppression forbids it (S14/M10)');
   const ok = sgate('structural-valid.json');
   assert.equal(ok.code, 0, 'a page exposing exactly one main landmark passes the gate (negative control, S14/Mn11)');
 });
 
 test('S55 (M10/B8): the one live cross-namespace pair (landmark-one-main <-> cannot-evaluate-ambiguous-main) is not double-counted', () => {
-  // Requirement ID: S55 (CR2-M10, CR3-2/B8) — the tabindex/positive-tabindex pair is DEAD CODE: S1
-  // disables the axe tabindex rule (CR2-B13), so axe can never emit a tabindex finding for it to act
+  // Requirement ID: S55 (CR2-M10, CR3-2/B8, CR4-M1) — the tabindex/positive-tabindex pair is DEAD CODE:
+  // S1 disables the axe tabindex rule (CR2-B13), so axe can never emit a tabindex finding for it to act
   // on. The sole live pair is the axe landmark-one-main rule vs the non-axe cannot-evaluate-ambiguous-
-  // main check, both pinned to the :root selector: when both appear for :root, the non-axe finding is
-  // emitted and the axe finding is suppressed (else one 0-or-2-main defect ships as two entries at two
-  // severities). The fixture exercises the ACTUALLY-REACHABLE pairing, not the impossible tabindex one.
+  // main check: when both appear for the same route, the non-axe finding is emitted and the axe finding
+  // is suppressed (else one 0-or-2-main defect ships as two entries at two severities). CR4-M1: the
+  // suppression is keyed on the paired rule-code identity alone — the CR3 :root selector-equality
+  // condition (never verified against live axe output; axe may target `html`, not `:root`) is dropped.
   const dup = sgate('structural-cross-namespace-landmark-bad.json');
-  assert.match(out(dup), /cross-namespace|landmark-one-main|cannot-evaluate-ambiguous-main|suppress|equivalence|dedup/i, 'the gate names the cross-namespace equivalence rule when the axe landmark-one-main finding + its paired non-axe cannot-evaluate-ambiguous-main finding share the :root selector (S55)');
-  assert.notEqual(dup.code, 0, 'a report emitting BOTH the axe landmark-one-main finding and the non-axe cannot-evaluate-ambiguous-main finding for the :root selector must fail the gate — the axe finding must be suppressed (S55/M10/B8)');
+  assert.match(out(dup), /cross-namespace|landmark-one-main|cannot-evaluate-ambiguous-main|suppress|equivalence|dedup/i, 'the gate names the cross-namespace equivalence rule when the axe landmark-one-main finding + its paired non-axe cannot-evaluate-ambiguous-main finding appear for the same route (S55/CR4-M1)');
+  assert.notEqual(dup.code, 0, 'a report emitting BOTH the axe landmark-one-main finding and the non-axe cannot-evaluate-ambiguous-main finding for the same route must fail the gate — the axe finding must be suppressed on paired rule-code identity, no selector-equality condition (S55/M10/B8/CR4-M1)');
 });
 
 test('S49 S4 S15 (B9/B5): a role=button control sources its accessible name via aria-command-name / the accname engine', () => {
@@ -498,4 +539,96 @@ test('S49 S4 S15 (B9/B5): a role=button control sources its accessible name via 
   const roleBtn = sgate('structural-role-button-no-name-bad.json');
   assert.match(out(roleBtn), /aria-command-name|accessible name|accname|button/i, 'the gate names the aria-command-name / accname rule for an unnamed role=button control (S49/B9)');
   assert.notEqual(roleBtn.code, 0, 'a role=button control exposing no accessible name must fail the gate with a non-zero exit (S49/S4/S15)');
+});
+
+// ==== CHALLENGE-ROUND-4 additions ====
+
+test('S1 S47 (CR4-B3/B4): an infinite CSS animation does not deadlock the settle precondition', () => {
+  // Requirement ID: S1, S47 — document.getAnimations subtree includes animation-iteration-count:infinite
+  // elements (spinners, pulse dots, animated gradients) that NEVER empty; the pre-CR4 "empty list" clause
+  // hit the 10s cap every run and recorded settle-timeout permanently. S1 now excludes infinite-iteration
+  // animations from the precondition (treated as settled), so such a route reaches completed within the cap.
+  const fx = json('test/fixtures/structural-infinite-animation-settles-ok.json');
+  assert.notEqual(fx.run.run_status, 'settle-timeout', 'a route with an infinite CSS animation settles to a real run_status, never settle-timeout (S1/S47/CR4-B3/B4)');
+  assert.equal(fx.metadata.settle_precondition_met, true, 'the settle precondition is met on a route whose only outstanding animation is infinite-iteration (S1/CR4-B4)');
+  const settled = sgate('structural-infinite-animation-settles-ok.json');
+  assert.equal(settled.code, 0, 'a completed run whose only unfinished animation is infinite-iteration passes the gate — the infinite animation is treated as settled, not a settle-timeout (negative control, S1/S47/CR4-B3/B4)');
+});
+
+test('S57 (CR4-B5): structural-ci-diff.mjs validates its own trust boundary (axe_version, schema_version, lane) before route predicates', () => {
+  // Requirement ID: S57 — the CI diff gate must independently refuse an unpinned/misrouted bundle, not
+  // rely on structural-report-gate.mjs having already caught it (D5's "entire value proposition"). Mirrors
+  // the M14/Mi4 sgate assertions but invoked against sci, since a CI pipeline may wire ONLY the diff gate.
+  const wrongVer = sci('structural-wrong-axe-version-bad.json');
+  assert.match(out(wrongVer), /axe.?version|4\.12\.1|version/i, 'the CI diff gate names the pinned-axe-version rule for a wrong metadata.axe_version (S57/S2)');
+  assert.notEqual(wrongVer.code, 0, 'structural-ci-diff.mjs refuses a bundle whose metadata.axe_version is not the pinned 4.12.1, with a non-zero exit, before any route predicate (S57/S2)');
+  const wrongSchema = sci('structural-schema-version-wrong-bad.json');
+  assert.match(out(wrongSchema), /schema.?version|version|unsupported/i, 'the CI diff gate names the schema_version rule for an unsupported schema_version (S57/SN2)');
+  assert.notEqual(wrongSchema.code, 0, 'structural-ci-diff.mjs refuses a bundle whose schema_version is unsupported, with a non-zero exit (S57/SN2)');
+  const wrongLane = sci('structural-wrong-lane-value-bad.json');
+  assert.match(out(wrongLane), /lane|structural|persona/i, 'the CI diff gate names the lane discriminator rule for a wrong top-level lane (S57/S22)');
+  assert.notEqual(wrongLane.code, 0, 'structural-ci-diff.mjs refuses a bundle whose top-level lane is not "structural", with a non-zero exit (S57/S22)');
+  const clean = sci('structural-no-violations-ok.json');
+  assert.equal(clean.code, 0, 'a correctly-pinned, correctly-lane-tagged clean bundle passes the CI diff gate (negative control, S57)');
+});
+
+test('S58 S59 (CR4-M8): axe-execution-degraded is recorded and blocks CI — a silent zero-results resolve is fail-closed', () => {
+  // Requirement ID: S58, S59 — axe-core can degrade silently (CSP-blocked internal checks, closed shadow
+  // roots) resolving with zero violation+incomplete+pass results on a non-trivial DOM; indistinguishable
+  // from a genuinely clean pass. S45's fail-closed only covers the throw path; S58/S59 cover the resolve path.
+  const degradedGate = sgate('structural-axe-execution-degraded-bad.json');
+  assert.match(out(degradedGate), /axe-execution-degraded|degraded|zero.*result|silently/i, 'the gate names the axe-execution-degraded run_status for a resolve-with-zero-results route on a non-trivial DOM (S58)');
+  assert.notEqual(degradedGate.code, 0, 'a route recording run_status axe-execution-degraded must fail the gate with a non-zero exit, never a silent clean pass (S58)');
+  const degradedCi = sci('structural-axe-execution-degraded-bad.json');
+  assert.notEqual(degradedCi.code, 0, 'the CI gate exits non-zero on a route whose run_status is axe-execution-degraded, to block the merge (S59/M8)');
+  const clean = sci('structural-no-violations-ok.json');
+  assert.equal(clean.code, 0, 'a genuinely clean completed run still passes the CI gate (negative control, S58/S59)');
+});
+
+test('S60 (CR4-M9): a raw impact string is a required persisted property on axe-sourced findings', () => {
+  // Requirement ID: S60 — locked at the schema level in the M9 test (impact in the required array); here
+  // the gate must reject an axe-sourced finding record that omits the raw impact field, so the S53
+  // critical-impact CI predicate (which reads impact, not the derived severity) can never be made unreachable.
+  const noImpact = sgate('structural-axe-finding-no-impact-bad.json');
+  assert.match(out(noImpact), /impact|required|axe/i, 'the gate names the persisted-impact rule for an axe-sourced finding record missing its raw impact string (S60)');
+  assert.notEqual(noImpact.code, 0, 'an axe-sourced finding record with no raw impact property must fail the gate with a non-zero exit (S60/M9)');
+  const ok = sgate('structural-valid.json');
+  assert.equal(ok.code, 0, 'a report whose axe-sourced findings all persist a raw impact string passes the gate (negative control, S60)');
+});
+
+test('CR4-M7 (S20 S41 S24 S50): dedup, join, and finding_id all key off target_element_identifier, never target_selector', () => {
+  // Requirement ID: S20, S41, S24 — the schema defines target_element_identifier AND target_selector as
+  // two distinct properties; a builder keying dedup off one and join off the other silently breaks the
+  // cross-lane join on any page where the values diverge. This fixture sets them to DIFFERENT strings, so a
+  // gate that dedups two same-identifier/different-selector findings into one (keying on identifier) passes,
+  // while one keying on target_selector leaves the duplicate and fails.
+  const divergent = sgate('structural-identifier-vs-selector-divergent-bad.json');
+  assert.match(out(divergent), /dedup|duplicate|target_element_identifier|identifier|selector/i, 'the gate names the identifier-keyed dedup rule when two findings share target_element_identifier but differ in target_selector (S20/S41/M7)');
+  assert.notEqual(divergent.code, 0, 'two findings sharing target_element_identifier but differing in target_selector must be deduplicated on the identifier — an undeduplicated file fails the gate (S20/S41/M7)');
+  const ok = sgate('structural-identifier-vs-selector-collapsed-ok.json');
+  assert.equal(ok.code, 0, 'the same defect correctly collapsed on target_element_identifier passes the gate (negative control, S20/S41/M7)');
+});
+
+test('Mi4 (S20): two axe findings sharing rule_id + target_element_identifier are deduplicated', () => {
+  // Requirement ID: S20 (CR4-Mi4) — S20 (axe dedup) had zero suite coverage, unlike its non-axe twin S41.
+  const dupe = sgate('structural-axe-dup-rule-bad.json');
+  assert.match(out(dupe), /dedup|duplicate|rule.?id|identifier|selector/i, 'the gate names the axe dedup rule when two findings share rule_id + target_element_identifier (S20)');
+  assert.notEqual(dupe.code, 0, 'two undeduplicated axe findings sharing rule_id + target_element_identifier must fail the gate with a non-zero exit (S20/Mi4)');
+  const ok = sgate('structural-axe-dup-collapsed-ok.json');
+  assert.equal(ok.code, 0, 'the same axe defect correctly collapsed to a single finding passes the gate (negative control, S20/Mi4)');
+});
+
+test('S10a (CR4-Mi2): a heading-order skip (level jump > 1) is detected in the findings, not only asserted on envelope text', () => {
+  // Requirement ID: S10a — the pre-CR4 suite only regex-matched "best-practice" on validity-envelope text;
+  // no fixture drove actual heading-order detection, so a no-op detector passed. S10a pins the algorithm:
+  // a heading whose level exceeds the immediately preceding heading's level by more than 1 (e.g. h1->h3).
+  const skip = json('test/fixtures/structural-heading-order-skip-bad.json');
+  const skipCodes = skip.findings.map((f) => f.code);
+  assert.ok(skipCodes.includes('heading-order'), 'a page whose headings skip h1->h3 emits a heading-order finding (S10a)');
+  const skipFinding = skip.findings.find((f) => f.code === 'heading-order');
+  assert.match(JSON.stringify(skipFinding), /best-practice/i, 'the heading-order finding carries the best-practice label, never a WCAG 1.3.1 failure (S10a/S27)');
+  const okFx = json('test/fixtures/structural-heading-order-ok.json');
+  assert.ok(!okFx.findings.map((f) => f.code).includes('heading-order'), 'a page with monotonic heading levels emits no heading-order finding (S10a)');
+  const okGate = sgate('structural-heading-order-ok.json');
+  assert.equal(okGate.code, 0, 'a page with correct heading order passes the gate (negative control, S10a)');
 });

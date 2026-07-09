@@ -217,3 +217,76 @@ its RED-test assertion. Remaining known deltas are DELIBERATE and disclosed: spe
 (Gherkin, D-table rationale) beyond the terse requirement line; the exhaustive CI-block table is the
 single SSOT for gate verdicts. No stale count, no "one gate"/"structurally impossible" overclaim, and
 no CR2-in-place edit remains unsynced in spec.md.
+
+## CHALLENGE-ROUND-4 (2026-07-09): 21 CONFIRMED applied (5 BLOCKER + 12 MAJOR + 4 MINOR), 6 REJECTED re-confirmed
+
+Single-writer pass. Net requirement delta **+6** (S57/S58/S59/S60 appended; S10a inserted after S10;
+S26b inserted after S26 — no renumbering). Edited S1/S12/S20/S21/S41/S45/S50/S55 in place. Every changed
+line traced inline `# CR4-<defect-id>`. Requirements 64 -> 70 (62 functional S1-S60 + S10a/S26b, 8
+nonfunctional SN1-SN8); req-lint 70/70 exit 0; coverage-audit --pre-freeze 8/8; test-coverage-audit
+36/36 CRITICAL; acceptance-0002 44/44 RED (0 pass); acceptance.test.mjs (0001) 93/0 untouched.
+
+### Merged same-root pairs (one edit each, per the panel's §4 systemic note — not two redundant patches)
+- **B1 + B2 + M3 -> ONE S12 rewrite.** The single most defect-dense requirement. The exclusion pool now
+  drops BOTH ancestors AND descendants of the declared anchor (B1/B2: a larger-bounding-box descendant —
+  e.g. an absolutely-positioned full-bleed overlay div nested inside `<main>` — no longer out-measures
+  the anchor, because it is excluded, not overridden), PLUS any zero-rendered-text candidate (M3: a
+  decorative full-bleed container can no longer outrank the real text anchor). The separate contradictory
+  "never disqualified by a candidate it contains" guarantee clause is gone — ancestor+descendant exclusion
+  delivers it by construction. The spike `structural-scan.mjs` prominence logic was rewritten to match:
+  `getBoundingClientRect()` bounding-box AREA (never char count), opposing pool excludes the anchor's
+  ancestors + descendants + zero-area/hidden/zero-text candidates — removing the third undocumented
+  containment-override algorithm (`largest.contains(mainEl) || mainEl.contains(largest)`) B2 found live.
+  New fixture `structural-dom-sev-main-content-descendant-overflow-ok.json` + a fixture-through-gate
+  assertion in the S12 test lock the nested-larger-descendant case (kept fixture-shaped, not jsdom-unit:
+  jsdom has no layout — `getBoundingClientRect` returns zeros — so it cannot exercise a bounding-box-area
+  rule, and a passing unit test would break the RED ATDD invariant the suite depends on).
+- **B3 + B4 -> ONE S1 rewrite.** The `getAnimations()`-empty settle precondition is now scoped to
+  still-running FINITE-iteration animations only; an animation whose `effect.getComputedTiming().iterations`
+  is `Infinity` (spinner/pulse/animated-gradient) is treated as settled and never blocks settle, so a
+  page with a legitimate infinite CSS animation no longer hits the 10s cap and records settle-timeout
+  every run. New test `S1 S47 (CR4-B3/B4)` + fixture `structural-infinite-animation-settles-ok.json`
+  assert such a route reaches run_status completed / settle_precondition_met=true within the cap.
+- **M2 + M4 -> ONE S21 edit.** S21's byte-identical determinism guarantee is now scoped to a matching
+  `render_environment_id` (plus identical pinned browser version), mirroring sibling S42's condition list
+  exactly — D5b's own font-rendering rationale (a font/rendering change flipping a borderline 4.499:1
+  color-contrast finding) targets S21's axe-violation payload, not only S42's.
+
+### Remaining confirmed defects applied at judge severity (edit-first)
+| # | sev | disposition | how |
+|---|-----|-------------|-----|
+| B5 | BLK | ACCEPT | +S57: `structural-ci-diff.mjs` self-validates axe_version(S2)/schema_version(SN2)/lane(S22) before any route predicate; +spec.md "input validity (bundle-level)" CI-block table section; +`S57 (CR4-B5)` test invoking `sci()` on the wrong-axe/wrong-schema/wrong-lane fixtures + a clean neg control |
+| M1 | MAJ | ACCEPT | S55: suppression keyed on the paired rule-code identity ALONE; the unverified `:root` selector-equality (axe may target `html`, not `:root`) dropped; fixture `structural-cross-namespace-landmark-bad.json` updated (axe target `html`, dom `:root` — different selectors, suppression still fires) |
+| M5 | MAJ | ACCEPT (document) | use-of-color / G183 (WCAG 1.4.1): +spec.md Non-goals bullet + cut-table row below — a decision trail, not a rebuilt check |
+| M6 | MAJ | ACCEPT (scoped) | +S26b (contrast-exemption categories: logotype/incidental/inactive-UI text) in requirements.txt + spec.md S26 list. The brief §3 mirror named in the directive is DEFERRED: `docs/research/DECISION-BRIEF-*` is outside this pass's write scope — recorded here, not silently skipped |
+| M7 | MAJ | ACCEPT | S20/S41/S50 rekeyed from the ambiguous prose "target-element selector" to the literal schema field `target_element_identifier` (matching S24); +`CR4-M7` test with divergent-identifier/selector fixtures |
+| M8 | MAJ | ACCEPT | +S58 (record run_status axe-execution-degraded on a resolve-with-zero-results over a non-trivial DOM) + S59 (CI block on it); +run_status table row; +`S58 S59 (CR4-M8)` test |
+| M9 | MAJ | ACCEPT | +S60 (raw impact persisted in the per-finding required array, distinct from derived severity); extended the M9 cross-schema test's shared-property loop to assert `impact` required for axe-sourced entries |
+| M10 | MAJ | ACCEPT | +fixture `structural-s14-violation-double-emission-bad.json` (cannot-evaluate-ambiguous-main + main-content-missing on one route) + assertion in the Mn11 test that the gate rejects the S14-suppression violation |
+| M11 | MAJ | ACCEPT | replaced the inline-reimplemented S24 join test body with a call to the real `structural-cross-ref.mjs` (RED until built) + a no-match fixture pair asserting the "no cross-lane match found" disclosure |
+| M12 | MAJ | ACCEPT | replaced the single minor-impact S17 fixture with a 4-level loop (critical/serious/moderate/minor each one-below-pinned) + an all-correct neg control |
+| Mi1 | MIN | ACCEPT | S51 test: +uniqueness assertion (same route+rule, different selector -> DIFFERENT finding_id; not a member of the original id set) |
+| Mi2 | MIN | ACCEPT | +S10a (heading-order detection: level jump > 1 in DOM order) + fixture pair + a detection test (skip fixture carries the best-practice-labeled heading-order code, ok fixture does not) |
+| Mi3 | MIN | ACCEPT (edit) | S45: `continue-control` added to the still-emitted non-axe enumeration |
+| Mi4 | MIN | ACCEPT | +`Mi4 (S20)` test + fixtures `structural-axe-dup-rule-bad.json` / `-collapsed-ok.json` (S20 axe-dedup had zero coverage, unlike its non-axe twin S41) |
+
+### Cut-table addendum (M5)
+| Cut item | Reason |
+|---|---|
+| Use-of-color / G183 check (WCAG 1.4.1) | brief §2a named it an MVP MUST-check but it silently vanished from requirements.txt with no trail; deferred here (reliable use-of-color detection needs human judgment beyond axe's reliable automation; not load-bearing for the main-content/NRV/contrast core). Now a decision trail, not a silent drop (CR4-M5). v2 advisory-only candidate. |
+
+### The 6 REJECTED — one-line cites, no re-litigation (per the panel §3 rejections + CR1/CR2/CR3 scrub-log)
+1. **S49 accessible-name via `axe.commons.text.accessibleText`** — REJECTED: the attack's premises are factually wrong against live axe-core 4.12.1 source (takes a raw Element, resolves its own VirtualNode, typed in the shipped `.d.ts`); S49's `axe.setup`/`teardown` bracket is correct. Residual was only a non-material citation gap. No requirement changed.
+2. **0001's `report-gate.mjs` silently passing a misrouted structural bundle** — REJECTED: verbatim 3rd re-raise of CR1 REJECTED #3 / CR2 REJECTED #1 / CR3 REJECTED B6; D6 discloses this as a deliberate reversible naming-convention guard; no spec-compliant builder wires the frozen 0001 gate to a structural bundle. No requirement added.
+3. **0001's diff-only `ci-diff.mjs` lets a persisting critical finding slide** — REJECTED: S52 names `structural-ci-diff.mjs` as a separate absolute single-bundle checker (not a diff tool); the diff-evasion scenario cannot occur with no baseline/current step. Re-raise of CR1 #4 / CR2 #2. No requirement added.
+4. **D6's "one schema family" trains reuse of 0001's `run_status` $ref, breaking S45/S47** — REJECTED: D6 never mentions `run_status`; M9 locks only severity/finding_id; no ajv/JSON-Schema validator exists in the repo, so a stray `$ref` is inert against the CLI-subprocess gate tests. No requirement added.
+5. **S24's verbatim route join has no format contract -> silent join failure** — REJECTED: S24 already mandates disclosing "no cross-lane match found" rather than a silent empty join (scrub-log CR3-M7); now additionally locked by the M11 no-match test. No requirement added.
+6. **S13 refusal verified only against a hand-authored fixture; spike does the opposite** — REJECTED: the live-execution gap is an explicitly-disclosed deferred v2 residual (spec.md Known-gaps), matching the frozen 0001 sibling's posture; the spike's substring fallback is pre-empted by an explicit scrub-log kill entry a literal-reading builder follows. No requirement added.
+
+### CR4 desync sweep result (post-edit)
+Every edited requirement's spec.md restatement bullet + RED-test assertion was re-diffed. New CRITICAL
+acceptance bullets (S57/S58/S59) are each referenced by a `# CR4-*` test assertion (test-coverage-audit
+36/36). New/edited tests each carry a failing anchor (negative-control `equal(code,0)`, schema
+`existsSync`, or unbuilt-module `import`) so the suite stays 0-pass RED. Deliberate disclosed delta: the
+DECISION-BRIEF §3 mirror (M6) is outside this pass's write scope — recorded in the S26b spec bullet + the
+M6 table row above, not silently skipped.
