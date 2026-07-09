@@ -730,3 +730,97 @@ preserved; +1 test block = the `--help` precedence test; +0 fixtures — no new 
 lint-result.txt refreshed in the same pass.
 
 Post-CR10 state is a prose/contract-consistency delta from the round-10-challenged spec; no new mechanism or requirement surface added.
+
+---
+
+## Quality-phase fix (2026-07-09)
+
+A disjoint quality review (empirically proven) found the 87-green build was Goodhart-fitted to the
+frozen fixtures: judgment logic was duplicated/inlined across the shell scripts (so gate and ci-diff
+could drift — D-DET), and several safety guards were bypassable. The spec (`docs/specs/0001-…`) was
+NOT modified — `spec_sha` remains `da91e069…`. Only the shell scripts, new pure core modules, the
+acceptance test, and fixtures changed. Suite after fix: **93 tests, 93 pass, 0 fail**.
+
+### M1 — functional-core / imperative-shell refactor (ADR-0002)
+
+All gate judgments were extracted into pure `scripts/core/*` modules (no fs/network/browser, no
+`process.exit`, deterministic). The three shell scripts now IMPORT the core — no judgment logic is
+duplicated or inlined in any shell script, so the same input cannot be judged differently by
+report-gate vs ci-diff (D-DET).
+
+| core module | pure exports | imported by |
+|---|---|---|
+| `core/run-status.mjs` | `FLOOR_STATES`, `CONVERGENCE_FLOOR`, `floorCount`, `deriveBlocked` | report-gate, ci-diff |
+| `core/identity.mjs` | `findingId` (sha256), `tupleKey`, `teiOf`, `HEX_FINDING_ID` | report-gate |
+| `core/redaction.mjs` | `CRED_SCANNERS`, `luhnValid`, `hasCredentialLeak` | report-gate, validate-persona |
+| `core/severity.mjs` | `NIELSEN_10`, `DEFAULT_RUBRIC`, `bucketNumeric`, `numericFactors`, `convergenceCounts` | report-gate |
+| `core/claims.mjs` | `WTP_RE`, `POPULATION_RE`, `forbiddenClaims` | report-gate |
+| `core/denylist.mjs` | `isValidDenylist`, `denylistViolation` | report-gate, run-gauntlet |
+
+Core purity is now mechanically locked by the frozen suite (`ADR-0002 core purity` test) and the
+review probe `grep -rE 'process.exit|readFileSync|playwright' scripts/core/` returns empty.
+
+### Confirmed-finding fixes
+
+- **B1 (F49):** `FLOOR_STATES` = {completed, patience-exhausted, runner-capped}. `timed-out` REMOVED
+  from the floor — a wallclock-terminated subagent is an execution failure, not a designed
+  abandonment. `ci-diff.mjs` no longer short-circuits on stored `run_status==='BLOCKED'`; it
+  RECOMPUTES via `core.deriveBlocked` (D-DET).
+- **B2 (F153):** GitHub PAT scanners `/ghp_[A-Za-z0-9]{36}/` and `/gh_pat_[A-Za-z0-9_]{20,}/` added
+  to `core/redaction.mjs`. `validate-persona.mjs`'s forked, weaker `CRED_PATTERNS` (lacked
+  cookie/Luhn/ghp_) was DELETED; it now calls the unified `hasCredentialLeak`.
+- **M2 (F49):** `deriveBlocked` uses `floorCount < 3` (the fixed convergence floor, "fewer than 3"),
+  never `< personaEntries.length` — an N=5 run with 3 floor-state personas is NOT blocked.
+- **M3 (F37/F106/F108):** `run-gauntlet.mjs` now reads + `JSON.parse`s the `--denylist` file and
+  asserts a non-empty array of strings via `core.denylistViolation`, emitting a `denylist:` refusal
+  on missing/invalid/empty. Presence-only check removed.
+- **M4 (F37):** report-gate raises F37 when `run.denylist` is absent AND the bundle carries a `click`
+  action (F38's denylist-abort check is unenforceable without a denylist), not only on a fully-empty
+  bundle. (Scoped to click actions — the only denylist-relevant action type — so the non-click
+  execution-surface `-ok` fixtures are unaffected.)
+- **m1 (F165/F203):** a hex-shaped `finding_id` now REQUIRES the tuple fields and is recomputed
+  unconditionally — no longer skipped when `target_element_identifier` is absent.
+- **m2 (F57/F154):** action/tool-call cap boundary is now `>= 50` / `>= 250` ("once it has executed 50").
+- **m3 (F17):** every kept finding must carry `convergence_tier` (presence now enforced).
+- **m4 (F21/F22):** forbidden-claim/population regexes widened in `core/claims.mjs` to cover
+  customers|visitors|users|… nouns, the word "percent", and non-`$` currencies (€/£/euros/pounds).
+  Patterns stay shape-anchored so hyphenated persona names (`willing-to-pay-user`) never match.
+  **Residual (noted):** a number-free WTP/population assertion ("most users would happily pay") is not
+  caught by a lexical shape-anchored regex — deferred to v2 rather than risk false positives on prose.
+
+### Frozen-file amendments (spec-fidelity corrections, NOT test-weakening — justified)
+
+- `test/fixtures/run-timeout-partial-ledger-ok.json`: stored `run_status` `"completed"` → `"BLOCKED"`.
+  **F49 justification:** 2 completed + 1 timed-out → floor count 2 < 3 → BLOCKED. The fixture
+  previously encoded behavior CONTRADICTING frozen F49 (it stored `completed` while its own persona
+  list derives BLOCKED once `timed-out` leaves the floor per B1). The `-ok` suffix refers to the
+  partial-ledger merge (F75/F76), which stays valid — the finding still passes. Per SSOT the F49 spec
+  text is authority over the fixture. The F75/F76 test still passes (code 0).
+- `test/fixtures/run-timeout-partial-ledger-missing-bad.json`: stored `run_status` `"completed"` →
+  `"BLOCKED"` (same F49 justification). This makes the fixture fail purely on its intended F76 reason
+  (partial ledger dropped, not merged) rather than incidentally on the run_status mismatch.
+- `test/fixtures/patience-abandon-with-evidence.json`: added `personas_flagging: ["free-tier-user"]`,
+  `convergence_tier: 0`, `partial_tier: 1` to fr-905. **F17 justification:** m3 requires every kept
+  finding to carry a convergence tier; the single flagger is patience-exhausted (not completed), so
+  the honest join is convergence_tier 0 / partial_tier 1. The F114 positive-control test still passes.
+
+### Added strengthening fixtures + tests (anti-Goodhart)
+
+- `run-status-blocked-all-timed-out.json` — 3×timed-out stored `completed`: gate MUST fail (B1) AND
+  ci-diff MUST recompute BLOCKED (D-DET). (B1 test block.)
+- `run-status-n5-three-completed-ok.json` — N=5 (3 completed + 2 crashed) stored `completed`: NOT
+  blocked (M2 regression lock).
+- `evidence-secret-leak-ghp.json` / `evidence-secret-redacted-ghp-ok.json` /
+  `evidence-not-secret-ghp-word-ok.json` — ghp_ leak / -ok / survive-negative-control (B2/F153).
+- `evidence-secret-leak-ghpat.json` — gh_pat_ leak (B2/F153).
+- `denylist-empty.json` (empty-array denylist file) + missing-file path — run-gauntlet refuses (M3).
+- `denylist-absent-with-click-bad.json` — click action + no denylist → F37 (M4).
+
+### Re-freeze
+
+`freeze-spec.sh docs/specs/0001-…spec.md test/acceptance.test.mjs` was run per protocol. It REFUSES
+by design (line 97-99 RED-lock gate) because the suite is now GREEN (implementation exists):
+`REFUSED to freeze — acceptance test 'test/acceptance.test.mjs' PASSES now … it must be RED`. Since
+`spec.md` was NOT modified, `freeze.json`'s `spec_sha` is unchanged (`da91e069…`) and the frozen spec
+lock remains valid and byte-identical — no regeneration is possible or needed post-implementation.
+This is expected RED-lock-tool behavior, not a regression.

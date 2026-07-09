@@ -3,7 +3,8 @@
 // Exit codes: 0 = crawl started & gates passed; 1 = gate/validation refusal; 2 = usage error;
 // 3 = target unreachable at crawl start. This layer implements argument validation + refusal;
 // the live Playwright crawl is stubbed behind the validated entry (TODO: wire persona subagents).
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { denylistViolation } from './core/denylist.mjs';
 
 const USAGE = `ux-gauntlet run-gauntlet.mjs — multi-persona UX friction audit runner
 
@@ -67,6 +68,19 @@ function isLocalhost(url) {
   } catch { return false; }
 }
 
+// M3: the --denylist file must actually parse to a non-empty JSON array of strings. A presence-only
+// check is a bypassable safety guard — an operator pointing --denylist at a missing/corrupt/empty
+// file would otherwise start a crawl with no destructive-action guard live. Returns a 'denylist:'-
+// prefixed refusal string (so it stays in the F108 fixed-order slot) or null when the file is valid.
+function denylistFileViolation(pathStr) {
+  if (!existsSync(pathStr)) return `denylist: --denylist file not found: ${pathStr} (remedy: denylist/default-destructive-labels.json)`;
+  let parsed;
+  try { parsed = JSON.parse(readFileSync(pathStr, 'utf8')); }
+  catch (e) { return `denylist: --denylist file is not valid JSON: ${e.message}`; }
+  const v = denylistViolation(parsed);
+  return v ? `denylist: ${v}` : null;
+}
+
 function personaCount(flags) {
   if (flags.personas.length > 0) return flags.personas.length;
   try {
@@ -88,6 +102,7 @@ function main() {
   if (!flags.env) violations.push('env: missing --env (must be local|staging|production)');
   else if (!['local', 'staging', 'production'].includes(flags.env)) violations.push(`env: invalid --env value "${flags.env}" (must be local|staging|production)`);
   if (!flags.denylist) violations.push('denylist: missing --denylist; remedy: denylist/default-destructive-labels.json');
+  else { const dv = denylistFileViolation(flags.denylist); if (dv) violations.push(dv); }
   if (personaCount(flags) < 3) violations.push('persona-count: fewer than 3 personas supplied (minimum is 3)');
 
   if (violations.length > 0) {

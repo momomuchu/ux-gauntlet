@@ -2,7 +2,10 @@
 // validate-persona.mjs <persona-file>
 // Exits nonzero and names the missing/offending field on a schema violation (F25, F29),
 // and rejects a persona carrying a live-credential-shaped field value (F66).
+// The credential shape set is the shared pure core scanner (ADR-0002/B2) — no forked, weaker
+// pattern list; cookie/Luhn/ghp_/gh_pat_ coverage comes for free with report-gate's redaction.
 import { readFileSync, existsSync } from 'node:fs';
+import { hasCredentialLeak } from './core/redaction.mjs';
 
 const REQUIRED = ['goal', 'success_criteria', 'budget_authority', 'patience_threshold_steps', 'forbidden_claims'];
 
@@ -42,13 +45,6 @@ function parseYaml(text) {
   return obj;
 }
 
-const CRED_PATTERNS = [
-  /[Bb]earer\s+[A-Za-z0-9_.~+/=-]{20,}/,
-  /eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/,
-  /sk-[A-Za-z0-9-]{20,}/,
-  /AKIA[A-Z0-9]{16}/,
-];
-
 function fail(msg) {
   process.stderr.write(msg + '\n');
   process.exit(1);
@@ -73,7 +69,7 @@ for (const credField of ['login_password', 'login_email']) {
   if (Object.prototype.hasOwnProperty.call(persona, credField)) {
     const value = String(persona[credField]);
     const looksLikePlaceholder = /^TEST[-_]/i.test(value);
-    const looksLikeCredential = CRED_PATTERNS.some((re) => re.test(value)) || /@/.test(value);
+    const looksLikeCredential = hasCredentialLeak(value) !== null || /@/.test(value);
     if (!looksLikePlaceholder && looksLikeCredential) {
       fail(`persona carries a live-credential-shaped value in field "${credField}" (F66): use a TEST- placeholder, never a real credential`);
     }

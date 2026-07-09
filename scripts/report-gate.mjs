@@ -2,27 +2,15 @@
 // report-gate.mjs [--check-fixture <file> | <findings.json>]
 // Validates a UX Gauntlet run bundle and exits nonzero on ANY violation.
 // The two documented invocation forms (--check-fixture and a bare positional) are one code path.
+// ALL judgment logic lives in scripts/core/* pure modules (ADR-0002): this shell only reads the
+// file, feeds plain data to the core, and translates verdicts into exit codes / stdout / stderr.
 import { readFileSync, existsSync } from 'node:fs';
-import { createHash } from 'node:crypto';
-
-const NIELSEN_10 = [
-  'visibility-of-system-status', 'match-system-real-world', 'user-control-freedom',
-  'consistency-standards', 'error-prevention', 'recognition-rather-than-recall',
-  'flexibility-efficiency-of-use', 'aesthetic-minimalist-design',
-  'help-users-recognize-recover-errors', 'help-and-documentation',
-];
-
-const DEFAULT_RUBRIC = {
-  frequency_buckets: { '1': 0, '2-3': 1, '4-6': 2, '7-10': 3, '11-plus': 4 },
-  impact_buckets: {
-    'self-recovered-no-detour': 0,
-    'recovered-with-minor-detour': 1,
-    'recovered-with-major-detour': 2,
-    'recovered-only-via-support-or-workaround': 3,
-    'task-abandoned-or-never-resumed': 4,
-  },
-  persistence_buckets: { '0': 0, '1-2': 1, '3-5': 2, '6-9': 3, '10-plus': 4 },
-};
+import { FLOOR_STATES, deriveBlocked } from './core/run-status.mjs';
+import { findingId, tupleKey, teiOf, HEX_FINDING_ID } from './core/identity.mjs';
+import { hasCredentialLeak } from './core/redaction.mjs';
+import { NIELSEN_10, DEFAULT_RUBRIC, bucketNumeric, numericFactors, convergenceCounts } from './core/severity.mjs';
+import { forbiddenClaims } from './core/claims.mjs';
+import { isValidDenylist } from './core/denylist.mjs';
 
 const LEDGER_REASON_CODES = new Set([
   'task-completed', 'denylist-abort', 'patience-exhausted', 'runner-capped',
@@ -30,58 +18,10 @@ const LEDGER_REASON_CODES = new Set([
   'payment-refused', 'third-party-data-refused', 'max-tool-calls', 'max-actions',
 ]);
 
-const FLOOR_STATES = new Set(['completed', 'patience-exhausted', 'runner-capped', 'timed-out']);
 const D15_FLAGS = ['audited_terminal_step', 'external_side_effect', 'precondition_step', 'payment_step', 'denylist_override'];
 
-const CRED_SCANNERS = [
-  { name: 'bearer token', re: /[Bb]earer\s+[A-Za-z0-9_.~+/=-]{20,}/ },
-  { name: 'standalone JWT', re: /eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/ },
-  { name: 'cookie header', re: /(?:set-)?cookie:\s*\S+=\S+/i },
-  { name: 'AWS access key id', re: /AKIA[A-Z0-9]{16}/ },
-  { name: 'sk- API key', re: /sk-[A-Za-z0-9-]{20,}/ },
-];
-
-function bucketNumeric(n, buckets) {
-  for (const [key, val] of Object.entries(buckets)) {
-    if (/-plus$/.test(key) || /\+$/.test(key)) {
-      const lo = parseInt(key, 10);
-      if (n >= lo) return val;
-    } else if (key.includes('-')) {
-      const [a, b] = key.split('-').map((x) => parseInt(x, 10));
-      if (n >= a && n <= b) return val;
-    } else if (n === parseInt(key, 10)) {
-      return val;
-    }
-  }
-  return undefined;
-}
-
-function luhnValid(digits) {
-  let sum = 0;
-  let alt = false;
-  for (let i = digits.length - 1; i >= 0; i--) {
-    let d = digits.charCodeAt(i) - 48;
-    if (alt) { d *= 2; if (d > 9) d -= 9; }
-    sum += d;
-    alt = !alt;
-  }
-  return sum % 10 === 0;
-}
-
-function hasCredentialLeak(text) {
-  if (typeof text !== 'string') return null;
-  for (const s of CRED_SCANNERS) {
-    if (s.re.test(text)) return s.name;
-  }
-  for (const m of text.matchAll(/\d{13,19}/g)) {
-    if (luhnValid(m[0])) return 'Luhn-valid card number';
-  }
-  return null;
-}
-
-function findingId(tag, step, tei) {
-  return 'fid-' + createHash('sha256').update(`${tag}|${step}|${tei}`).digest('hex').slice(0, 16);
-}
+const ACTION_CAP = 50;   // F57: "once it has executed 50" — the cap is reached AT 50 (m2, >=).
+const TOOL_CALL_CAP = 250; // F154 default per-run LLM tool-call maximum (m2, >=).
 
 function loadHeuristicSet(bundle) {
   const file = bundle.run && bundle.run.heuristic_set_file;
@@ -100,15 +40,6 @@ function loadHeuristicSet(bundle) {
     } catch { /* fall through to default */ }
   }
   return { ids: NIELSEN_10, rubric: DEFAULT_RUBRIC };
-}
-
-function numericFactors(sf) {
-  return sf && ['frequency', 'impact', 'persistence'].every((k) => typeof sf[k] === 'number');
-}
-
-function tupleKey(f) {
-  const id = f.target_element_identifier || f.target_selector || '';
-  return `${f.heuristic_tag}|${f.step}|${id}`;
 }
 
 function main() {
@@ -137,7 +68,8 @@ function main() {
   const appErrors = Array.isArray(bundle.app_errors) ? bundle.app_errors : [];
   const personaEntries = Array.isArray(bundle.personas) ? bundle.personas : null;
   const { ids: heuristicIds, rubric } = loadHeuristicSet(bundle);
-  const denylist = Array.isArray(run.denylist) ? run.denylist.map((d) => String(d).toLowerCase()) : null;
+  const rawDenylist = run.denylist;
+  const denylist = Array.isArray(rawDenylist) ? rawDenylist.map((d) => String(d).toLowerCase()) : null;
   const storedRunStatus = bundle.run_status;
 
   // --- Zero-evidence drop (F14/F15) ---
@@ -175,14 +107,19 @@ function main() {
     }
   }
 
-  // --- Denylist config validity (F37/F106) ---
-  if (denylist !== null) {
-    if (denylist.length === 0) add('denylist is present but empty — a non-empty JSON array of strings is required (F106)');
+  // --- Denylist config validity (F37/F106) — one core validator, no presence-only bypass (M3/M4) ---
+  if (rawDenylist !== undefined) {
+    // Present but not a non-empty array of strings is an F106 violation.
+    if (!isValidDenylist(rawDenylist)) add('denylist is present but is not a non-empty JSON array of strings (F106)');
   } else {
-    const bare = allFindings.length === 0 && !walkthrough && actions.length === 0 && ledger.length === 0
+    // Absent denylist: F37 fires whenever the bundle is a bare run config OR carries any click action
+    // (a click cannot be safety-checked against a denylist that was never supplied) — not only when the
+    // whole bundle is empty (M4). Non-click execution surfaces (navigate/submit/background) don't require it.
+    const bareEmpty = allFindings.length === 0 && !walkthrough && actions.length === 0 && ledger.length === 0
       && appErrors.length === 0 && !personaEntries && !bundle.summary && !bundle.walkthrough_progress
       && !bundle.denylist_override_events && taskSteps.length === 0;
-    if (bare) add('run configuration supplies no operator denylist (F37)');
+    const hasClickAction = actions.some((a) => a && a.type === 'click');
+    if (bareEmpty || hasClickAction) add('run configuration supplies no operator denylist (F37)');
   }
 
   // --- Denylist click enforcement (F38/F128/F130) ---
@@ -233,9 +170,9 @@ function main() {
   }
 
   // --- BLOCKED derivation (F49/F191) + disclosure (F54) + degraded confidence (F124) ---
+  // Derived by the pure core (D-DET): the same input yields the same verdict in gate and ci-diff.
   if (personaEntries && storedRunStatus !== undefined) {
-    const floorCount = personaEntries.filter((p) => FLOOR_STATES.has(p.run_status)).length;
-    const derivedBlocked = floorCount < personaEntries.length;
+    const derivedBlocked = deriveBlocked(personaEntries);
     const storedBlocked = storedRunStatus === 'BLOCKED';
     if (derivedBlocked !== storedBlocked) {
       add(`run_status derivation mismatch: per-persona terminal states derive ${derivedBlocked ? 'BLOCKED' : 'NOT-BLOCKED'} but stored run_status is "${storedRunStatus}" (F191)`);
@@ -255,11 +192,11 @@ function main() {
   // --- Persona caps (F57/F58/F154) + concurrency (F132-134) + timeout partial ledger (F75/F76) ---
   if (personaEntries) {
     for (const p of personaEntries) {
-      if (typeof p.action_count === 'number' && p.action_count > 50 && p.run_status !== 'runner-capped') {
-        add(`persona ${p.name} exceeded the 50-action cap (action_count=${p.action_count}) but is not run_status runner-capped (F57/F58)`);
+      if (typeof p.action_count === 'number' && p.action_count >= ACTION_CAP && p.run_status !== 'runner-capped') {
+        add(`persona ${p.name} reached the ${ACTION_CAP}-action cap (action_count=${p.action_count}) but is not run_status runner-capped (F57/F58)`);
       }
-      if (typeof p.tool_call_count === 'number' && p.tool_call_count > 250 && p.run_status !== 'runner-capped') {
-        add(`persona ${p.name} exceeded the 250 tool-call cap (tool_call_count=${p.tool_call_count}) but is not run_status runner-capped (F154)`);
+      if (typeof p.tool_call_count === 'number' && p.tool_call_count >= TOOL_CALL_CAP && p.run_status !== 'runner-capped') {
+        add(`persona ${p.name} reached the ${TOOL_CALL_CAP} tool-call cap (tool_call_count=${p.tool_call_count}) but is not run_status runner-capped (F154)`);
       }
     }
     const timed = personaEntries.filter((p) => p.start_ts && p.end_ts);
@@ -313,7 +250,12 @@ function main() {
     if (!f.heuristic_tag) add(`finding ${f.id || f.finding_id} is untagged (no heuristic_tag) (F24)`);
     else if (!heuristicIds.includes(f.heuristic_tag)) add(`finding ${f.id || f.finding_id} heuristic_tag "${f.heuristic_tag}" is outside the configured heuristic set (F11/F23)`);
 
-    // Evidence credential redaction (F43/F44/F102/F166/F167)
+    // Convergence tier presence (F17): every kept finding MUST carry a convergence_tier (m3).
+    if (f.convergence_tier === undefined || f.convergence_tier === null) {
+      add(`finding ${f.id || f.finding_id} is missing the required convergence_tier field (F17)`);
+    }
+
+    // Evidence credential redaction (F43/F44/F102/F153/F166/F167) — core scanner set.
     if (Array.isArray(f.evidence)) {
       for (const ev of f.evidence) {
         const leak = hasCredentialLeak(ev && ev.captured_text);
@@ -321,14 +263,9 @@ function main() {
       }
     }
 
-    // Forbidden claims in finding narrative (F21 WTP / F22 population percentage)
-    if (typeof f.narrative === 'string') {
-      if (/willing(ness)?\s*to\s*pay|would pay|\$\s?\d|\d+\s*(usd|dollars)\b|\bper month\b|\/month/i.test(f.narrative)) {
-        add(`finding ${f.id || f.finding_id} narrative makes a willingness-to-pay claim (F21 forbidden claim)`);
-      }
-      if (/\d+\s*%\s*of\s*(all\s*)?users?/i.test(f.narrative)) {
-        add(`finding ${f.id || f.finding_id} narrative makes a population-percentage claim (F22 forbidden claim)`);
-      }
+    // Forbidden claims in finding narrative (F21 WTP / F22 population) — core detector.
+    for (const reason of forbiddenClaims(f.narrative)) {
+      add(`finding ${f.id || f.finding_id} narrative makes a ${reason}`);
     }
 
     // App-error misfiling (F47/F48/F113)
@@ -371,20 +308,27 @@ function main() {
       }
     }
 
-    // finding_id hash (F92/F165/F203): validated when hex-shaped or numeric-factor findings.
-    if (f.finding_id && (f.target_element_identifier || f.target_selector)) {
-      const tei = f.target_element_identifier || f.target_selector;
-      const hexShaped = /^fid-[0-9a-f]{16}$/.test(f.finding_id);
-      if (hexShaped || numericFactors(sf)) {
+    // finding_id hash (F92/F165/F203): a hex-shaped id MUST carry the tuple fields and match the
+    // recomputed hash unconditionally — never skipped just because target_element_identifier is
+    // absent (m1). Numeric-factor findings are also recomputed when a tei is present.
+    if (f.finding_id) {
+      const hexShaped = HEX_FINDING_ID.test(f.finding_id);
+      const tei = teiOf(f);
+      if (hexShaped) {
+        if (tei === undefined || tei === null || tei === '') {
+          add(`finding ${f.id || f.finding_id} finding_id is hex-shaped (fid-+16hex) but carries no target_element_identifier/target_selector to recompute the F165 hash from (F165/F203)`);
+        } else {
+          const expected = findingId(f.heuristic_tag, f.step, tei);
+          if (f.finding_id !== expected) add(`finding ${f.id} finding_id "${f.finding_id}" != deterministic hash ${expected} of (heuristic_tag, step, target_element_identifier) (F92/F165)`);
+        }
+      } else if (numericFactors(sf) && tei) {
         const expected = findingId(f.heuristic_tag, f.step, tei);
         if (f.finding_id !== expected) add(`finding ${f.id} finding_id "${f.finding_id}" != deterministic hash ${expected} of (heuristic_tag, step, target_element_identifier) (F92/F165)`);
       }
     }
 
     // Convergence arithmetic (F17/F120/F170)
-    const pf = Array.isArray(f.personas_flagging) ? f.personas_flagging : [];
-    const completedInPf = completedSet ? pf.filter((p) => completedSet.has(p)).length : pf.length;
-    const nonCompleted = pf.length - completedInPf;
+    const { completed: completedInPf, partial: nonCompleted } = convergenceCounts(f.personas_flagging, completedSet);
     if (typeof f.convergence_tier === 'number' && f.convergence_tier !== completedInPf) {
       add(`finding ${f.id || f.finding_id} convergence_tier ${f.convergence_tier} != count of completed flagging personas ${completedInPf} (F17/F170)`);
     }
@@ -394,7 +338,7 @@ function main() {
 
     // Provenance (F189): flagging personas of a walkthrough_failure must have a "No" at that step.
     if (f.friction_type === 'walkthrough_failure' && walkthrough) {
-      for (const p of pf) {
+      for (const p of (Array.isArray(f.personas_flagging) ? f.personas_flagging : [])) {
         const flagged = walkthrough.some((w) => w.persona === p && w.step === f.step && Object.values(w.answers || {}).some((v) => v === 'no'));
         if (!flagged) add(`finding ${f.id || f.finding_id} lists ${p} in personas_flagging but that persona produced no "No" walkthrough answer at step ${f.step} (F189 provenance)`);
       }

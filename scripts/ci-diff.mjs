@@ -1,7 +1,11 @@
 #!/usr/bin/env node
 // ci-diff.mjs --baseline <file> --current <file>
 // Exits nonzero on a NEW severity-4 finding, an escalation to severity 4, or a BLOCKED run.
+// BLOCKED is RECOMPUTED from the per-persona terminal states via the shared pure core (ADR-0002,
+// D-DET) — never short-circuited on a stored run_status field, so gate and ci-diff cannot disagree
+// about whether the same run is BLOCKED (B1, quality-phase fix 2026-07-09).
 import { readFileSync, existsSync } from 'node:fs';
+import { deriveBlocked } from './core/run-status.mjs';
 
 function arg(name) {
   const i = process.argv.indexOf(name);
@@ -22,16 +26,6 @@ const key = (f) => f.finding_id || f.id;
 const baseByKey = new Map();
 for (const f of base.findings || []) baseByKey.set(key(f), f);
 
-const FLOOR_STATES = new Set(['completed', 'patience-exhausted', 'runner-capped', 'timed-out']);
-function isBlocked(bundle) {
-  if (bundle.run_status === 'BLOCKED') return true;
-  if (Array.isArray(bundle.personas)) {
-    const floor = bundle.personas.filter((p) => FLOOR_STATES.has(p.run_status)).length;
-    if (bundle.personas.length > 0 && floor < bundle.personas.length) return true;
-  }
-  return false;
-}
-
 const blocking = [];
 for (const f of cur.findings || []) {
   const b = baseByKey.get(key(f));
@@ -41,7 +35,8 @@ for (const f of cur.findings || []) {
   }
 }
 
-const blockedRun = isBlocked(cur);
+// Recompute BLOCKED from the persona terminal states — do NOT trust a stored run_status field.
+const blockedRun = deriveBlocked(Array.isArray(cur.personas) ? cur.personas : null);
 
 if (blocking.length === 0 && !blockedRun) {
   process.stdout.write('ci-diff: clean — no new/escalated severity-4 finding, run not BLOCKED\n');
@@ -56,6 +51,6 @@ if (blocking.length > 0) {
   process.stderr.write('caveat: results carry rerun-instability; a single red CI run may be LLM/persona stochasticity — manually re-run the gauntlet before treating it as a confirmed regression.\n');
 }
 if (blockedRun) {
-  process.stderr.write('BLOCK: current run_status is BLOCKED (near-total persona failure), independent of severity-4 diff content (F101)\n');
+  process.stderr.write('BLOCK: current run recomputes to run_status BLOCKED (near-total persona failure), independent of severity-4 diff content (F101/D-DET)\n');
 }
 process.exit(1);

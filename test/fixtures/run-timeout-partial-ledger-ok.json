@@ -4,7 +4,7 @@
     "task_list": "test/fixtures/tasks.json",
     "personas": ["free-tier-user", "willing-to-pay-user", "vp-team-buyer"]
   },
-  "run_status": "completed",
+  "run_status": "BLOCKED",
   "personas": [
     { "name": "free-tier-user", "run_status": "completed" },
     { "name": "willing-to-pay-user", "run_status": "timed-out", "last_completed_step": 3 },

@@ -1,0 +1,15 @@
+{
+  "run": {
+    "target_url": "http://localhost:3000",
+    "task_list": "test/fixtures/tasks.json",
+    "personas": ["free-tier-user", "willing-to-pay-user", "vp-team-buyer"]
+  },
+  "run_status": "completed",
+  "personas": [
+    { "name": "free-tier-user", "run_status": "timed-out" },
+    { "name": "willing-to-pay-user", "run_status": "timed-out" },
+    { "name": "vp-team-buyer", "run_status": "timed-out" }
+  ],
+  "findings": [],
+  "narrative": "B1/quality-phase regression lock: all 3 persona subagents were terminated by the wallclock timeout (timed-out is an execution-failure signal, NOT a designed floor state), so the F49 not-blocked floor set {completed, patience-exhausted, runner-capped} count is 0 < 3 and the derived run_status is BLOCKED. This fixture hand-sets run_status to 'completed' to prove report-gate RECOMPUTES BLOCKED (F191) and rejects the disagreement, and to prove ci-diff.mjs recomputes BLOCKED (D-DET) rather than trusting the stored field."
+}

@@ -1316,3 +1316,84 @@ test('F197 F198 CR7-2: a run whose every persona-task navigation aborts robots-d
   const bad = gate('summary-robots-blocked-all-bad.json');
   assert.notEqual(bad.code, 0, 'a run where every persona-task navigation is robots-disallowed but summary.robots_blocked_all_navigation is not set to true must fail the gate — an all-zero, exit-0 report indistinguishable from a flawless app is the exact silent false-negative F197/F198 exist to catch');
 });
+
+// ============================================================================
+// Quality-phase fix 2026-07-09 (.swe-spec/scrub-log.md §Quality-phase fix) —
+// disjoint-review confirmed findings. Core-shell refactor (ADR-0002) + B1/B2/M2/M3/M4/m1-m4.
+// ============================================================================
+
+test('B1 F49: timed-out is NOT a floor state — 3 timed-out personas stored "completed" derive BLOCKED and fail the gate', () => {
+  // Requirement ID: F49 (B1 — the pre-fix FLOOR_STATES included timed-out, so a wallclock-terminated
+  // run counted toward the not-blocked floor and a 3-of-3 timed-out run could read as clean. timed-out
+  // is an execution-failure signal, not a designed abandonment; removing it from the floor makes a
+  // 3-of-3 timed-out run derive BLOCKED (floorCount 0 < 3).)
+  const badStored = gate('run-status-blocked-all-timed-out.json');
+  assert.notEqual(badStored.code, 0, 'a 3-of-3 timed-out run (0 in the floor set {completed, patience-exhausted, runner-capped}) whose stored run_status hand-sets "completed" must fail the gate — report-gate recomputes BLOCKED (F191) since timed-out is no longer a floor state (B1)');
+  // ci-diff must ALSO recompute BLOCKED from the persona list, never short-circuit on a stored field (D-DET).
+  const ci = run(['scripts/ci-diff.mjs', '--baseline', 'test/fixtures/findings-valid.json', '--current', 'test/fixtures/run-status-blocked-all-timed-out.json']);
+  assert.notEqual(ci.code, 0, 'ci-diff.mjs recomputes BLOCKED from the 3 timed-out personas and exits nonzero, independent of the stored run_status "completed" (B1/D-DET)');
+  assert.match(ci.stderr + ci.stdout, /blocked/i, 'ci-diff names BLOCKED as the reason, proving it recomputed rather than trusting the stored field');
+});
+
+test('M2 F49: the convergence floor is a fixed 3, not the persona count — an N=5 run with 3 floor-state personas is NOT blocked', () => {
+  // Requirement ID: F49 (M2 — deriveBlocked used floorCount < personaEntries.length, so any run with
+  // even one crashed persona derived BLOCKED regardless of how many succeeded; F49 says "fewer than 3".)
+  const ok = gate('run-status-n5-three-completed-ok.json');
+  assert.equal(ok.code, 0, 'an N=5 run with 3 completed + 2 crashed personas is NOT BLOCKED (floorCount 3 is not < 3), and its stored run_status "completed" matches the derived value — the convergence floor is the fixed constant 3, never the persona count (M2 regression lock)');
+});
+
+test('B2 F153: GitHub PAT tokens (ghp_ classic and gh_pat_ fine-grained) are redacted by the unified core scanner, with -ok and survive controls', () => {
+  // Requirement ID: F153 (B2 — the shipped CRED_SCANNERS lacked GitHub PAT patterns; ghp_/gh_pat_ are
+  // among the most commonly leaked live tokens. Added to the single core scanner set so BOTH
+  // report-gate evidence redaction AND validate-persona F66 credential-field checks catch them.)
+  const ghpLeak = gate('evidence-secret-leak-ghp.json');
+  assert.notEqual(ghpLeak.code, 0, 'a classic ghp_ + 36-char GitHub PAT surviving in a DOM snippet captured_text must fail the gate (F153 ghp_ class, B2)');
+  assert.match(ghpLeak.stderr + ghpLeak.stdout, /redact|secret|credential|github pat/i, 'gate output names the redaction rule');
+  const ghpOk = gate('evidence-secret-redacted-ghp-ok.json');
+  assert.equal(ghpOk.code, 0, 'the same ghp_ token correctly redacted must pass the gate (F153 ghp_ -ok negative control, B2)');
+  const ghpWord = gate('evidence-not-secret-ghp-word-ok.json');
+  assert.equal(ghpWord.code, 0, 'ordinary UI copy mentioning a short ghp_ label with fewer than 36 trailing token chars must survive to disk unmodified — the ghp_ pattern is length-qualified (F153 survive control, B2)');
+  const ghpatLeak = gate('evidence-secret-leak-ghpat.json');
+  assert.notEqual(ghpatLeak.code, 0, 'a fine-grained gh_pat_ GitHub PAT surviving in a screenshot captured_text sidecar must fail the gate (F153 gh_pat_ class, B2)');
+});
+
+test('M4 F37: an absent denylist on a run bundle carrying a click action fails the gate (not only a fully-empty bundle)', () => {
+  // Requirement ID: F37 (M4 — the prior bare-empty heuristic only raised F37 when the whole bundle was
+  // empty; a run bundle with click actions but no operator denylist cannot have its clicks safety-checked
+  // against F38's denylist-abort rule, so F37 now also fires whenever a click action is present with no
+  // denylist supplied.)
+  const clickNoDenylist = gate('denylist-absent-with-click-bad.json');
+  assert.notEqual(clickNoDenylist.code, 0, 'a run bundle with a click action but no operator-supplied run.denylist must fail the gate — the F38 denylist-abort safety check is unenforceable without a denylist (F37, M4)');
+  assert.match(clickNoDenylist.stderr + clickNoDenylist.stdout, /denylist/i, 'gate output names the missing denylist (F37)');
+});
+
+test('M3 F37 F106 F108: run-gauntlet reads and validates the --denylist FILE content, refusing an empty-array or missing file (not a presence-only check)', () => {
+  // Requirement ID: F37, F106, F108 (M3 — the runner only checked --denylist PRESENCE; an operator
+  // pointing it at an empty/corrupt/missing file would start a crawl with no destructive-action guard
+  // live. The runner now parses the file and asserts a non-empty JSON array of strings, emitting a
+  // 'denylist:'-prefixed refusal in the F108 fixed-order slot.)
+  const base = ['scripts/run-gauntlet.mjs', '--url', 'http://localhost:9', '--tasks', 'examples/tasks.json', '--i-own-this-target', '--env', 'local', '--headless'];
+  const empty = run([...base, '--denylist', 'test/fixtures/denylist-empty.json']);
+  assert.equal(empty.code, 1, 'a --denylist pointing at an empty JSON array is an exit-1 refusal (F106) — presence alone is not sufficient (M3)');
+  assert.match(empty.stderr, /denylist/i, 'stderr names the denylist refusal for the empty-array file (M3)');
+  const missing = run([...base, '--denylist', 'test/fixtures/does-not-exist-denylist.json']);
+  assert.equal(missing.code, 1, 'a --denylist pointing at a non-existent file is an exit-1 refusal, not a silent start (M3)');
+  assert.match(missing.stderr, /denylist/i, 'stderr names the denylist refusal for the missing file (M3)');
+  // Negative control: the shipped default denylist file is valid and must NOT trigger a denylist refusal.
+  const validRun = run([...base, '--denylist', 'denylist/default-destructive-labels.json']);
+  assert.doesNotMatch(validRun.stderr, /denylist:/i, 'the valid shipped default denylist file must never trigger a denylist refusal line (M3 negative control)');
+});
+
+test('ADR-0002 core purity: scripts/core/ modules contain no I/O, no process.exit, no browser imports', () => {
+  // The quality phase can mechanically verify the functional-core boundary: the pure judgment modules
+  // must never read files, exit the process, or touch a browser. If this drifts, the same input could be
+  // judged differently by report-gate vs ci-diff (the D-DET violation ADR-0002 exists to prevent).
+  const coreModules = ['run-status', 'identity', 'redaction', 'severity', 'claims', 'denylist'];
+  const forbidden = /process\.exit|readFileSync|writeFileSync|readdirSync|existsSync|playwright|from ['"]node:fs['"]|require\(/;
+  for (const m of coreModules) {
+    const p = `scripts/core/${m}.mjs`;
+    assert.ok(existsSync(p), `${p} must exist (ADR-0002 core module)`);
+    const src = read(p);
+    assert.doesNotMatch(src, forbidden, `${p} must contain no fs/process.exit/browser/require — it is a PURE core module (ADR-0002)`);
+  }
+});
