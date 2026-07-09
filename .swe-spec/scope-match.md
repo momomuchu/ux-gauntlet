@@ -152,3 +152,17 @@ implement `--ci` diffing — CI mode is exclusively `ci-diff.mjs`, CR6-M3). Verd
 still FITS budget (unconstrained token budget, no external deadline). The panel-named freeze-readiness
 gap (no test proved the orchestrator COMPUTES run_status/BLOCKED) was closed with F191 at zero new
 build subsystem — it is a new assertion in the existing report-gate contract, not a new script.
+
+## Challenge round 7 consolidation (2026-07-09)
+
+Requirement count held **FLAT** at 205 (196 functional, 9 nonfunctional) — the first round to not grow.
+F78/F79 (F1-F196 range now has two gaps: F78/F79 deleted) were removed as DR-25 duplicates of the DR-09
+patience family and F197/F198 added for the robots-blocked-all false-negative (net delta 0). The
+active-ID range is F1-F198 minus {F78, F79}, N1-N9. `test/fixtures/` grew by 2 to 121 files (2 new:
+`summary-robots-blocked-all-ok.json`, `summary-robots-blocked-all-bad.json`); two existing fixtures were
+repaired in place (no net file change from the repairs). Build-surface addition: one new `summary.json`
+field (`robots_blocked_all_navigation`) + one stderr warning path — zero new schema/script files, zero
+new CLI flags. Verdict unchanged: scope still FITS budget. The consolidation move (dedupe + disclose
+rather than add) directly answers the panel's §4 diagnosis that 6 additive rounds had begun surfacing
+internal redundancy over product defects; the spec is judged **FREEZE-READY** (no blocking item — full
+verdict in `scrub-log.md ## CR7 consolidation + freeze-readiness`).

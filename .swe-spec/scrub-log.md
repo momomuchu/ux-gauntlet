@@ -371,3 +371,126 @@ F191, F192, F194, F196 newly covered as CRITICAL citations); `node --test test/a
 → **82 tests, 0 pass, 82 fail** (RED preserved; 76 pre-CR6 + 6 new CR6 blocks). The RED baseline
 count last recorded in this file as "71 tests" (CR4 snapshot, line ~169) and "76 tests" (CR5) is now
 82 (CR6-MIN6 resolution — validation.md remains the file of record and is updated in the same pass).
+
+## CR7 consolidation + freeze-readiness
+
+Challenge round 7 (`.swe-spec/CHALLENGE-ROUND-7.md`, 17 confirmed + 5 rejected) is the round where the
+panel's own §4 systemic observation surfaced the real state of the spec: 6 additive rounds grew it 43→205
+requirements, and the panel is now finding **internal redundancy** (F78/F79 [DR-25] describe the SAME
+patience-abandonment event as F50-F53/F175 [DR-09]; F149/F150 step-normalization rediscovered by 3
+independent lenses) rather than product-wrong behavior. The convergence move is **consolidation**, so this
+pass DEDUPES and DISCLOSES rather than adds. Net requirement delta: **0** (F78/F79 deleted, F197/F198
+added — functional count stays flat at 196, total 205). This is the arbitration record.
+
+### Dedupe / merge table (what merged into what)
+
+| Removed | Folded into (survivor) | DR tags kept on survivor | Rationale |
+|---|---|---|---|
+| **F78** ("terminate its crawl" on patience threshold, DR-25a) | **F50** (abandon the current task, DR-09a) | `# DR-09a DR-25a CR7-1` | ONE event. F78's "terminate whole crawl" scope is irreconcilable with F50's "abandon current task" for any >1-task list; the DR-09 abandon-task scope is canonical. F78 deleted. |
+| **F79** (emit distinct run-status event `patience-exceeded`, DR-25b) | **F175** (set run_status `patience-exhausted`, CR4-S1) | `# CR4-S1 DR-25b CR7-1` | ONE event. F79's literal `patience-exceeded` is a stale spelling the F53/F123/F175 enum never uses (canonical = `patience-exhausted`, per the CR5 canonical token table). F79 deleted. |
+| — (replacement, not a merge) | **F197 + F198** (robots-blocked-all false-negative, CR7-2) | new lines | The one genuinely-new product-wrong behavior this round (silent all-zero clean report when a blanket `Disallow:/` aborts every navigation) replaces the deleted duplicate pair, so the count stays flat. |
+
+**Net requirement delta: 0.** requirements.txt: 205 lines before → 205 lines after (196 functional, 9
+nonfunctional). spec.md HIGH-item bullet at old line 232 (F78/F79) removed; a robots-false-negative HIGH
+bullet (F197/F198) added in the same section. categorized-requirements.md F78/F79 rows marked DELETED,
+F197/F198 rows added. lint-result.txt regenerated (205/205 PASS). No IDs reused (append-only convention).
+
+### F149/F150 systemic cluster (3 lenses, ONE root) — resolved by DISCLOSURE, not a new mechanism
+
+The panel's §4 obs #1 correctly traces BLOCKER#3 (fixture-vs-formula), the differing-`patience_threshold_steps`
+MAJOR, and the F190-convergence_tier-misleading MAJOR to ONE unfixed root: F149/F150 normalized
+`target_element_identifier`/`heuristic_tag` for terminal_friction identity but never normalized `step`.
+The panel's own two lenses split on the fix: one proposed a disclosure, the other proposed a new mechanism
+(F150a: fix `step` to constant 0). **Arbitration: DISCLOSE, do not add F150a.** A step-normalization
+mechanism is a v2 behavior change, out of scope for a consolidation pass, and inconsistent with the
+CR6-B4 disclose-don't-rederive posture already governing the severity-formula duplication. Applied as:
+(a) spec.md CR3-5 bullet gains a scope-disclosure (CR7-4) stating the corroboration guarantee holds only
+for identical-`step` abandonment and that `partial_tier`, not `convergence_tier`, is the corroboration
+signal for the patience-abandonment class; (b) the two contradictory positive-control fixtures REPAIRED
+(below). Zero new requirements for this cluster.
+
+### Contradictory-fixture repairs (CR7-3) — hygiene that was locking impossible ground truth
+
+- `patience-identity-divergent-personas-merged-ok.json`: both personas now carry `run_status:
+  patience-exhausted`; `convergence_tier` 2→0, `partial_tier` 0→2 (F17 counts only run_status=completed
+  flaggers — with 0 completed, convergence_tier=2 was **unreachable** for any spec-compliant orchestrator,
+  yet the F149/F150 test cited this fixture by name as canonical proof); `confidence` added; narrative
+  reworded from convergence_tier to partial_tier corroboration. `component_severities` [3,3] was already
+  present. Test message at the F149/F150 block updated to "partial_tier=2, convergence_tier=0"; the
+  `gate()` exit-code assertion is unchanged (still RED). This is the arbiter-endorsed BLOCKER#3 repair
+  minus its proposed new convergence_tier-recompute requirement (declined — see residuals).
+- `run-status-not-blocked-patience-only.json`: `component_severities` [4,4] added to its 2-persona merged
+  finding (F118 requires it for any F46-merged finding; it was missing). No tier change (this fixture was
+  already internally consistent: convergence_tier=0, partial_tier=2).
+
+### Applied vs rejected — per-defect disposition (round-7 panel §2/§3)
+
+| Round-7 item (panel severity) | Disposition | Reason |
+|---|---|---|
+| **F78/F79 vs F50-F53 duplicate** (BLOCKER) | **APPLIED — DEDUPE** | Primary mandate. Deleted F78/F79; folded DR-25a→F50, DR-25b→F175. Removed a real build-time contradiction (terminate-crawl vs abandon-task; `patience-exceeded` vs `patience-exhausted`). |
+| **robots-blocked-all silent false-negative** (BLOCKER) | **APPLIED — F197/F198** | Close-real-behavior: an all-zero exit-0 "clean" report on a blanket-robots-disallow target is actively misleading (the strongest wrong-output case this round). Added summary field + stderr warning; 2 fixtures + 1 RED test. Replaces the deleted pair (net 0). |
+| **fixture convergence_tier=2 unreachable + F149/F150 cite it** (BLOCKER) | **PARTIAL — fixture repaired, recompute-gate requirement DECLINED** | Fixture repaired (CR7-3, above); this closes the contradiction. The proposed new convergence_tier/partial_tier recompute-gate requirement (mirror F191) DECLINED as a consolidation-pass addition — convergence_tier mismatch is ALREADY gate-covered (test lines 394/400/1038 reject `convergence_tier != count(personas_flagging)` and crashed-inflated tiers); the full personas_flagging×run_status recompute is a build-phase F191-generalization residual (panel obs #3). |
+| **F192 anti-filename-dispatch scoped to only 2 of 5 scripts** (BLOCKER) | **DECLINED — residual** | Test-rigor / anti-gaming, not product-wrong-output: an honest build is unaffected; only a builder gaming the suite via a filename lookup table is enabled. Documented residual for build phase (extend F192's content-derivation lock to ci-diff.mjs/validate-persona.mjs). Not a freeze blocker. |
+| **patience_threshold_steps divergence breaks corroboration** (MAJOR) | **APPLIED — DISCLOSURE (CR7-4)** | Arbiter-directed: narrow the rationale, do not add F150a. spec.md CR3-5 bullet discloses the identical-`step`-only scope + partial_tier signal. |
+| **F45/F177 friction_type merge collision** (MAJOR) | **DECLINED — residual** | The collision needs two DIFFERENT friction_types at an identical (heuristic_tag, step, target_element_identifier) tuple. The built product still emits a schema-valid single friction_type (F177 is satisfiable); only the tiebreak on a rare merged finding is under-specified. Heavy fix (component_friction_types array + precedence + amend F177). Documented residual, not wrong-output. |
+| **F165 pipe-delimiter hash collision** (MAJOR) | **REJECTED — not reachable** | The claimed collision requires a shared `\|` to redistribute across field boundaries. But `heuristic_tag` is drawn from the configured set (F11 — kebab-case tag ids, pipe-free) and `step` is an integer index (F45/F147): both non-terminal join fields are pipe-free, so `${tag}\|${step}\|${id}` parses unambiguously and uncontrolled accessible-name text (F103 tier-2) only ever lands in the TERMINAL `id` field, which cannot shift a boundary. Two distinct tuples cannot collide. (Residual sliver: a pathological operator-authored CUSTOM heuristic tag containing a literal `\|` — operator controls their own config; near-theoretical.) No F165 change; avoids a needless recompute of every precomputed-hash fixture. |
+| **F179 CDP synchronicity signal unobservable** (MAJOR) | **DECLINED — build-phase clarification** | F40's default is fail-safe (do NOT submit); a competent builder maps F179 to CDP/Playwright request `initiator` stack + a correlation time-window. Buildability clarification, not wrong-output. Reword deferred to build phase (touches F179/spec/ADR + a fixture — churn on a just-settled CR5-B2 line). |
+| **N8 denylist/audited_terminal collision for operator tasks.json** (MAJOR) | **DECLINED — top residual** | Real operator-hostility gap (silent mid-run F38-abort of the audited terminal step) but ledger-traceable (`denylist-abort` reason_code, F56) and safe-by-default (abort, never a dangerous click); F195 already prevents it for the SHIPPED example. Generalizing F195 to a static launch precondition is the recommended build-phase follow-up. Not untraceable-wrong-output. |
+| **F190 convergence_tier=0 misleading for terminal_friction** (MAJOR) | **APPLIED (disclosure part) / DECLINED (F190 stderr change)** | The convergence_tier=0-is-correct-for-non-completed-flaggers fact is now disclosed via the CR7-4 partial_tier scope note. The proposed F190 amendment (add partial_tier to ci-diff stderr) + new disclosure requirement DECLINED as additions; the disclosure carries the operator-facing resolution. |
+| **severity frequency/persistence triage consequence undisclosed** (MAJOR) | **APPLIED — F181 amended (CR7-6)** | Disclosure-completeness, in place (net 0). Appended the downstream-triage consequence (ranking can invert: impact-4 single-encounter < impact-0 recurring) to F181 + the spec validity-envelope bullet. Explicitly NOT a formula change — the impact-floor was already rejected at CR6-B4 (this EXTENDS that disclose-don't-rederive decision, does not re-litigate it). |
+| **run_status not-BLOCKED never an atomic MUST** (MINOR) | **DECLINED — hygiene** | Panel itself calls it "a req-lint hygiene gap, not an undiscoverable trap"; the fixture + test already encode the `completed` literal. Adding an F-line is pure surface. |
+| **Summary brands "NN/g 3-factor rubric" unhedged** (MINOR) | **APPLIED — docs hedge (CR7-5)** | spec.md Summary now carries the persistence=frequency-duplicate hedge (net 0, docs-only). |
+| **exit code 2 has zero test coverage** (MINOR) | **REJECTED — re-litigates D9** | D9/spec.md:332 explicitly carves exit-2 out as "no dedicated F-line"; the panel acknowledges this is "a documented, deliberate scope decision." Adding F36a contradicts a durable recorded decision — reviewer disagreement with D9 is not a spec defect. |
+| **F129 denylist_override_used no negative control** (MINOR) | **DECLINED — test-rigor + RED-safety risk** | Control-pair completeness only; a bad-only `notEqual(code,0)` assertion would PASS against the missing script (breaking the 0-pass RED invariant unless carefully paired). Documented residual. |
+| **N8 test uses 6 flags incl --headless vs "only 5"** (MINOR) | **DECLINED — test-rigor** | `--headless` is redundant-with, not contradictory-to, the F87 auto-default; verification-rigor gap only, not wrong-output. |
+
+### Rejected re-litigations (panel's own §3, concurred)
+
+The panel itself rejected 5 attacks that re-open durable decisions (F119 MAX-merge → D13; CI-gate-on-sev4
+→ D3 + CR1-19 + scrub-log CR5; N8 promise scope; F37 always-explicit denylist → ADR-0001:53-57; N8
+staging 6th flag → F67/F68). This arbiter concurs — all trace to recorded, reasoned decisions, not
+missing context. Per the standing contract, no round-7 attack that re-litigates the **CR6 arbitration**
+(F49 inverted counted set) or the **CR5 canonical token table** (run_status/reason_code/outcome
+spellings) was applied; the severity-formula duplication (CR6-B4) and the exit-2 carve-out (D9) were
+likewise defended rather than re-derived.
+
+### FREEZE-READINESS VERDICT: **FREEZE-READY** (no blocking item)
+
+Judged against the one question that matters — *would any REMAINING known defect make the BUILT product
+produce wrong output, vs being requirement-doc hygiene?*
+
+- The single real **build-time contradiction** (F78/F79: terminate-crawl vs abandon-task on the identical
+  trigger + a stale `patience-exceeded` literal) is **removed**. No requirement now contradicts another
+  on a shared trigger.
+- The two **contradictory positive-control fixtures** (which locked ground truth a spec-compliant
+  orchestrator could never emit) are **repaired** — the acceptance suite no longer encodes impossible
+  targets.
+- The one genuinely-misleading built-output behavior (**robots-blocked-all silent false-negative**) is
+  **closed** (F197/F198).
+- The patience-convergence **overclaim** is now **honestly disclosed** (identical-`step`-only; read
+  partial_tier), so the report no longer promises corroboration it cannot deliver for heterogeneous
+  thresholds.
+
+Every REMAINING known item is either (a) **ledger-traceable and safe-by-default** (M5 denylist/audited
+collision — aborts, never mis-acts; `denylist-abort` in the ledger), (b) a **rare under-specified
+tiebreak** on a schema-valid output (M2 friction_type-on-merge), (c) **fail-safe buildability**
+(F179 CDP correlation — default is don't-submit), (d) **test-rigor / anti-gaming** (F192 scope, F129
+control, exit-2, N8 --headless), or (e) a **build-phase gate-generalization** with partial existing
+coverage (convergence_tier full recompute). None makes a correctly-built product silently emit
+categorically-wrong, untraceable data. **Blocking item: none.**
+
+Top build-phase follow-ups (not freeze blockers, ranked): (1) generalize F195 → a static launch
+precondition rejecting an operator `audited_terminal_step` label that collides with the denylist (M5);
+(2) extend F192's content-derivation lock to ci-diff.mjs/validate-persona.mjs (B4); (3) reword F179 to a
+CDP-observable initiator-stack + time-window correlation; (4) generalize F191's derivation-lock to all
+F46-merge-derived fields (convergence_tier/partial_tier/friction_type). All are enhancements over an
+already-buildable, internally-consistent contract. Freeze is withheld only pending founder approval, per
+the standing NO-freeze instruction — the SPEC itself is judged freeze-READY.
+
+### CR7 count sync
+
+Fresh re-runs from repo root: `req-lint.sh .swe-spec/requirements.txt` → **205/205 PASS** (196 functional
++ 9 nonfunctional; F78/F79 removed, F197/F198 added — flat); `coverage-audit.sh --pre-freeze` → **8/8
+stages PASS**; `test-coverage-audit.sh` → **95/95 CRITICAL PASS** (unchanged — no CRITICAL id added or
+removed; F197/F198 landed as HIGH); `node --test test/acceptance.test.mjs` → **83 tests, 0 pass, 83 fail**
+(RED preserved; 82 pre-CR7 + 1 new F197/F198 block). validation.md remains the file of record.

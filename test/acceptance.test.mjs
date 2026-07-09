@@ -925,7 +925,7 @@ test('F149 F150 CR3-5: patience-abandonment identity is fixed (sentinel + design
   // finding_ids, defeating the exact reliability signal the 3-persona architecture exists to produce
   // for the friction class that most needs corroboration.)
   const merged = gate('patience-identity-divergent-personas-merged-ok.json');
-  assert.equal(merged.code, 0, 'two personas independently abandoning the identical task at the identical step, via different simulated DOM/path state, merge into one finding at convergence_tier=2 because target_element_identifier is a fixed per-step sentinel (F149) and heuristic_tag is the one designated patience-abandonment tag (F150) — negative control');
+  assert.equal(merged.code, 0, 'two personas independently abandoning the identical task at the identical step, via different simulated DOM/path state, merge into one finding at partial_tier=2, convergence_tier=0 (both flaggers are patience-exhausted, so F17 counts 0 completed toward convergence_tier) because target_element_identifier is a fixed per-step sentinel (F149) and heuristic_tag is the one designated patience-abandonment tag (F150) — negative control, CR7-3 fixture repair');
   const divergent = gate('patience-identity-divergent-values-bad.json');
   assert.notEqual(divergent.code, 0, 'the identical step-11 abandonment recorded with a DOM-derived target_element_identifier for one persona, instead of the fixed sentinel F149 mandates, must fail the gate — the divergence silently collapses convergence_tier=2 to two convergence_tier=1 entries');
 });
@@ -1139,4 +1139,19 @@ test('F23 CR6-M4: report-gate.mjs bare-arg production form (no --check-fixture) 
   assert.equal(bareOk.code, 0, 'the bare positional production form `report-gate.mjs <findings.json>` must PASS a valid fixture, identical to the --check-fixture form (ADR-0001:122, F23, CR6-M4)');
   const bareBad = run(['scripts/report-gate.mjs', 'test/fixtures/finding-untagged.json']);
   assert.notEqual(bareBad.code, 0, 'the bare positional production form must FAIL an untagged finding exactly like --check-fixture — the two ADR-documented invocation forms are one code path, not two divergent implementations (F23, CR6-M4)');
+});
+
+test('F197 F198 CR7-2: a run whose every persona-task navigation aborts robots-disallowed surfaces a robots_blocked_all_navigation summary signal, not a silent all-zero clean report', () => {
+  // Requirement ID: F197, F198 (challenge round 7 BLOCKER — a blanket robots.txt Disallow:/ on a
+  // local/staging target aborts every persona's navigation at step 1 (F42), all 3 personas land on the
+  // non-terminal completed run_status, F49's floor is met, no step executes so no friction is generated,
+  // and summary.json shows all-zero severities with exit 0 — indistinguishable from a flawless app. The
+  // only prior trace was a per-task ledger reason_code, never surfaced at report/summary level. F197
+  // sets a run-aggregate summary.robots_blocked_all_navigation flag; F198 warns on stderr naming
+  // --override-robots. This does NOT reclassify F41/F42's abort-only run_status, it adds a distinct
+  // run-aggregate signal (scrub-log CR4 table; CHALLENGE-ROUND-7 BLOCKER fix directive).)
+  const ok = gate('summary-robots-blocked-all-ok.json');
+  assert.equal(ok.code, 0, 'a run where 100% of persona-task navigations carry reason_code robots-disallowed AND summary.robots_blocked_all_navigation=true passes the gate — the false-negative is surfaced, not hidden (F197 positive control)');
+  const bad = gate('summary-robots-blocked-all-bad.json');
+  assert.notEqual(bad.code, 0, 'a run where every persona-task navigation is robots-disallowed but summary.robots_blocked_all_navigation is not set to true must fail the gate — an all-zero, exit-0 report indistinguishable from a flawless app is the exact silent false-negative F197/F198 exist to catch');
 });

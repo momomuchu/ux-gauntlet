@@ -105,8 +105,8 @@ functional — they stay functional, not QoS.
 | F75 | functional | partial-run policy (wallclock termination) — DR-23a |
 | F76 | functional | partial-run policy (merge partial ledger as-is) — DR-23b |
 | F77 | functional | error-classification policy (transient failure never a friction) — DR-24 |
-| F78 | functional | patience-exceeded policy (terminate crawl) — DR-25a |
-| F79 | functional | patience-exceeded policy (distinct run-status event) — DR-25b |
+| F78 | — | DELETED CR7-1 — DR-25a folded onto F50 (superseded duplicate of the DR-09 patience family) |
+| F79 | — | DELETED CR7-1 — DR-25b folded onto F175 (patience-exhausted enum, not the stale "patience-exceeded") |
 | F80 | functional | interface-contract policy (distinct exit code 3) — DR-26 |
 | F81 | functional | operator-dx policy (status file, state) — DR-27a |
 | F82 | functional | operator-dx policy (status file, step index) — DR-27b |
@@ -321,5 +321,10 @@ F181) do not change any line's functional/nonfunctional category.
 | F194 | functional | disclosure policy (non-default-rubric/free-text severity attribution) — CR6-M2 |
 | F195 | functional | self-consistency policy (example terminal label vs shipped denylist) — CR6-MIN3 |
 | F196 | functional | refusal-scoping policy (payment_step F40 exemption, test_mode-gated) — CR6-B2 |
+| F197 | functional | reporting-surface policy (summary.json robots_blocked_all_navigation false-negative signal) — CR7-2 |
+| F198 | functional | operator-warning policy (stderr --override-robots warning on all-robots-blocked run) — CR7-2 |
 
-Summary: 196 functional, 9 nonfunctional (205 total).
+Summary: 196 functional, 9 nonfunctional (205 total). CR7 consolidation: F78/F79 deleted (DR-25 duplicates
+of the DR-09 patience family), F197/F198 added (robots-blocked-all false-negative) — functional count
+stays flat at 196; net requirement delta 0. Every requirement here passes the Perfect Technology Filter
+(each is a policy/definition/refusal still needed on a computer with infinite speed/memory/cost).

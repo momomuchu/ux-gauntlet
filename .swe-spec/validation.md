@@ -306,3 +306,24 @@ only F40; F38 stays live). One MINOR (DR-28 SKILL.md quickstart line) was SKIPPE
 is a build-phase artifact absent at spec phase, and the directive itself required no requirements.txt
 change — the F56/F123 `dry-run-boundary-stop` reason_code already closes the silent-failure mode
 (recorded in `scrub-log.md ## CR6 arbitration`, disposition #15).
+
+## Challenge round 7 validation (2026-07-09) — CONSOLIDATION + freeze-readiness
+
+This pass was a **consolidation arbitration**, not an additive round: the panel surfaced internal
+redundancy (F78/F79 [DR-25] = the same patience-abandonment event as F50-F53/F175 [DR-09]) over product
+defects. **Net requirement delta: 0.** Deduped F78/F79 (deleted; DR-25a folded onto F50, DR-25b onto
+F175) and added F197/F198 (robots-blocked-all silent false-negative — the one genuinely-new product-wrong
+behavior). Functional count stays flat at 196 (205 total). Two contradictory positive-control fixtures
+repaired (`patience-identity-divergent-personas-merged-ok.json` convergence_tier 2→0/partial_tier 0→2 +
+run_status added; `run-status-not-blocked-patience-only.json` component_severities added). Three
+disclosures applied in place (F181 triage-consequence CR7-6; spec.md patience-convergence scope CR7-4;
+spec.md NN/g-summary hedge CR7-5). Full applied-vs-rejected disposition + the **FREEZE-READY** verdict
+(no blocking item; residuals ranked) recorded in `scrub-log.md` under `## CR7 consolidation +
+freeze-readiness`.
+
+Fresh re-runs from repo root: `req-lint.sh .swe-spec/requirements.txt` → **205/205 PASS** (F78/F79
+removed, F197/F198 added — flat); `coverage-audit.sh --pre-freeze` → **8/8 stages PASS**;
+`test-coverage-audit.sh docs/specs/0001-ux-gauntlet-mvp.spec.md test/acceptance.test.mjs` →
+**95/95 CRITICAL PASS** (unchanged — F197/F198 landed HIGH, no CRITICAL id added/removed);
+`node --test test/acceptance.test.mjs` → **83 tests, 0 pass, 83 fail — RED preserved** (82 pre-CR7 + 1
+new F197/F198 block). This is the current file of record for the RED baseline count (83).

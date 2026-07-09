@@ -21,6 +21,7 @@
       "partial_tier": 2,
       "heuristic_tag": "flexibility-efficiency-of-use",
       "severity": 4,
+      "component_severities": [4, 4],
       "confidence": "degraded-below-persona-floor",
       "severity_factors": { "frequency": "every attempt past threshold", "impact": "task abandoned", "persistence": "recurs" },
       "market_impact": true,
