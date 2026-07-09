@@ -2,9 +2,9 @@
   "schema_version": 1,
   "lane": "structural",
   "run": {
-    "route": "/pricing",
-    "url": "http://localhost:3000/pricing",
-    "run_status": "completed"
+    "route": "/signup/",
+    "url": "http://localhost:3000/signup/",
+    "run_status": "refused"
   },
   "metadata": {
     "axe_version": "4.12.1",
@@ -19,8 +19,7 @@
     "browser_version": "chromium/1179",
     "timestamp": "2026-07-09T12:00:00Z",
     "expected_main_content": {
-      "/signup": "#audiobook-text",
-      "/pricing": "#pricing-detail"
+      "/signup": "#audiobook-text"
     }
   },
   "validity_envelope": {
@@ -41,19 +40,7 @@
   },
   "violation_ids": [],
   "incomplete_ids": [],
-  "findings": [
-    {
-      "lane": "structural",
-      "source": "axe",
-      "finding_id": "f-pricing-axe-button-name",
-      "code": "axe:button-name",
-      "rule_id": "button-name",
-      "impact": "critical",
-      "severity": 4,
-      "target_element_identifier": "button#buy",
-      "target_selector": "button#buy",
-      "route": "/pricing",
-      "help": "button-name finding"
-    }
-  ]
+  "findings": [],
+  "refused": true,
+  "refusal_reason": "map key \"/signup\" does not exact-match the operator-supplied --path \"/signup/\"; S39 pins exact case-sensitive matching with no trailing-slash normalization, so S40 refuses this route (Mn8)"
 }

@@ -64,3 +64,46 @@ brief claim smuggled in as a requirement):
 4. **0001's `ci-diff.mjs` misreading structural findings via a stray `convergence_tier`** — rejected:
    the suite mandates a separate `structural-ci-diff.mjs` against structural fixtures; the wrong-file
    wiring never occurs under spec-compliant behavior. No requirement added.
+
+## CHALLENGE-ROUND-2 (2026-07-09): 25 CONFIRMED applied (9 BLOCKER + 14 MAJOR + 2 MINOR), 5 REJECTED
+
+Applied in one single-writer pass. Appended S47-S55 + SN8; edited S1/S4/S12/S14/S15/S39/S44 in place;
+added D7 (incomplete+critical carve-out) and rewrote D6 to the actual two-script architecture. Every
+changed line traced inline as `# CR2-<defect-id>`; no renumbering of S1-S46/SN1-SN7. Key reconciliations:
+
+- **Settle precondition (B4 + B18 + B13) merged into ONE S1 edit** rather than three colliding rewrites:
+  network-idle (which can hang forever on analytics/chat/polling routes) is dropped in favor of
+  page-load + `document.fonts.ready` + a 500ms MutationObserver DOM-mutation-quiescence window (covers
+  hydration/ARIA writes, B18's ≥200ms subsumed by 500ms), capped at a fixed 10s max wait (B4), and axe
+  is run with `rules { tabindex: { enabled: false } }` (B13) so the built-in tabindex rule cannot
+  collide with S11/S35's positive-tabindex check. S47/S48 add the settle-timeout run_status + CI block.
+- **The incomplete-critical hole (M2) closed deterministically via S53 + D7**, not by mutating the
+  severity-0 display value: S18/S36 still pin every `incomplete` entry to severity 0 for the human
+  reviewer, but S53 makes the CI gate read the raw `impact` field, so a reproducible critical a11y gap
+  that axe classifies as `incomplete` blocks CI instead of sitting as a permanently-unescalatable
+  severity-0 line. D7 discloses the carve-out and its closure. S52 (B17) hardens the sibling case:
+  the CI critical predicate reads raw `impact`, never the derived severity integer.
+- **D6 prose corrected (B1 + M14) to the two-script architecture** the frozen acceptance suite locks
+  in: one schema FAMILY (shared shape via the `lane` discriminator), two separate disambiguated gate
+  scripts — `structural-report-gate.mjs`/`structural-ci-diff.mjs` for structural,
+  `report-gate.mjs`/`ci-diff.mjs` for persona. "one CI gate handles both" / "one gate script" deleted
+  everywhere it appeared (D6 row, Summary settle refs, known-gaps).
+- **S44 comparability guard widened (M7 + M19)** from axe_version-only to axe_version OR browser_version
+  OR ruleset_tags drift; **SN8 (M20)** pins the OS/font-rendering container as `render_environment_id`
+  and S42's determinism guarantee is scoped to matching `render_environment_id`.
+- **Thin-test cluster fixed at the test layer (B25/M21/M22/M24)**: the S35 test now loops all 9 codes
+  (each one-below-pinned), M21 asserts renderer exit code + a differential fixture, M22 replaces the
+  `typeof code === 'number'` tautology with a real dedup pass/fail pair, M24 adds settle_precondition_met.
+
+### The 5 REJECTED attacks — re-confirmed rejected, NOT converted into requirements
+The CR2 panel itself REJECTED 5 (proving teeth); 2 of those are verbatim re-raises of CR1 scrub-log
+rejections and are re-confirmed rejected here in one line each, with no re-litigation:
+1. **0001's `report-gate.mjs` silently misrouting a structural bundle** — re-raise of CR1 REJECTED #3;
+   the suite names disambiguated `structural-report-gate.mjs`, no literal-spec builder wires the 0001
+   gate. Stands rejected. No requirement added.
+2. **0001's `ci-diff.mjs` misreading structural findings via a stray `convergence_tier`** — re-raise of
+   CR1 REJECTED #4; a spec-compliant builder must build the separate `structural-ci-diff.mjs`, so the
+   scenario never occurs under compliant behavior. Stands rejected. No requirement added.
+The other 3 CR2 rejections (S14/S35 zero-main collision; S7-vs-S14/S35 "duplicate" severities; S21/S42
+"no pinned hash formula" as an independent gap) were resolved by reading spec.md's Gherkin + the
+already-disclosed MVP scope boundary — no new requirement warranted.

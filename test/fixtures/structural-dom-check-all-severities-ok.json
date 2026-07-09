@@ -1,0 +1,144 @@
+{
+  "schema_version": 1,
+  "lane": "structural",
+  "run": {
+    "route": "/signup",
+    "url": "http://localhost:3000/signup",
+    "run_status": "completed"
+  },
+  "metadata": {
+    "axe_version": "4.12.1",
+    "ruleset_tags": [
+      "wcag2a",
+      "wcag2aa",
+      "wcag21aa",
+      "wcag22aa",
+      "best-practice"
+    ],
+    "wcag_target": "AA",
+    "browser_version": "chromium/1179",
+    "timestamp": "2026-07-09T12:00:00Z",
+    "expected_main_content": {
+      "/signup": "#audiobook-text"
+    }
+  },
+  "validity_envelope": {
+    "criteria_count_pct": 32,
+    "criteria_count": "16 of 50",
+    "issue_volume_pct": 57,
+    "vendor_reported": true,
+    "independently_audited": false,
+    "disclaimer": "Both the ~32 percent criteria-count figure and the ~57 percent issue-volume figure are vendor-reported by Deque, not independently audited. A structural pass is not usable, is not good UI. This is not a WCAG conformance certification.",
+    "non_automatable_classes": [
+      "focus order",
+      "focus visible",
+      "keyboard operability"
+    ],
+    "best_practice_labeled": [
+      "heading-order"
+    ]
+  },
+  "violation_ids": [],
+  "incomplete_ids": [],
+  "findings": [
+    {
+      "lane": "structural",
+      "source": "dom-check",
+      "finding_id": "f-signup-main-content-missing",
+      "code": "main-content-missing",
+      "severity": 4,
+      "target_element_identifier": "#el-0",
+      "target_selector": "#el-0",
+      "route": "/signup",
+      "detail": "main-content-missing at pinned severity 4"
+    },
+    {
+      "lane": "structural",
+      "source": "dom-check",
+      "finding_id": "f-signup-continue-control-missing",
+      "code": "continue-control-missing",
+      "severity": 4,
+      "target_element_identifier": "#el-1",
+      "target_selector": "#el-1",
+      "route": "/signup",
+      "detail": "continue-control-missing at pinned severity 4"
+    },
+    {
+      "lane": "structural",
+      "source": "dom-check",
+      "finding_id": "f-signup-main-content-not-in-main",
+      "code": "main-content-not-in-main",
+      "severity": 3,
+      "target_element_identifier": "#el-2",
+      "target_selector": "#el-2",
+      "route": "/signup",
+      "detail": "main-content-not-in-main at pinned severity 3"
+    },
+    {
+      "lane": "structural",
+      "source": "dom-check",
+      "finding_id": "f-signup-cannot-evaluate-ambiguous-main",
+      "code": "cannot-evaluate-ambiguous-main",
+      "severity": 3,
+      "target_element_identifier": "#el-3",
+      "target_selector": "#el-3",
+      "route": "/signup",
+      "detail": "cannot-evaluate-ambiguous-main at pinned severity 3"
+    },
+    {
+      "lane": "structural",
+      "source": "dom-check",
+      "finding_id": "f-signup-continue-not-semantic",
+      "code": "continue-not-semantic",
+      "severity": 3,
+      "target_element_identifier": "#el-4",
+      "target_selector": "#el-4",
+      "route": "/signup",
+      "detail": "continue-not-semantic at pinned severity 3"
+    },
+    {
+      "lane": "structural",
+      "source": "dom-check",
+      "finding_id": "f-signup-continue-not-focusable",
+      "code": "continue-not-focusable",
+      "severity": 3,
+      "target_element_identifier": "#el-5",
+      "target_selector": "#el-5",
+      "route": "/signup",
+      "detail": "continue-not-focusable at pinned severity 3"
+    },
+    {
+      "lane": "structural",
+      "source": "dom-check",
+      "finding_id": "f-signup-main-content-not-prominent",
+      "code": "main-content-not-prominent",
+      "severity": 2,
+      "target_element_identifier": "#el-6",
+      "target_selector": "#el-6",
+      "route": "/signup",
+      "detail": "main-content-not-prominent at pinned severity 2"
+    },
+    {
+      "lane": "structural",
+      "source": "dom-check",
+      "finding_id": "f-signup-unlabeled-landmark-section",
+      "code": "unlabeled-landmark-section",
+      "severity": 2,
+      "target_element_identifier": "#el-7",
+      "target_selector": "#el-7",
+      "route": "/signup",
+      "detail": "unlabeled-landmark-section at pinned severity 2"
+    },
+    {
+      "lane": "structural",
+      "source": "dom-check",
+      "finding_id": "f-signup-positive-tabindex",
+      "code": "positive-tabindex",
+      "severity": 1,
+      "target_element_identifier": "#el-8",
+      "target_selector": "#el-8",
+      "route": "/signup",
+      "detail": "positive-tabindex at pinned severity 1"
+    }
+  ]
+}

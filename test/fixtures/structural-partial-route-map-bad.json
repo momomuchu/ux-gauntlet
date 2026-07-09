@@ -4,7 +4,7 @@
   "run": {
     "route": "/pricing",
     "url": "http://localhost:3000/pricing",
-    "run_status": "completed"
+    "run_status": "refused"
   },
   "metadata": {
     "axe_version": "4.12.1",
@@ -19,8 +19,7 @@
     "browser_version": "chromium/1179",
     "timestamp": "2026-07-09T12:00:00Z",
     "expected_main_content": {
-      "/signup": "#audiobook-text",
-      "/pricing": "#pricing-detail"
+      "/signup": "#audiobook-text"
     }
   },
   "validity_envelope": {
@@ -44,16 +43,17 @@
   "findings": [
     {
       "lane": "structural",
-      "source": "axe",
-      "finding_id": "f-pricing-axe-button-name",
-      "code": "axe:button-name",
-      "rule_id": "button-name",
-      "impact": "critical",
-      "severity": 4,
-      "target_element_identifier": "button#buy",
-      "target_selector": "button#buy",
+      "source": "dom-check",
+      "finding_id": "f-signup-cannot-evaluate-ambiguous-main",
+      "code": "cannot-evaluate-ambiguous-main",
+      "severity": 3,
+      "target_element_identifier": "#pricing-main",
+      "target_selector": "#pricing-main",
       "route": "/pricing",
-      "help": "button-name finding"
+      "route_refused": true,
+      "detail": "route-level refused: /pricing unmapped (S40/S54)"
     }
-  ]
+  ],
+  "refused": true,
+  "refusal_reason": "the audited route /pricing has no entry in the expected-main-content map; S40 requires a route-level refused result, and S54 requires CI to block on it"
 }

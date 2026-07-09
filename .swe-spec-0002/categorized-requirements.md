@@ -57,6 +57,15 @@ sibling is SN1 (the reproducibility *quality attribute* across repeated runs).
 | S44 | functional | CR1-Mi5 — refusing to compare reports with differing axe_version is a comparison-integrity rule |
 | S45 | functional | CR1-B5 — recording run_status axe-execution-failed is a fail-closed reporting rule (a crashed scan is never a clean pass) |
 | S46 | functional | CR1-B5 — CI blocking on axe-execution-failed is a gate policy composed with S37/S38 |
+| S47 | functional | CR2-B4 — recording run_status settle-timeout is a fail-closed reporting rule (a never-settling page is never a clean pass), sibling of S45 |
+| S48 | functional | CR2-B4 — CI blocking on settle-timeout is a gate policy composed with S46 |
+| S49 | functional | CR2-B5 — sourcing the accessible name via axe's accname engine is an accessible-name-provenance rule for S15 (no second name engine) |
+| S50 | functional | CR2-B16 — the deterministic finding_id derivation formula is the identity policy that makes the S21/S42 byte-identical promise provable, not luck |
+| S51 | functional | CR2-B16 — double-invoking the actual generator for set-equality is a verification-method rule that keeps the determinism claim honest end-to-end |
+| S52 | functional | CR2-B17 — evaluating the critical-impact predicate on raw impact (never derived severity) is a gate-correctness rule protecting the S17 mapping |
+| S53 | functional | CR2-M2 — CI blocking on an incomplete finding whose raw impact is critical closes the incomplete-critical carve-out (D7), a gate policy |
+| S54 | functional | CR2-M3 — CI blocking on the S40 route-level refused status is a gate policy so an unmapped route can never go silently unaudited |
+| S55 | functional | CR2-M10 — the cross-namespace equivalence-table suppression is a finding-identity policy reconciling S20/S41 across the axe/non-axe boundary |
 | SN1 | nonfunctional | reproducibility quality attribute — a perfect machine removes the sampling variance this line guards, so it is a real-world tech-property requirement |
 | SN2 | nonfunctional | versioned-schema robustness is a maintainability/evolution quality, not a domain behavior |
 | SN3 | nonfunctional | no-third-party-egress is a data-locality quality constraint |
@@ -64,10 +73,14 @@ sibling is SN1 (the reproducibility *quality attribute* across repeated runs).
 | SN5 | nonfunctional | licensing/language are distribution qualities, not product logic |
 | SN6 | nonfunctional | machine-readable metadata is an interoperability quality of the output |
 | SN7 | nonfunctional | CR1-M12 — pinned browser-binary version in metadata is a rendering-environment reproducibility property (sibling of SN4/S2) |
+| SN8 | nonfunctional | CR2-M20 — the pinned OS/font-rendering container render_environment_id is a rendering-environment reproducibility property closing the cross-machine glyph-shaping variance (sibling of SN7) |
 
-Summary: 46 functional (S1-S46), 7 nonfunctional (SN1-SN7). CHALLENGE-ROUND-1 appended S35-S46 + SN7
-(the S17 severity split, the report-gate/CI-gate composition, the cross-lane join fix, the
-axe-execution fail-closed rule, the browser-version pin) with no renumbering of S1-S34/SN1-SN6. The
+Summary: 55 functional (S1-S55), 8 nonfunctional (SN1-SN8). CHALLENGE-ROUND-1 appended S35-S46 + SN7;
+CHALLENGE-ROUND-2 appended S47-S55 + SN8 (the settle-timeout fail-closed + CI pair, the accname-engine
+source, the deterministic finding_id derivation + double-invoke proof, the raw-impact predicate, the
+incomplete-critical CI block, the route-refused CI block, the cross-namespace dedup table, the
+container render_environment_id) and edited S1/S4/S12/S14/S15/S39/S44 in place, with no renumbering of
+S1-S46/SN1-SN7. The
 Perfect Technology Filter keeps
 determinism/reproducibility on both sides deliberately: the *contract* (identical output for
 identical input, S2/S21) is functional; the *quality attribute* (no sampling variance across runs,

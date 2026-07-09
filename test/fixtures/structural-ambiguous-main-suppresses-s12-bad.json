@@ -2,8 +2,8 @@
   "schema_version": 1,
   "lane": "structural",
   "run": {
-    "route": "/pricing",
-    "url": "http://localhost:3000/pricing",
+    "route": "/signup",
+    "url": "http://localhost:3000/signup",
     "run_status": "completed"
   },
   "metadata": {
@@ -19,8 +19,7 @@
     "browser_version": "chromium/1179",
     "timestamp": "2026-07-09T12:00:00Z",
     "expected_main_content": {
-      "/signup": "#audiobook-text",
-      "/pricing": "#pricing-detail"
+      "/signup": "#audiobook-text"
     }
   },
   "validity_envelope": {
@@ -44,16 +43,15 @@
   "findings": [
     {
       "lane": "structural",
-      "source": "axe",
-      "finding_id": "f-pricing-axe-button-name",
-      "code": "axe:button-name",
-      "rule_id": "button-name",
-      "impact": "critical",
-      "severity": 4,
-      "target_element_identifier": "button#buy",
-      "target_selector": "button#buy",
-      "route": "/pricing",
-      "help": "button-name finding"
+      "source": "dom-check",
+      "finding_id": "f-signup-cannot-evaluate-ambiguous-main",
+      "code": "cannot-evaluate-ambiguous-main",
+      "severity": 3,
+      "target_element_identifier": "main",
+      "target_selector": "main",
+      "route": "/signup",
+      "detail": "two main landmarks: S14 fails closed and suppresses the entire S12 found-inside-prominent evaluation, so NO main-content-missing finding is emitted for this page (Mn11)"
     }
-  ]
+  ],
+  "main_landmark_count": 2
 }

@@ -2,8 +2,8 @@
   "schema_version": 1,
   "lane": "structural",
   "run": {
-    "route": "/pricing",
-    "url": "http://localhost:3000/pricing",
+    "route": "/signup",
+    "url": "http://localhost:3000/signup",
     "run_status": "completed"
   },
   "metadata": {
@@ -16,11 +16,10 @@
       "best-practice"
     ],
     "wcag_target": "AA",
-    "browser_version": "chromium/1179",
+    "browser_version": "chromium/1200",
     "timestamp": "2026-07-09T12:00:00Z",
     "expected_main_content": {
-      "/signup": "#audiobook-text",
-      "/pricing": "#pricing-detail"
+      "/signup": "#audiobook-text"
     }
   },
   "validity_envelope": {
@@ -41,19 +40,6 @@
   },
   "violation_ids": [],
   "incomplete_ids": [],
-  "findings": [
-    {
-      "lane": "structural",
-      "source": "axe",
-      "finding_id": "f-pricing-axe-button-name",
-      "code": "axe:button-name",
-      "rule_id": "button-name",
-      "impact": "critical",
-      "severity": 4,
-      "target_element_identifier": "button#buy",
-      "target_selector": "button#buy",
-      "route": "/pricing",
-      "help": "button-name finding"
-    }
-  ]
+  "findings": [],
+  "comparison_note": "axe_version matches the baseline but browser_version differs (chromium/1200 vs baseline chromium/1179); S44 must refuse to treat the two reports as comparable (M7/M19)"
 }

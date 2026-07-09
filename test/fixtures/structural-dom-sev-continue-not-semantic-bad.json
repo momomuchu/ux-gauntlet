@@ -2,8 +2,8 @@
   "schema_version": 1,
   "lane": "structural",
   "run": {
-    "route": "/pricing",
-    "url": "http://localhost:3000/pricing",
+    "route": "/signup",
+    "url": "http://localhost:3000/signup",
     "run_status": "completed"
   },
   "metadata": {
@@ -19,8 +19,7 @@
     "browser_version": "chromium/1179",
     "timestamp": "2026-07-09T12:00:00Z",
     "expected_main_content": {
-      "/signup": "#audiobook-text",
-      "/pricing": "#pricing-detail"
+      "/signup": "#audiobook-text"
     }
   },
   "validity_envelope": {
@@ -44,16 +43,14 @@
   "findings": [
     {
       "lane": "structural",
-      "source": "axe",
-      "finding_id": "f-pricing-axe-button-name",
-      "code": "axe:button-name",
-      "rule_id": "button-name",
-      "impact": "critical",
-      "severity": 4,
-      "target_element_identifier": "button#buy",
-      "target_selector": "button#buy",
-      "route": "/pricing",
-      "help": "button-name finding"
+      "source": "dom-check",
+      "finding_id": "f-signup-continue-not-semantic",
+      "code": "continue-not-semantic",
+      "severity": 2,
+      "target_element_identifier": "#audiobook-text",
+      "target_selector": "#audiobook-text",
+      "route": "/signup",
+      "detail": "continue-not-semantic must carry the spec-pinned severity 3, not 2 (S35 fixed table)"
     }
   ]
 }

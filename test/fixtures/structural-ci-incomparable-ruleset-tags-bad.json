@@ -2,8 +2,8 @@
   "schema_version": 1,
   "lane": "structural",
   "run": {
-    "route": "/pricing",
-    "url": "http://localhost:3000/pricing",
+    "route": "/signup",
+    "url": "http://localhost:3000/signup",
     "run_status": "completed"
   },
   "metadata": {
@@ -12,15 +12,13 @@
       "wcag2a",
       "wcag2aa",
       "wcag21aa",
-      "wcag22aa",
-      "best-practice"
+      "wcag22aa"
     ],
     "wcag_target": "AA",
     "browser_version": "chromium/1179",
     "timestamp": "2026-07-09T12:00:00Z",
     "expected_main_content": {
-      "/signup": "#audiobook-text",
-      "/pricing": "#pricing-detail"
+      "/signup": "#audiobook-text"
     }
   },
   "validity_envelope": {
@@ -41,19 +39,6 @@
   },
   "violation_ids": [],
   "incomplete_ids": [],
-  "findings": [
-    {
-      "lane": "structural",
-      "source": "axe",
-      "finding_id": "f-pricing-axe-button-name",
-      "code": "axe:button-name",
-      "rule_id": "button-name",
-      "impact": "critical",
-      "severity": 4,
-      "target_element_identifier": "button#buy",
-      "target_selector": "button#buy",
-      "route": "/pricing",
-      "help": "button-name finding"
-    }
-  ]
+  "findings": [],
+  "comparison_note": "axe_version matches but ruleset_tags differ (best-practice dropped); S44 must refuse to treat the two reports as comparable because a config edit silently changed which rules ran (M19)"
 }

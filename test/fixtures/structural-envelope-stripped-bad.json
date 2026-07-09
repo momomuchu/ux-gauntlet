@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "lane": "structural",
+  "run": {
+    "route": "/signup",
+    "url": "http://localhost:3000/signup",
+    "run_status": "refused"
+  },
+  "metadata": {
+    "axe_version": "9.9.9",
+    "ruleset_tags": [
+      "wcag2a",
+      "wcag2aa",
+      "wcag21aa",
+      "wcag22aa",
+      "best-practice"
+    ],
+    "wcag_target": "AA",
+    "browser_version": "chromium/1179",
+    "timestamp": "2026-07-09T12:00:00Z",
+    "expected_main_content": {
+      "/signup": "#audiobook-text"
+    }
+  },
+  "violation_ids": [],
+  "incomplete_ids": [],
+  "findings": [],
+  "refused": true,
+  "refusal_reason": "validity envelope stripped and axe_version not pinned — renderer must refuse / diverge, proving it reads its input rather than emitting a constant banner (S25/M21)"
+}

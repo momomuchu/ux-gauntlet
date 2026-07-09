@@ -2,8 +2,8 @@
   "schema_version": 1,
   "lane": "structural",
   "run": {
-    "route": "/pricing",
-    "url": "http://localhost:3000/pricing",
+    "route": "/signup",
+    "url": "http://localhost:3000/signup",
     "run_status": "completed"
   },
   "metadata": {
@@ -19,8 +19,7 @@
     "browser_version": "chromium/1179",
     "timestamp": "2026-07-09T12:00:00Z",
     "expected_main_content": {
-      "/signup": "#audiobook-text",
-      "/pricing": "#pricing-detail"
+      "/signup": "#audiobook-text"
     }
   },
   "validity_envelope": {
@@ -39,21 +38,23 @@
       "heading-order"
     ]
   },
-  "violation_ids": [],
+  "violation_ids": [
+    "aria-required-attr"
+  ],
   "incomplete_ids": [],
   "findings": [
     {
       "lane": "structural",
       "source": "axe",
-      "finding_id": "f-pricing-axe-button-name",
-      "code": "axe:button-name",
-      "rule_id": "button-name",
+      "finding_id": "f-signup-axe-aria-required-attr",
+      "code": "axe:aria-required-attr",
+      "rule_id": "aria-required-attr",
       "impact": "critical",
-      "severity": 4,
-      "target_element_identifier": "button#buy",
-      "target_selector": "button#buy",
-      "route": "/pricing",
-      "help": "button-name finding"
+      "severity": 3,
+      "target_element_identifier": "button.cta",
+      "target_selector": "button.cta",
+      "route": "/signup",
+      "detail": "raw impact is critical but severity was mis-mapped to 3; the CI gate must block on the raw impact field, never the derived severity integer (S52/B17)"
     }
   ]
 }

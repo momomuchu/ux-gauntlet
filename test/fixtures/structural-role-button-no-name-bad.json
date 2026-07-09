@@ -2,8 +2,8 @@
   "schema_version": 1,
   "lane": "structural",
   "run": {
-    "route": "/pricing",
-    "url": "http://localhost:3000/pricing",
+    "route": "/signup",
+    "url": "http://localhost:3000/signup",
     "run_status": "completed"
   },
   "metadata": {
@@ -19,8 +19,7 @@
     "browser_version": "chromium/1179",
     "timestamp": "2026-07-09T12:00:00Z",
     "expected_main_content": {
-      "/signup": "#audiobook-text",
-      "/pricing": "#pricing-detail"
+      "/signup": "#audiobook-text"
     }
   },
   "validity_envelope": {
@@ -39,21 +38,23 @@
       "heading-order"
     ]
   },
-  "violation_ids": [],
+  "violation_ids": [
+    "aria-command-name"
+  ],
   "incomplete_ids": [],
   "findings": [
     {
       "lane": "structural",
       "source": "axe",
-      "finding_id": "f-pricing-axe-button-name",
-      "code": "axe:button-name",
-      "rule_id": "button-name",
-      "impact": "critical",
-      "severity": 4,
-      "target_element_identifier": "button#buy",
-      "target_selector": "button#buy",
-      "route": "/pricing",
-      "help": "button-name finding"
+      "finding_id": "f-signup-axe-aria-command-name",
+      "code": "axe:aria-command-name",
+      "rule_id": "aria-command-name",
+      "impact": "serious",
+      "severity": 3,
+      "target_element_identifier": "div[role=button]",
+      "target_selector": "div[role=button]",
+      "route": "/signup",
+      "detail": "a role=button control exposes no accessible name; S4's closed list now includes aria-command-name and S15/S49 source the name via axe.commons.text.accessibleText (B9/B5/S49)"
     }
   ]
 }
