@@ -1,0 +1,46 @@
+PASS: S1: The structural lane MUST inject the pinned axe-core script into each operator-supplied route's rendered DOM via Playwright, then collect axe violations, incomplete results, passes as structured data.
+PASS: S2: The axe-core dependency MUST be pinned to the exact version 4.12.1, recorded verbatim in every structural report's metadata block.
+PASS: S3: The axe-core run MUST be configured with the ruleset tags wcag2a, wcag2aa, wcag21aa, wcag22aa, best-practice, recorded in report metadata every run.
+PASS: S4: For every interactive component the lane MUST run the axe rules button-name, link-name, input-button-name, select-name, aria-required-attr, aria-valid-attr-value to verify name plus role are exposed, with value exposed only where the component has user-settable state.
+PASS: S5: The lane MUST run axe color-contrast to flag any text below the 4.5:1 normal-text ratio, below the 3:1 large-text ratio, where large text is 18pt-plus (14pt-plus when bold), computed with no rounding so 4.499:1 fails.
+PASS: S6: The lane MUST run the axe rules label, aria-input-field-name to flag any form input lacking a programmatic label.
+PASS: S7: The lane MUST run axe landmark-one-main to flag a page not exposing exactly one main landmark, reported under a best-practice label at moderate impact, never as a WCAG success criterion.
+PASS: S8: The lane MUST run axe region to flag any rendered content sitting outside every landmark region.
+PASS: S9: The lane MUST validate that each landmark role is one of the 8 WAI-ARIA landmark types banner, navigation, main, search, form, region, complementary, contentinfo, flagging an unlabeled section as a coverage gap rather than skipping it.
+PASS: S10: The lane MUST report heading-order findings under a best-practice label visibly distinct from WCAG success-criterion violations, never as a WCAG 1.3.1 failure.
+PASS: S11: The lane MUST run a deterministic DOM check flagging any element carrying a positive tabindex value greater than 0 as an anti-pattern.
+PASS: S12: The lane MUST verify the operator-declared expected-main-content anchor resolves to an element that is found on the page, sits inside the single main landmark, is the largest visible text block on the page.
+PASS: S13: The lane MUST refuse to produce a gated structural result when the operator supplies no expected-main-content selector, mirroring the persona lane's refusal to start without an operator-defined happy path.
+PASS: S14: When the page exposes a count of main landmarks other than exactly 1, the expected-main-content containment check MUST fail closed with the report value cannot-evaluate-ambiguous-main, never a false pass.
+PASS: S15: For each flow step the lane MUST verify the declared continue control is a semantic control (a native button, link, input, an element exposing role button), carries an accessible name, is keyboard-focusable.
+PASS: S16: The lane MUST run the axe ARIA-state ruleset (aria-required-attr, aria-valid-attr-value, aria-required-children, aria-required-parent) to flag a custom widget whose aria-expanded, aria-selected, aria-checked state is invalid.
+PASS: S17: Each structural finding's severity MUST be a pure function of axe's own impact field, mapping critical to 4, serious to 3, moderate to 2, minor to 1.
+PASS: S18: An axe incomplete result MUST be mapped to severity 0, surfaced as a needs-manual-review entry, never dropped, never reported as a pass.
+PASS: S19: The structural lane MUST assign severity with zero LLM judgment, so no persona-derived value, no model-derived value enters the lane.
+PASS: S20: Two findings sharing the same axe rule ID plus the same target-element selector MUST be deduplicated into one finding entry.
+PASS: S21: Given an identical DOM snapshot, an identical pinned axe-core version 4.12.1, an identical ruleset configuration, the lane MUST emit a byte-identical violation-id set on every run.
+PASS: S22: The structural lane MUST emit a schema-validated JSON findings file in the same findings-schema family as the persona lane, carrying a mandatory lane field whose value is the string structural.
+PASS: S23: The structural findings file MUST stay a separate artifact, never merged with the persona findings file into one blended score.
+PASS: S24: A structural finding MUST cross-reference a persona finding only through the shared target_element identifier plus the shared run route, never through a merged severity value.
+PASS: S25: Every structural report MUST print a validity envelope stating that automated accessibility testing covers about 32 percent of WCAG AA success criteria by criteria-count (16 of 50), about 57 percent by issue-volume (vendor-reported), so a structural pass is not usable, is not good UI.
+PASS: S26: The validity envelope MUST name the WCAG criteria classes automated testing cannot evaluate, listing at minimum focus order, focus visible, keyboard operability.
+PASS: S27: The validity envelope MUST label heading-order findings, DOM-order findings as best-practice heuristics, never as WCAG success-criterion violations.
+PASS: S28: Every structural report's metadata MUST disclose the pinned axe-core version 4.12.1 plus the configured ruleset tags used for that run.
+PASS: S29: Every structural report MUST state that a structural pass is not a WCAG conformance certification.
+PASS: S30: The CI gate MUST block a merge whenever the structural lane emits any axe critical-impact violation, independent of the 0-to-4 severity mapping.
+PASS: S31: The WCAG target level MUST be a configurable value defaulting to AA, swappable through configuration data without editing lane logic.
+PASS: S32: Any bump of the pinned axe-core version MUST require a recorded decision record before the new version is used.
+PASS: S33: The structural lane MUST audit only the operator-supplied route list per run, performing no site-wide crawl, no autonomous route discovery.
+PASS: S34: The structural lane MUST run independently of the persona lane with no cross-lane gating in the MVP, so neither lane's result gates whether the other lane runs.
+PASS: SN1: The structural lane MUST reproduce the same finding set across repeated runs on the same DOM snapshot under the same pinned version, with no run-to-run variance from model sampling.
+PASS: SN2: The structural findings JSON MUST conform to a versioned schema carrying a schema_version integer field the gate checks before accepting the file.
+PASS: SN3: The structural lane MUST depend on no third-party network service beyond the local browser runtime when the target is a localhost route.
+PASS: SN4: The structural lane MUST render each route at a single pinned desktop viewport of 1280 pixels width.
+PASS: SN5: All shipped structural-lane artifacts MUST be MIT-licensed, authored in English.
+PASS: SN6: The structural report metadata MUST record the run timestamp, the pinned axe-core version, the ruleset tags, the WCAG target level as machine-readable fields.
+---
+SUMMARY: 40 requirement(s) checked, 0 failed (mechanical check: testable/atomic/binding/unambiguous).
+MANUAL CHECKLIST (not mechanically checkable — verify by hand before freeze, per CRITERION 1):
+  - true stakeholder need: does each line trace to a real stated need, not an assumption?
+  - stakeholder vocabulary: does each line use the domain's own words, not implementation jargon?
+  - acceptable to all stakeholders: is there any unresolved objection to any line?
