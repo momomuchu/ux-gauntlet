@@ -328,3 +328,23 @@ Summary: 196 functional, 9 nonfunctional (205 total). CR7 consolidation: F78/F79
 of the DR-09 patience family), F197/F198 added (robots-blocked-all false-negative) — functional count
 stays flat at 196; net requirement delta 0. Every requirement here passes the Perfect Technology Filter
 (each is a policy/definition/refusal still needed on a computer with infinite speed/memory/cost).
+
+## Challenge round 8 pass 2026-07-09 (.swe-spec/CHALLENGE-ROUND-8.md, F199-F201) — TAIL CLEANUP
+
+Same Perfect Technology Filter applied. All 3 new lines resolve to `functional`: each is a
+report-content disclosure policy a real report generator still needs regardless of machine
+speed/memory/cost — none describes a QoS/resource attribute of the machine. Zero new N-numbers (same
+pattern as rounds 3-6). In-place edits (F104 disclosure-widen, F148 network-layer wording, F194
+default-numeric trigger, the N5 provenance comment) do not change any line's category.
+
+| ID | Category | Filter note |
+|----|----------|-------------|
+| F199 | functional | disclosure policy (sk- redaction generic-shape false-positive risk) — CR8-M2 |
+| F200 | functional | disclosure policy (heuristic_tag cross-run reclassification → finding_id drift) — CR8-M6 |
+| F201 | functional | operator-instruction policy (check baseline same-step neighbor before regression) — CR8-M6 |
+
+Summary: 199 functional, 9 nonfunctional (208 total). Net requirement delta +3 (F199-F201 added; no
+deletions). M-A's proposed F103-identifier strip mechanism was DECLINED as a build-phase residual
+(disclosure-only landed in the widened F104); 3 MAJOR/MINOR were re-litigations of durable CR7
+dispositions and were rejected — see scrub-log.md `## CR8 tail cleanup`. Every new line passes the
+Perfect Technology Filter.

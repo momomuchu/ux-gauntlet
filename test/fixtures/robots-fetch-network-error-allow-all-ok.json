@@ -1,0 +1,14 @@
+{
+  "run": {
+    "target_url": "http://localhost:3000",
+    "task_list": "test/fixtures/tasks.json",
+    "personas": ["vp-team-buyer"],
+    "robots_override": false,
+    "robots_txt_fetch_status": null,
+    "robots_txt_fetch_error": "network-timeout"
+  },
+  "actions": [
+    { "persona": "vp-team-buyer", "step": 2, "type": "navigate", "path": "/pricing", "robots_disallowed": false, "outcome": "executed" }
+  ],
+  "findings": []
+}

@@ -1,0 +1,16 @@
+{
+  "run": {
+    "target_url": "http://localhost:3000",
+    "task_list": "test/fixtures/tasks.json",
+    "personas": ["free-tier-user", "willing-to-pay-user", "vp-team-buyer"]
+  },
+  "run_status": "BLOCKED",
+  "personas": [
+    { "name": "free-tier-user", "run_status": "completed" },
+    { "name": "willing-to-pay-user", "run_status": "completed" },
+    { "name": "vp-team-buyer", "run_status": "completed" }
+  ],
+  "validity_envelope_text": "This report is not a replacement for real user research. It contains no willingness-to-pay estimates. It contains no population percentage extrapolations. It makes no ISO 9241-11 compliance claim.",
+  "findings": [],
+  "narrative": "CR8-MIN8 reverse-direction derivation-lock RED fixture (F191 mirror of run-status-derived-blocked-mismatch-bad.json): the per-persona run_status list is 3-of-3 completed, so the value DERIVED under F49's counted-set rule is NOT-BLOCKED (3 personas in the not-blocked floor set {completed, patience-exhausted, runner-capped}), but the stored top-level run_status hand-sets 'BLOCKED'. F191's 'disagrees' wording is symmetric: report-gate.mjs must RECOMPUTE and exit nonzero on a falsely-BLOCKED healthy run just as it does on a falsely-completed failed run — a builder implementing only `if (derivedBlocked && stored !== 'BLOCKED') reject` (never checking the reverse) would silently accept this findings file that falsely claims BLOCKED on a clean run."
+}

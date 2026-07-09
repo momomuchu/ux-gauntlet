@@ -56,6 +56,11 @@ N4: A CI run MUST complete headless without interactive operator input.
 # pending empirical measurement at build time. (CR3-18: the prior wording claimed the arithmetic
 # "roughly equals" 45 minutes when the actual product is 15 minutes; this restates the real computed
 # figure and separates it from the enforced bound. No change to the enforceable N5/N9 requirement lines.)
+# N5 vs F131 (CR8-MIN7): F131's 50-minute default (--timeout) is a deliberate safety-margin kill-switch
+# set ABOVE N5's 45-minute target, not a re-derivation of it; a run legitimately finishing at minute
+# 47-49 exceeds N5's target without tripping F131, by design. N5 is a MEDIUM/BLOCKS:none design target
+# validated empirically (see provenance comment above), never runner-gate-enforced — a kill-switch above,
+# not at, the target SLA is the standard sane pattern (see scrub-log.md CR2-7).
 N5: A 3-persona run against a 5-step task list MUST complete within 45 minutes on one machine. # CR1-25 CR2-8
 N6: A run against a localhost target URL MUST succeed without any third-party network service beyond the agent runtime itself.
 N7: All shipped artifacts MUST be written in English.
@@ -77,7 +82,7 @@ F45: The orchestrator MUST classify two friction records as the same underlying 
 F46: The orchestrator MUST merge two findings classified as the same underlying finding into one findings.json entry with one evidence-pointer array. # DR-06b
 F47: When a target-app-side 5xx-or-network-failure event occurs during a walkthrough step, the persona agent MUST record it as a distinct app-error event separate from the friction ledger. # DR-07a
 F48: The report generator MUST list app-error events in a section separate from the heuristic-tagged friction list. # DR-07b
-F49: The orchestrator MUST set the machine-readable run-status field, separate from findings.json, to BLOCKED when fewer than 3 persona subagents reach one of the run_status values completed, patience-exhausted, runner-capped — crashed personas, timed-out personas, are excluded from that floor, counting toward BLOCKED instead. # DR-08 CR4-B2 CR5-B3 CR6-B1
+F49: The orchestrator MUST set a run-level run_status field, a top-level sibling of the findings array in findings.json, to BLOCKED when fewer than 3 persona subagents reach one of the run_status values completed, patience-exhausted, runner-capped — crashed personas, timed-out personas, are excluded from that floor, counting toward BLOCKED instead. # DR-08 CR4-B2 CR5-B3 CR6-B1
 F50: When a persona's step count crosses patience_threshold_steps, the persona subagent MUST abandon the current task. # DR-09a DR-25a CR7-1
 F51: When a persona's step count crosses patience_threshold_steps, the persona subagent MUST record a terminal friction instance tagged with the abandonment step index. # DR-09b
 F52: When a persona's step count crosses patience_threshold_steps, the persona subagent MUST set the task outcome field to failed_by_patience in its ledger, the underscored spelling the frozen ledger fixtures already encode as ground truth. # DR-09c CR5-M1
@@ -143,7 +148,7 @@ F100: The orchestrator MUST emit the partial ledger of any persona subagent term
 F101: CI mode MUST exit nonzero when the run-level run_status field equals BLOCKED, independent of severity-4 findings. # CR1-2
 F102: A screenshot-type evidence artifact MUST carry a captured_text sidecar field containing text extracted from the browser accessibility tree at capture time. # CR1-3
 F103: The target_element_identifier used in the F45 dedup tuple MUST be computed via a priority-ordered fallback of data-testid attribute value, accessible-name-plus-role, stable id attribute value, innerText-anchored CSS path, in that priority order, applying the same deterministic procedure to every persona, every account state, scoped only to that step's own rendered DOM, never re-branched by which persona produced it, never re-branched by which account produced it. # DR-06a CR1-4 CR2-18
-F104: The validity-envelope disclosure section MUST state that convergence tiers can undercount on target applications lacking stable element selectors, distinct from a persona-gated, account-gated DOM element that legitimately differs by design. # DR-06a CR1-4 CR2-18
+F104: The validity-envelope disclosure section MUST state that convergence tiers can undercount from any of three tuple-instability causes: a target application lacking stable element selectors, distinct from a persona-gated, account-gated DOM element that legitimately differs by design; two personas independently selecting different heuristic_tag values from the configured set for the same underlying friction, heuristic_tag selection being an unreconciled per-persona judgment call with no cross-persona consistency mechanism; an F103 tier-2 accessible-name-plus-role identifier, tier-4 innerText-anchored-CSS-path identifier that embeds F59 synthetic-identity-pool text on a control not itself persona-gated. # DR-06a CR1-4 CR2-18 CR8-M5 CR8-M1
 F105: The skill MUST ship denylist/default-destructive-labels.json conforming to schemas/denylist.schema.json, referenced by name in SKILL.md. # DR-01a CR1-6
 F106: The orchestrator MUST exit nonzero when the operator-supplied denylist file fails to validate as a non-empty JSON array of strings. # DR-01a CR1-6
 F107: The runner CLI MUST check every static launch precondition among url presence, tasks-file presence, i-own-this-target-flag presence, env-flag presence, denylist-file validity, persona-count minimum, before refusing to start a crawl on any single violation. # CR1-7 CR1-14
@@ -218,7 +223,7 @@ N9: The run-level wallclock budget derivation MUST use a single persona's action
 F145: The task-list step schema MUST support an operator-set audited_terminal_step boolean per step, distinct from the precondition_step field, distinct from the payment_step field, distinct from the external_side_effect field, distinct from the denylist_override field. # CR3-1
 F146: The persona agent's default dry-run boundary from F40 MUST NOT apply to a step flagged audited_terminal_step, exempting only that step's own non-idempotent submission within the audited task. # CR3-1
 F147: For an off-path friction instance whose friction_type is one of extra_action / ambiguity_resolution, the step field in the F45 identity tuple MUST equal the index of the next not-yet-completed happy-path step at the time the friction occurred, never the index of the last-completed happy-path step. # DR-06a CR3-2
-F148: When a target's robots.txt fetch returns any response outside the 2xx success range on an otherwise-reachable target, the runner MUST treat the target as allow-all for robots.txt purposes, proceeding with crawling. # DR-04a CR3-3
+F148: When a target's robots.txt fetch returns any response outside the 2xx success range on an otherwise-reachable target, likewise when the robots.txt fetch fails at the network level (timeout, connection error, DNS failure) on an otherwise-reachable target, the runner MUST treat the target as allow-all for robots.txt purposes, proceeding with crawling. # DR-04a CR3-3 CR8-MIN2
 F149: The target_element_identifier for a patience-abandonment terminal friction MUST equal a fixed sentinel string computed only from the step value, identical regardless of the persona's path to abandonment. # DR-09b CR3-5
 F150: The heuristic_tag for a patience-abandonment terminal friction MUST equal one fixed value declared as the designated patience-abandonment tag in the heuristic-set configuration file. # DR-09b CR3-5
 F151: CI mode MUST exit nonzero when a finding matched by finding_id to a baseline entry has current-run severity 4 with matched baseline severity below 4. # CR3-6 CR3-14
@@ -309,7 +314,7 @@ F190: ci-diff.mjs MUST print the convergence_tier value of each new-or-escalated
 F191: report-gate.mjs MUST exit nonzero when a findings file's stored run-level run_status disagrees with the BLOCKED-or-not value recomputed from the per-persona run_status list under F49's counted-set rule. # CR6-B6
 F192: report-gate.mjs, render-report.mjs MUST derive their exit code, their rendered output, from the parsed content of the file at the given path, never from the path string itself. # CR6-B5
 F193: When no ancestor element walking up from the target element to the document root satisfies F183's nearestAncestorWithStableId qualification, nearestAncestorWithStableId MUST equal the document root element documentElement, defined for any parsed DOM. # CR6-M1
-F194: The validity-envelope disclosure section MUST state that a finding's severity value is the skill/operator's own rubric, not independently NN/g-verified, whenever the active heuristic-set configuration's severity scale labels / frequency-impact-persistence formula / bucket mappings differ from the F12/F159/F161/F162 defaults, likewise whenever a finding's severity_factors is stored as free-text rationale per F12. # CR6-M2
+F194: The validity-envelope disclosure section MUST state that a finding's severity value is the skill/operator's own rubric, not independently NN/g-verified, whenever the active heuristic-set configuration's severity scale labels, mean-of-factors formula, bucket mappings differ from the F12/F159/F161/F162 defaults, whenever a finding's severity_factors is stored as free-text rationale per F12, likewise whenever severity_factors is stored as 3 numeric values under the untouched default F159/F161/F162 bucket mapping, naming specifically that the frequency, impact bucket THRESHOLDS are the spec author's own operationalization of NN/g's qualitative 3-factor concept (brief section 2.3), not independently NN/g-verified numeric thresholds, in addition to F181's persistence-duplication disclosure. # CR6-M2 CR8-M4
 F195: The shipped examples/tasks.json terminal audited_terminal_step step's target-element label MUST NOT case-insensitively match any entry in denylist/default-destructive-labels.json. # CR6-MIN3
 F196: The persona agent's default dry-run boundary from F40 MUST NOT apply to a payment_step-flagged step's own payment submission when the run declares test_mode true — a payment_step-flagged step in a run without test_mode stays fully subject to F39's refusal, F40's dry-run boundary. # CR6-B2
 
@@ -328,3 +333,19 @@ F196: The persona agent's default dry-run boundary from F40 MUST NOT apply to a 
 # convention: F78/F79's freed IDs are NOT reused; the next-available sequential IDs are F197/F198.
 F197: The runner CLI MUST set the summary.json field robots_blocked_all_navigation to true when every persona's task-list navigation in a run aborts with reason_code robots-disallowed. # DR-04a CR7-2
 F198: The runner CLI MUST print a stderr warning naming --override-robots before exiting whenever the summary.json robots_blocked_all_navigation field is true. # DR-04a CR7-2
+
+# --- Challenge round 8 pass 2026-07-09 (.swe-spec/CHALLENGE-ROUND-8.md) — TAIL CLEANUP ---
+# 1 BLOCKER (F49 "separate from findings.json" wording — fixed in place at line 80, no new line),
+# 7 MAJOR, 8 MINOR; 4 panel-rejected. Disposition posture: DISCLOSE/narrow over new mechanisms (12/16
+# panel-confirmed items resolve via disclosure/fixture/test). Three MAJOR were re-litigations of durable
+# CR7 dispositions (F192 x2 scrub-log:433, F83/DR-28 scrub-log row 15) — REJECTED per the standing
+# contract. In-place edits (F104 CR8-M5/M1, F148 CR8-MIN2, F194 CR8-M4, N5 comment CR8-MIN7) are above;
+# M-A's proposed F199 strip MECHANISM was DECLINED as a build-phase residual (consistent with CR7's
+# F150a disclose-don't-add precedent + the panel's own single-normalization-pass observation) — only its
+# DISCLOSURE part landed in the widened F104. This section holds the 3 genuinely-new disclosure lines
+# (F199 sk- false-positive, F200/F201 heuristic_tag cross-run identity drift). Net functional delta +3
+# (196 -> 199). Per the append-only numbering convention no freed ID is reused; next-available = F199-F201.
+# Full per-item disposition recorded in scrub-log.md "## CR8 tail cleanup".
+F199: The validity-envelope disclosure section MUST state that the sk- cloud-API-key redaction pattern is a generic shape match, not credential-context-qualified, MAY redact non-credential UI text matching a 20-or-more-character alphanumeric run prefixed by 'sk-' (a promo code, a SKU, a ticket id). # CR8-M2
+F200: The validity-envelope disclosure section MUST state that a persona subagent's heuristic_tag assignment is a classification judgment that MAY differ between runs for the identical underlying friction, producing a different finding_id despite an unchanged step, an unchanged target_element_identifier. # CR8-M6
+F201: The validity-envelope disclosure section MUST instruct the operator to check the baseline for an existing finding sharing the same step value before treating a new finding_id as a confirmed regression. # CR8-M6

@@ -739,6 +739,19 @@ test('F148 CR3-3: a missing-or-erroring robots.txt on an otherwise-reachable tar
   // structurally invisible to the frozen suite and would only detonate on a founder's real machine).
   const allowAll = gate('robots-404-allow-all-ok.json');
   assert.equal(allowAll.code, 0, 'a target whose robots.txt fetch 404\'d (absent) must be treated as allow-all and crawled, never refused (F148)');
+  // CR8-M7 (challenge round 8 MAJOR): F148/spec.md:200 mandate allow-all for the ENTIRE non-2xx range
+  // ("any other error"), but the only fixture hardcoded status 404 — a builder implementing a literal
+  // `status === 404` check (not the documented range rule) passed the whole frozen suite while a real
+  // 500/503 robots.txt failure got silently treated as disallow-all, reintroducing the false-refusal
+  // class F148/F197/F198 exist to prevent. A companion 500 fixture proves the RANGE rule, not a
+  // 404-literal special case.
+  const allowAll500 = gate('robots-500-allow-all-ok.json');
+  assert.equal(allowAll500.code, 0, 'a target whose robots.txt fetch returned 500 (any non-2xx, not only 404) must ALSO be treated as allow-all and crawled — the gate enforces the documented "any response outside the 2xx range" rule, not a 404-literal special case (F148, CR8-M7)');
+  // CR8-MIN2 (challenge round 8 MINOR): F148 reworded to make the NETWORK-LAYER failure case textually
+  // explicit (timeout/connection-error/DNS), not only paraphrased in spec.md:200's "any other error";
+  // a pure network-level robots.txt fetch failure on an otherwise-reachable target is also allow-all.
+  const allowAllNetErr = gate('robots-fetch-network-error-allow-all-ok.json');
+  assert.equal(allowAllNetErr.code, 0, 'a robots.txt fetch that fails at the network level (timeout/connection error/DNS) on an otherwise-reachable target must be treated as allow-all, not a refusal — the "or any other error" behavior spec.md promises is now gated, not just narrated (F148, CR8-MIN2)');
 });
 
 test('F152 CR3-7 D15: --override-robots is documented as the resolution for a local/staging robots.txt disallow-all', () => {
@@ -1056,6 +1069,13 @@ test('F191 CR6-B6: report-gate.mjs derives run_status/BLOCKED from the per-perso
   assert.equal(agree.code, 0, 'a findings file whose stored run_status=BLOCKED matches the value derived from its 3 crashed personas (0 in the not-blocked floor set) passes the gate — derivation agrees (F191 positive control)');
   const mismatch = gate('run-status-derived-blocked-mismatch-bad.json');
   assert.notEqual(mismatch.code, 0, 'a findings file whose personas are 3-of-3 crashed (derived BLOCKED) but whose stored run_status hand-sets "completed" must fail the gate — report-gate recomputes run_status from the per-persona terminal states and rejects the disagreement (F191, CR6-B6), proving derivation rather than a trusted hand-set field');
+  // CR8-MIN8 (challenge round 8 MINOR): F191's "disagrees" wording is SYMMETRIC, but only the
+  // derived-BLOCKED/stored-completed direction had a fixture. The mirror case (3 completed personas,
+  // derived NOT-BLOCKED, but run-level run_status hand-set to "BLOCKED") was untested — a builder
+  // implementing only `if (derivedBlocked && stored !== 'BLOCKED') reject` passes every current test
+  // while silently accepting a findings file that falsely claims BLOCKED on a healthy run.
+  const reverse = gate('run-status-stored-blocked-derived-not-bad.json');
+  assert.notEqual(reverse.code, 0, 'a findings file whose personas are 3-of-3 completed (derived NOT-BLOCKED) but whose stored run_status hand-sets "BLOCKED" must ALSO fail the gate — report-gate rejects a falsely-BLOCKED disagreement in BOTH directions, not only the falsely-completed one (F191, CR6-B6, CR8-MIN8)');
 });
 
 test('F192 CR6-B5: report-gate/render-report derive exit code and output from PARSED CONTENT of a runtime-generated path, not the filename', () => {
@@ -1115,6 +1135,14 @@ test('F194 CR6-M2: the validity envelope attributes severity to the skill/operat
   assert.match(mdCustom, /own rubric|operator'?s? own|not independently NN\/g.?verified|not independently verified/i, 'when a non-default heuristic-set severity-rubric config is active (heuristics-custom-severity-rubric.json), the validity envelope must state the severity is the skill/operator\'s own rubric, not independently NN/g-verified (F194, CR6-M2)');
   const mdFreeText = run(['scripts/render-report.mjs', 'test/fixtures/findings-custom-heuristic-set-ok.json']).stdout;
   assert.match(mdFreeText, /own rubric|operator'?s? own|not independently NN\/g.?verified|not independently verified/i, 'when a finding\'s severity_factors is stored as free-text rationale (severity asserted directly, F12 free-text branch), the same non-NN/g-verified attribution disclosure must appear (F194, CR6-M2)');
+  // CR8-M4 (challenge round 8 MAJOR): the prior F194 trigger fired ONLY on non-default/free-text paths,
+  // excluding the untouched-default numeric branch a builder ships out of the box — yet the Summary
+  // branded the default buckets "the NN/g 3-factor rubric" though DECISION-BRIEF §2.3 sources only the
+  // QUALITATIVE concept; the numeric THRESHOLDS in F159/F161/F162 were invented at CR3-17/CR4-B3 with no
+  // brief citation. Widened F194 now fires on the default-config numeric branch too, disclosing the
+  // frequency/impact bucket thresholds are the spec author's own operationalization, not NN/g-verified.
+  const mdDefaultNumeric = run(['scripts/render-report.mjs', 'test/fixtures/findings-severity-impact-persistence-mapped-ok.json']).stdout;
+  assert.match(mdDefaultNumeric, /own rubric|own operationalization|not independently NN\/g.?verified|not independently verified/i, 'even for a DEFAULT-config finding whose severity_factors is 3 numeric values under the untouched F159/F161/F162 bucket mapping, the validity envelope must disclose that the frequency/impact bucket THRESHOLDS are the spec author\'s own operationalization of NN/g\'s qualitative concept, not independently NN/g-verified numbers — the box-standard report may not imply NN/g authored the numeric thresholds (F194 widened, CR8-M4)');
 });
 
 test('F193 CR6-M1: F183 tier-5 has a defined terminal case when no ancestor carries a stable id — both personas anchor to documentElement and merge; a divergent terminal choice fails', () => {

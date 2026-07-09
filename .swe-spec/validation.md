@@ -327,3 +327,28 @@ removed, F197/F198 added — flat); `coverage-audit.sh --pre-freeze` → **8/8 s
 **95/95 CRITICAL PASS** (unchanged — F197/F198 landed HIGH, no CRITICAL id added/removed);
 `node --test test/acceptance.test.mjs` → **83 tests, 0 pass, 83 fail — RED preserved** (82 pre-CR7 + 1
 new F197/F198 block). This is the current file of record for the RED baseline count (83).
+
+## Challenge round 8 validation (2026-07-09) — TAIL CLEANUP
+
+A tail-cleanup pass, not additive-heavy. The one BLOCKER (F49 "separate from findings.json" self-
+contradiction) was already repaired in place (requirements.txt:80 + spec.md:204 both read "a top-level
+sibling of the findings array in findings.json") — verify-only, no counted-set logic touched. Posture:
+DISCLOSE/narrow over new mechanisms; REJECT re-litigations of durable CR7 dispositions. 3 MAJOR/MINOR
+were re-litigations (F192×2 scrub-log:433, F83/DR-28 scrub-log row 15) — rejected. M-A's proposed
+F103-identifier strip mechanism was DECLINED as a build-phase residual (only its disclosure landed, in
+the widened F104), consistent with CR7's F150a disclose-don't-add precedent + the panel's own single-
+normalization-pass observation. **Net requirement delta +3** (F199 sk- false-positive disclosure;
+F200/F201 heuristic_tag cross-run identity-drift disclosure). In-place edits: F104 (3-cause undercount
+disclosure), F148 (network-layer wording), F194 (default-numeric NN/g-attribution trigger), the N5
+provenance comment. Docs-only disclosures: spec.md click-trace removal (MIN-1), F45 friction_type
+residual + F179/F180 CDP-observability gap surfaced founder-facing (M-C, MIN-3), F192 scoped-residual
+caveat (MIN-6). Fixtures/assertions added into EXISTING failing test blocks only (F148/F191/F194) — no
+new test() block, so RED stays 0-pass. Full per-item disposition in `scrub-log.md ## CR8 tail cleanup`.
+
+Fresh re-runs from repo root: `req-lint.sh .swe-spec/requirements.txt` → **208/208 PASS** (199 functional
++ 9 nonfunctional; F199-F201 added — net +3); `coverage-audit.sh --pre-freeze` → **8/8 stages PASS**;
+`test-coverage-audit.sh docs/specs/0001-ux-gauntlet-mvp.spec.md test/acceptance.test.mjs` → **95/95
+CRITICAL PASS** (unchanged — F199-F201 landed HIGH, no CRITICAL id added/removed);
+`node --test test/acceptance.test.mjs` → **83 tests, 0 pass, 83 fail — RED preserved** (CR8 added
+assertions to the existing F148/F191/F194 blocks, no new test block). This is the current file of record
+for the RED baseline count (83).

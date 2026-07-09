@@ -494,3 +494,72 @@ Fresh re-runs from repo root: `req-lint.sh .swe-spec/requirements.txt` → **205
 stages PASS**; `test-coverage-audit.sh` → **95/95 CRITICAL PASS** (unchanged — no CRITICAL id added or
 removed; F197/F198 landed as HIGH); `node --test test/acceptance.test.mjs` → **83 tests, 0 pass, 83 fail**
 (RED preserved; 82 pre-CR7 + 1 new F197/F198 block). validation.md remains the file of record.
+
+## CR8 tail cleanup
+
+Challenge round 8 (`.swe-spec/CHALLENGE-ROUND-8.md`, 16 confirmed: 1 BLOCKER, 7 MAJOR, 8 MINOR; 4
+panel-rejected). A **tail-cleanup** pass. The BLOCKER (F49 "separate from findings.json" self-
+contradiction) was already fixed in place by the prior applier — verified: requirements.txt:80 reads
+"a top-level sibling of the findings array in findings.json" and spec.md:204's partial-run-visibility
+bullet reads "(a top-level sibling of the findings array in findings.json)". No F49 counted-set logic
+touched.
+
+**Governing posture (per the panel's own §4 + the standing contract):** DISCLOSE / narrow over new
+mechanisms (12/16 panel-confirmed items are disclosure-only); REJECT re-litigations of durable
+CR6/CR7/CR5 dispositions (panel: 3/16 are re-litigation); apply severity-downgraded items at the
+JUDGE's lower severity. Net requirement delta **+3** (F199/F200/F201) — the only growth closes
+genuinely-new, previously-undisclosed report-content behavior; every other fix edits an existing line,
+adds a spec disclosure bullet, or adds a fixture/assertion.
+
+### Per-item disposition (applied severity = JUDGE's severity from CHALLENGE-ROUND-8.md §2)
+
+| # | Item (panel severity) | Disposition | Trace | Notes |
+|---|---|---|---|---|
+| BLOCKER | F49 "separate from findings.json" self-contradiction | ALREADY-FIXED (verify-only) | — | Confirmed correct at requirements.txt:80 + spec.md:204. No change. |
+| M-A | F103 tier-2/tier-4 identifier embeds F59 synthetic-identity text → convergence undercount (MAJOR) | **PARTIAL — disclosure applied, F199-strip MECHANISM DECLINED** | CR8-M1 | The core complaint is that the failure mode is UNDISCLOSED ("a mechanism F104's disclosure never names"). Applied: widened F104 (+ spec.md:229) to name this as the 3rd tuple-instability cause. DECLINED the proposed F103-identifier strip step + fixture pair as a build-phase residual — consistent with CR7's F150a precedent (declined step-normalization mechanism, chose disclosure) and the panel's OWN systemic obs ("a single normalization pass across all three tuple fields would close all four as follow-ons rather than four separate patches"). Fixing only 1 of the 3 tuple fields' nondeterminism (leaving heuristic_tag + selector-instability disclosure-only) would be inconsistent with the whole-class governance posture. Net 0 for M-A. |
+| M-B | `sk-[A-Za-z0-9]{20,}` unqualified pattern redacts ordinary UI text (MAJOR) | **APPLIED — new disclosure F199** | CR8-M2 | Report-content disclosure that the sk- pattern is a generic shape match that MAY corrupt non-credential evidence text (promo/SKU/ticket). Regex deliberately NOT narrowed (directive: narrowing changes behavior, needs its own two-branch fixtures — separate CR). Landed HIGH (spec.md:229 validity-envelope bullet), so no forced CRITICAL test. Net +1. |
+| M-C | F45 dedup omits friction_type → F10/F33 force-merge, undisclosed to founder (MAJOR) | **APPLIED — spec.md disclosure bullet only** | CR8-M3 | The defect itself was DECLINED at CR7 (scrub-log:435, rare under-specified tiebreak on schema-valid output). Round-8's valid point: it lived only in the internal scrub-log, absent from founder-facing spec disclosure (unlike pixel-OCR/sequential-fallback residuals). Surfaced it in "Known verification gaps"; does NOT reopen the CR7 DECLINED disposition; no new F-number. Net 0. |
+| M-D | Default severity bucket thresholds branded "NN/g" though brief sources only the qualitative concept (MAJOR) | **APPLIED — F194 widened in place + Summary hedge + test** | CR8-M4 | Widened F194's trigger to fire ALSO on the untouched-default numeric branch (naming frequency/impact THRESHOLDS as the spec author's own operationalization, not NN/g-verified numbers). Tightened spec.md Summary (§19-22) to stop calling the default buckets "the NN/g 3-factor rubric". Added a default-config numeric assertion to the existing F194 render-report test block. In-place edit, no new ID. Net 0. |
+| M-E | F104 convergence-undercount disclosure names only selector instability, omits heuristic_tag divergence (MAJOR) | **APPLIED — F104 widened in place** | CR8-M5 | Merged with M-A into ONE coherent widened F104 (+ spec.md:229) naming three causes: (a) selector instability, (b) cross-persona heuristic_tag divergence, (c) F59-text-in-identifier. In-place, no new ID. Net 0. |
+| M-F | F26/F151 baseline-diff has no disclosed false-"new-finding" mode when identity tuple drifts between runs (MAJOR) | **APPLIED — 2 new disclosure lines F200/F201** | CR8-M6 | Distinct from M-E: this is cross-RUN heuristic_tag reclassification → different finding_id → false F26 regression block. F70/F71 cover detection MISSES, not identity-drift false positives. F200 discloses the drift; F201 instructs the operator to check the baseline for a same-step neighbor before treating a new finding_id as a regression. Per directive: NOT folded into frozen F138/F139. Landed HIGH (spec.md:229). Net +2. |
+| M-G | F148 (CRITICAL) only fixture hardcodes status 404 though text says "any non-2xx / any other error" (MAJOR) | **APPLIED — fixture + assertion** | CR8-M7 | Added `robots-500-allow-all-ok.json` + a 2nd assertion in the existing F148 test block asserting code 0, proving the gate enforces the RANGE rule, not a 404-literal. No requirement wording change (text already correct). RED preserved (block already carries a failing positive control). Net 0. |
+| MIN-1 | Gherkin names "click trace" evidence type with zero requirement/schema/fixture backing (MINOR) | **APPLIED — docs-only** | CR8-MIN1 | spec.md:69 "(screenshot, DOM snippet, or click trace)" → "(screenshot or DOM snippet)". Matches the only two shapes F43/F44/F166/F167 redact. Net 0. |
+| MIN-2 | F41/F148 undefined behavior on a pure network-layer robots.txt fetch failure (MINOR) | **APPLIED — F148 reworded + fixture** | CR8-MIN2 | Reworded F148 to make the network-level case textually explicit (comma-list, req-lint-atomic); added `robots-fetch-network-error-allow-all-ok.json` + assertion in the F148 block; light spec.md:200 alignment. In-place edit. Net 0. |
+| MIN-3 | F179/F180 correlation criterion not observable via standard CDP/Playwright, not named by ID in disclosure (MINOR) | **APPLIED — spec.md disclosed-gap bullet** | CR8-MIN3 | Added a "Known verification gaps" bullet naming F179/F180, the heuristic approximation, and F180's fail-safe (miss → block, never wrongful exempt). Cross-refs the CR5-B2/line-437 deferred reword. Disclosure, not the reword (that stays build-phase). Net 0. |
+| MIN-4 | F83 examples/tasks.json "pass directly to the CLI" unsatisfiable vs a real app (MINOR) | **REJECTED — re-litigation of DR-28** | CR8-MIN4 | Already adjudicated MINOR at scrub-log.md row 15 (DR-28) / CR6 disposition #15 (SKIPPED-with-reason): the fix is a build-phase SKILL.md quickstart line (SKILL.md does not exist at spec phase). Fails safely into the reason_code taxonomy. The directive itself says "No requirements.txt change." Tracked as the existing build-phase residual; no spec change now. |
+| MIN-5 | F192 content-derivation lock exempts ci-diff.mjs/validate-persona.mjs (MINOR) | **REJECTED — re-litigation of CR7 scrub-log:433** | CR8-MIN5 | Verbatim re-raise of the CR7 panel item "F192 anti-filename-dispatch scoped to only 2 of 5 scripts", disposition DECLINED (test-rigor/anti-gaming only, not product-wrong-output). Directive itself: "no spec/test change required now." Build-phase follow-up already ranked in the CR7 freeze-readiness list (#2). No change. |
+| MIN-6 | spec.md:188 F192 bullet claims closure "totalizingly" without the scrub-log's declined-scope caveat inline (MINOR) | **APPLIED — spec.md wording precision** | CR8-MIN6 | The one live sliver of the otherwise-re-litigated F192 pair: appended the scoped-residual caveat (2-of-5-scripts, CR7-DECLINED) to spec.md:188 before "Requirement ID: F192." Docs-only; no test/requirement-ID change. Net 0. |
+| MIN-7 | N5 45-min SLA structurally unenforceable vs F131 50-min default (MINOR) | **APPLIED — N5 comment clarification** | CR8-MIN7 | Appended a clause to the N5 provenance comment block: F131's 50-min default is a deliberate safety-margin kill-switch ABOVE N5's 45-min target (the standard pattern), N5 is MEDIUM/BLOCKS:none, never runner-gate-enforced. Comment-only, no F/N line. Net 0. |
+| MIN-8 | F191 only tests the false-"completed" direction; the reverse (hand-set BLOCKED, derived not-blocked) untested (MINOR) | **APPLIED — fixture + assertion** | CR8-MIN8 | Added `run-status-stored-blocked-derived-not-bad.json` (3 completed personas, stored run_status "BLOCKED") + an assertion in the existing F191 CR6-B6 block that the gate rejects a falsely-BLOCKED disagreement in BOTH directions. F191 text already covers both directions — coverage-only. RED preserved (block already carries `assert.equal(agree.code,0)`). Net 0. |
+
+### Panel-rejected attacks (concurred, not applied)
+
+The panel itself rejected 4 attacks — all re-open durable decisions (N5 residual-gap exclusion → the
+requirements.txt:48 provenance comment already flags it; robots.txt not auto-relaxed for localhost →
+D15 exhaustive-relaxation decision + CR3 systemic resolution; F83/F8/F37 CLI-defaulting tension →
+ADR-0001 "Required: yes" + passing F6/F7/F8/F37 tests; F12 free-text branch nullifies reproducibility
+apparatus → already re-rejected across CR3/CR4). This arbiter concurs; none was applied.
+
+### RED-safety note (why every added assertion keeps the suite 0-pass)
+
+All CR8 test additions went into EXISTING test blocks (F148, F191, F194) that already carry a failing
+positive assertion (`assert.equal(code, 0)` / `assert.match` on missing-script empty stdout). node:test
+fails a test if ANY assertion throws, so the added `notEqual`/`equal`/`match` assertions cannot flip a
+block to green — no new standalone `notEqual(code,0)`-only test block was created (the exact RED-safety
+trap flagged at CR7 scrub-log:444). No new test() block added; the suite stays 83 tests, 0 pass, 83 fail.
+
+### FREEZE-READINESS: unchanged — **FREEZE-READY** (no blocking item)
+
+CR8 removed no guarantee and added only disclosures + coverage. The one BLOCKER was a wording
+self-contradiction already repaired. No CR8 item makes a correctly-built product emit categorically-wrong
+untraceable output. Freeze remains withheld only pending founder approval, per the standing NO-freeze
+instruction.
+
+### CR8 count sync
+
+Fresh re-runs from repo root: `req-lint.sh .swe-spec/requirements.txt` → **208/208 PASS** (199 functional
++ 9 nonfunctional; F199-F201 added — net +3); `coverage-audit.sh --pre-freeze` → **8/8 stages PASS**;
+`test-coverage-audit.sh docs/specs/0001-ux-gauntlet-mvp.spec.md test/acceptance.test.mjs` → **95/95
+CRITICAL PASS** (unchanged — F199-F201 landed HIGH, no CRITICAL id added/removed); `node --test
+test/acceptance.test.mjs` → **83 tests, 0 pass, 83 fail** (RED preserved; CR8 added assertions to the
+existing F148/F191/F194 blocks, no new test block). validation.md updated in the same pass.
