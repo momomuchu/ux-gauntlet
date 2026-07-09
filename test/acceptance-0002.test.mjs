@@ -48,6 +48,10 @@ test('S1 S2 S3 S28: structural findings schema exists and its metadata pins axe-
   for (const tag of RULESET_TAGS) {
     assert.match(schemaStr, new RegExp(tag), `ruleset tag "${tag}" must be declared in the schema metadata (S3)`);
   }
+  // CR5-M9: S1's "collect ... passes as structured data" clause was never locked by any schema field.
+  // The schema must declare an axe_passes_count field so a builder cannot ship a scanner that silently
+  // never records the axe pass count. (The tabindex-rule-disable half of M9 is locked by the S1/S47 settle test.)
+  assert.match(schemaStr, /axe_passes_count/i, 'the schema declares an axe_passes_count field so S1\'s pass-collection clause is persisted, not silently dropped (S1/CR5-M9)');
 });
 
 test('S4 S16: name-role-value is checked for every interactive component, incl. custom-widget ARIA state', () => {
@@ -173,6 +177,13 @@ test('S21: identical DOM + pinned axe-core 4.12.1 + identical config yields a by
   const drift = sgate('structural-determinism-drift-bad.json');
   assert.match(out(drift), /determinism|finding-id|violation-id|identical/i, 'the gate names the determinism invariant when two same-input runs report divergent finding-id sets (S21)');
   assert.notEqual(drift.code, 0, 'two same-input runs recording divergent finding-id sets must fail the gate with a non-zero exit (S21)');
+  // CR5-B5: impact is now in S21's covered record set. Two same-input runs with byte-identical
+  // {finding_id, severity, result-type} but a DRIFTING impact (moderate -> critical on the same
+  // incomplete finding_id — severity is pinned 0 by S36, so impact carries the only cross-run signal)
+  // flip the S53/D7 CI-block outcome while satisfying the pre-CR5 covered set. This must now be caught.
+  const impactDrift = sgate('structural-determinism-impact-drift-bad.json');
+  assert.match(out(impactDrift), /determinism|impact|finding-id|identical/i, 'the gate names the determinism invariant when impact drifts on a stable finding_id whose severity + result-type match (S21/CR5-B5)');
+  assert.notEqual(impactDrift.code, 0, 'two same-input runs whose impact drifts on a stable finding_id (flipping the S53 CI-block outcome) must fail the gate with a non-zero exit — impact is in S21 covered set (S21/CR5-B5)');
   const ok = sgate('structural-determinism-stable-ok.json');
   assert.equal(ok.code, 0, 'two same-input runs recording an identical finding-id set pass the gate (negative control, S21)');
 });
@@ -243,9 +254,17 @@ test('B4 (S24 D6, CR4-M11): the cross-lane join is computed by the real structur
   // uncovered. Disjoint target_element_identifier values on both sides must surface the disclosure.
   const noMatch = scref('structural-join-no-match-0002.json', 'join-persona-no-match-0001.json');
   assert.match(out(noMatch), /no cross-lane match found/i, "the script discloses 'no cross-lane match found' for disjoint identifiers rather than emitting an empty join array (S24/M11)");
+  // CR5-M11: the verbatim `route` key must be load-bearing. Identical target_element_identifier (button#buy)
+  // on both sides but a DIFFERENT route (/pricing vs /checkout) must NOT join — a cross-ref keying solely on
+  // target_element_identifier (ignoring route) would wrongly match. NOTE: the S24 join is otherwise
+  // v2-inert against real 0001 output (no 0001 script populates run.route — see spec.md Known gaps); this
+  // locks the route key for the day a future 0001 change writes it. Both fixture pairs hold route identical
+  // before CR5; this pair varies ONLY route.
+  const routeMismatch = scref('structural-join-route-mismatch-0002.json', 'join-persona-route-mismatch-0001.json');
+  assert.match(out(routeMismatch), /no cross-lane match found/i, "identical target_element_identifier but different route surfaces 'no cross-lane match found' — the verbatim route key is load-bearing, not ignored (S24/CR5-M11)");
 });
 
-test('S25 S26 S27 S29: every report prints the validity envelope with vendor-reported caveats on BOTH figures', () => {
+test('S25 S26 S26b S26c S27 S29: every report prints the validity envelope with vendor-reported caveats on BOTH figures', () => {
   // Requirement ID: S25 (also S26, S27, S29) — both figures vendor-reported + not independently audited (CR1-M6)
   const valid = srender('structural-valid.json'); // RED: renderer not built -> code 1, stdout ''
   const md = valid.stdout;
@@ -258,6 +277,15 @@ test('S25 S26 S27 S29: every report prints the validity envelope with vendor-rep
   assert.match(md, /focus order/i, 'the envelope names focus order among the non-automatable classes (S26)');
   assert.match(md, /focus visible/i, 'the envelope names focus visible among the non-automatable classes (S26/M6)');
   assert.match(md, /keyboard operability/i, 'the envelope names keyboard operability among the non-automatable classes (S26/M6)');
+  // CR5-M12 (S26b): the contrast-exemption taxonomy was written at CR4 but had ZERO test coverage — a
+  // builder could freeze-ship a validity envelope omitting it entirely. Lock all three categories here.
+  assert.match(md, /logotype/i, 'the envelope names the logotype contrast-exemption category (S26b/CR5-M12)');
+  assert.match(md, /incidental/i, 'the envelope names the incidental-text contrast-exemption category (S26b/CR5-M12)');
+  assert.match(md, /inactive/i, 'the envelope names the inactive-UI-component contrast-exemption category (S26b/CR5-M12)');
+  // CR5-mandate (S26c): the determinism validity disclosure — byte-identical determinism (S21/S42) holds
+  // ONLY within a matching render_environment_id; cross-render-environment reproduction is a disclosed
+  // residual the lane does not guarantee, which is why S44 refuses cross-environment CI comparison.
+  assert.match(md, /render[_ -]?environment/i, 'the envelope discloses that determinism is scoped to a matching render_environment_id — cross-environment reproduction is not guaranteed (S26c/CR5)');
   assert.match(md, /best-practice/i, 'the envelope labels heading-order as best-practice, not a WCAG failure (S27)');
   assert.doesNotMatch(md, /DOM-order finding/i, 'the envelope no longer references DOM-order findings — that check is a cut MVP non-goal (S27/Mi2)');
   assert.match(md, /not a wcag conformance certification/i, 'the report disclaims WCAG conformance certification (S29)');
@@ -287,6 +315,20 @@ test('S30 S37 S38 S46: the CI gate blocks on critical impact, on a refused run, 
   // advisory sev-3 ambiguous-main merged clean while a narrower sev-4 defect blocked.
   const ambiguousMain = sci('structural-ambiguous-main-suppresses-s12-bad.json');
   assert.notEqual(ambiguousMain.code, 0, 'the CI gate exits non-zero on a cannot-evaluate-ambiguous-main finding — the fail-closed containment result blocks the merge despite its pinned severity 3 (S56/CR3-1)');
+  // CR5-B6: S38 reads the finding CODE directly, never the derived severity integer. A genuine
+  // main-content-missing defect whose S35 code->severity lookup was corrupted (severity 3, not 4) must
+  // STILL block CI — a gate keying on "severity 4" would miss it, silently merging a missing-main-content page.
+  const mismapped = sci('structural-nonaxe-severity4-mismapped-bad.json');
+  assert.match(out(mismapped), /main-content-missing|code|blocked|merge/i, 'the CI gate names the code-based non-axe block rule for a main-content-missing finding whose severity was mis-mapped to 3 (S38/CR5-B6)');
+  assert.notEqual(mismapped.code, 0, 'the CI gate blocks a main-content-missing finding read from its CODE even when its severity integer was mis-mapped to 3 — S38 reads code, not the derived severity, matching S52/S56 (S38/CR5-B6)');
+  // CR5-B7: advisory negative controls — the gate must NOT over-block. A report whose only finding is an
+  // axe serious/moderate/minor violation, or one of the six advisory non-axe codes, passes CI clean.
+  // Without these, a "block if findings.length > 0" gate silently inverts D1's reversible-advisory model
+  // yet passes every BLOCK-only assertion in the suite.
+  const advisoryAxe = sci('structural-axe-severity-serious-bad.json');
+  assert.equal(advisoryAxe.code, 0, 'the CI gate exits 0 on a report whose only violation is an axe serious-impact (advisory, not critical) finding — the gate does not over-block (S30/S52/CR5-B7)');
+  const advisoryNonAxe = sci('structural-main-content-not-in-main-bad.json');
+  assert.equal(advisoryNonAxe.code, 0, 'the CI gate exits 0 on a report whose only finding is an advisory non-axe code (main-content-not-in-main, severity 3, advisory) — the gate does not over-block (S38/CR5-B7)');
   const clean = sci('structural-no-violations-ok.json');
   assert.equal(clean.code, 0, 'a genuinely clean, completed run with zero violations passes the CI gate (negative control, S30/S46/S56)');
 });
@@ -296,6 +338,12 @@ test('S45: the lane records run_status axe-execution-failed rather than a silent
   const failed = sgate('structural-axe-execution-failed-bad.json');
   assert.match(out(failed), /axe-execution-failed|execution.?failed|never tested|not.*complete/i, 'the gate names the axe-execution-failed run_status (S45)');
   assert.notEqual(failed.code, 0, 'a route whose axe run failed to complete must fail the gate with a non-zero exit, never advisory-pass as zero-violations clean (S45)');
+  // CR5-M10: S45's RETENTION clause — non-axe DOM checks that completed before the axe failure are STILL
+  // emitted; only axe-derived findings are omitted for the route. The pre-CR5 fixture had findings:[] and
+  // proved only the "omit axe findings" half. Inspect the fixture content to lock the retention half too.
+  const s45fx = json('test/fixtures/structural-axe-execution-failed-bad.json');
+  assert.ok(s45fx.findings.some((f) => f.source !== 'axe'), 'an axe-execution-failed route still emits its completed non-axe DOM-check findings — S45 retention clause (CR5-M10)');
+  assert.ok(!s45fx.findings.some((f) => f.source === 'axe'), 'no axe-sourced finding is emitted for an axe-execution-failed route — only the axe-derived findings are omitted (S45/CR5-M10)');
   const ok = sgate('structural-valid.json');
   assert.equal(ok.code, 0, 'a completed run passes the gate (negative control, S45)');
 });

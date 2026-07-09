@@ -40,7 +40,19 @@
   },
   "violation_ids": [],
   "incomplete_ids": [],
-  "findings": [],
+  "findings": [
+    {
+      "lane": "structural",
+      "source": "dom-check",
+      "finding_id": "f-signup-positive-tabindex",
+      "code": "positive-tabindex",
+      "severity": 1,
+      "target_element_identifier": "#promo-banner",
+      "target_selector": "#promo-banner",
+      "route": "/signup",
+      "detail": "CR5-M10: a non-axe DOM-check finding that COMPLETED before axe threw is still emitted (S45 retention clause). Only axe-derived findings are omitted for this route; the run still blocks CI on run_status axe-execution-failed (S46)."
+    }
+  ],
   "run_status": "axe-execution-failed",
   "axe_error": "axe.run() threw: page navigated away before evaluation completed"
 }

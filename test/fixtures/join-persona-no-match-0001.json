@@ -1,0 +1,28 @@
+{
+  "run": {
+    "route": "/pricing",
+    "url": "http://localhost:3000/pricing"
+  },
+  "findings": [
+    {
+      "lane": "persona",
+      "finding_id": "p-pricing-nm",
+      "friction_name": "nav is unclear",
+      "friction_type": "ambiguity_resolution",
+      "step": 1,
+      "heuristic_tag": "consistency-standards",
+      "personas_flagging": [
+        "vp-buyer"
+      ],
+      "convergence_tier": 2,
+      "severity": 2,
+      "severity_factors": {
+        "frequency": 2,
+        "impact": 2,
+        "persistence": 2
+      },
+      "target_element_identifier": "nav#top",
+      "target_selector": "nav#top"
+    }
+  ]
+}

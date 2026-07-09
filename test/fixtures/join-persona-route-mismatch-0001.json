@@ -1,0 +1,22 @@
+{
+  "run": {
+    "route": "/checkout",
+    "url": "http://localhost:3000/checkout"
+  },
+  "findings": [
+    {
+      "lane": "persona",
+      "finding_id": "p-checkout-1",
+      "friction_name": "buyer cannot tell what the buy button does",
+      "friction_type": "ambiguity_resolution",
+      "step": 3,
+      "heuristic_tag": "match-system-real-world",
+      "personas_flagging": ["vp-buyer"],
+      "convergence_tier": 1,
+      "severity": 3,
+      "severity_factors": { "frequency": 3, "impact": 3, "persistence": 3 },
+      "target_element_identifier": "button#buy",
+      "target_selector": "button#buy"
+    }
+  ]
+}

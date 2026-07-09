@@ -97,7 +97,8 @@ if (continueName) {
     return {
       name, found: true, tag,
       isSemanticControl: ['a', 'button', 'input'].includes(tag) || match.getAttribute('role') === 'button',
-      hasAccessibleName: !!(match.innerText || match.value || match.getAttribute('aria-label')),
+      // CR5-B4: continue-control accessible-name is sourced exclusively from axe's accname engine (S15/S49),
+      // never from an independent DOM truthiness check — the old hasAccessibleName field is retired here.
       keyboardFocusable: match.tabIndex >= 0 || ['a', 'button', 'input'].includes(tag),
     };
   }, continueName);
@@ -125,7 +126,8 @@ if (affordance) {
   else {
     if (!affordance.isSemanticControl) sev({ code: 'continue-not-semantic', severity: 3, heuristic: 'consistency-standards', detail: `The "${affordance.name}" control is a <${affordance.tag}>, not a real button/link — assistive tech may not expose it as actionable.` });
     if (!affordance.keyboardFocusable) sev({ code: 'continue-not-focusable', severity: 3, heuristic: 'flexibility-efficiency-of-use', detail: `The "${affordance.name}" control is not keyboard-focusable.` });
-    if (!affordance.hasAccessibleName) sev({ code: 'continue-no-name', severity: 3, heuristic: 'help-and-documentation', detail: `The "${affordance.name}" control has no accessible name.` });
+    // CR5-B4: continue-no-name finding code retired — the continue-control accessible-name failure mode is
+    // covered exclusively by S49's axe-accname-sourced check (S35 carries no continue-no-name code).
   }
 }
 for (const v of axe) sev({ code: `axe:${v.id}`, severity: v.impact === 'critical' ? 4 : v.impact === 'serious' ? 3 : v.impact === 'moderate' ? 2 : 1, heuristic: 'help-users-recognize-recover-errors', detail: `${v.help} (${v.nodes} node(s)) — e.g. ${v.sample || ''}` });

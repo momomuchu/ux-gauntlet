@@ -290,3 +290,101 @@ acceptance bullets (S57/S58/S59) are each referenced by a `# CR4-*` test asserti
 `existsSync`, or unbuilt-module `import`) so the suite stays 0-pass RED. Deliberate disclosed delta: the
 DECISION-BRIEF §3 mirror (M6) is outside this pass's write scope — recorded in the S26b spec bullet + the
 M6 table row above, not silently skipped.
+
+## CR5 consolidation + determinism honesty (2026-07-09): 21 CONFIRMED applied (7 BLOCKER + 12 MAJOR + 2 MINOR), 5 REJECTED re-confirmed
+
+Single-writer final-consolidation pass. Net requirement delta **+2** (S26c determinism-validity
+disclosure + S61 non-axe target_element_identifier stable-selector algorithm; 70 -> 72). Edited
+S1/S9/S15/S21/S38/S42/S58 in place; retired the spike's `continue-no-name` DOM check; disclosed the
+S24 join + S12 prominence heuristic in Known-gaps; Mn1/Mn2 doc+comment edits. No renumbering. Every
+changed line traced inline `# CR5-<defect-id>`. req-lint 72/72 exit 0; coverage-audit --pre-freeze 8/8;
+test-coverage-audit 36/36 CRITICAL; acceptance-0002 44/44 RED (0 pass); acceptance.test.mjs (0001) 93/0
+untouched.
+
+### Systemic mandate 1 — HONEST DETERMINISM SCOPING (kills the whole determinism-BLOCKER class)
+
+The panel plateaued because it was chasing a physically unachievable target: byte-identical
+cross-machine browser-render determinism (font-stack glyph shaping, image-decode timing). Resolved by
+claiming EXACTLY what is true, not by adding settle gates chasing perfection.
+
+- **The guarantee, stated precisely (S21/S42, now textually symmetric):** a byte-identical structural
+  finding-record set is emitted GIVEN the same DOM snapshot, the pinned axe-core 4.12.1, the pinned
+  browser version, a *matching* `render_environment_id`, after the S1 settle precondition completes.
+  B1/B3 fixed: **S42 was missing the `render_environment_id` clause its own D5b/SN8 prose claimed it
+  had** (CR4 scoped S21 but missed its non-axe twin S42) — S42 now carries the identical clause, so a
+  builder implementing S42 literally no longer ships an unscoped cross-environment claim SN8's own
+  glyph-shaping mechanism falsifies.
+- **The disclosed residual (S26c, NEW):** cross-render-environment reproduction is NOT guaranteed —
+  host OS glyph shaping can flip S12's largest-block tie-break, image-decode timing can flip an axe
+  color-contrast `incomplete`<->pass, on byte-identical DOM across two runners. The validity envelope
+  now states this is a residual the lane does not guarantee, and is exactly why S44 refuses to treat
+  two reports with differing `render_environment_id` as comparable (S44 blocks cross-environment CI
+  comparison BECAUSE the lane does not make that claim). The lane claims deterministic verdicts INSIDE
+  one pinned render environment, not byte-identical rendering ACROSS environments.
+- **The one cheap+real gate added (B2, S1):** the settle precondition now also waits for every `<img>`
+  + CSS `background-image` reachable from the DOM to reach a decoded/complete state (`await img.decode()`
+  + computed-style background-image check) before axe injection, still bounded by the existing fixed 10s
+  cap (an unmet image gate falls into `settle-timeout` like any other unmet precondition). This closes
+  the S1/image edge HONESTLY within a single environment — it is cheap, deterministic, and real; it is
+  NOT a perfection-chasing cross-machine gate. No other settle gate was added.
+
+### Systemic mandate 2 — S24 route-join fixed ONCE (M3 == M8 == M11, one root)
+
+The panel reconfirmed the same defect from three lenses (feasibility/evidence-fidelity/composition):
+no SPEC 0001 requirement or script (`assemble-run.mjs`) ever populates `run.route`, so S24's verbatim
+`route`-keyed join is inert against any real compliant 0001 bundle. Fixed once via the honest
+disclosure (directive option b): a Known-gaps bullet states the join is a **v2-dependent capability,
+structurally inert in the MVP** (resolves to the S24 "no cross-lane match found" disclosure on every
+real run), live only once a future 0001 change writes `run.route`. Frozen 0001 files + the schema are
+NOT touched. The route KEY itself is additionally locked (M11) by one `scref` route-mismatch fixture
+pair (identical `target_element_identifier`, differing route -> no match), so the join logic is correct
+for the day 0001 populates the field. One coordinated fix, not three line edits.
+
+### Remaining confirmed defects applied at judge severity (edit-first, minimal growth)
+
+| # | sev | disposition | how |
+|---|-----|-------------|-----|
+| B1/B3 | BLK | ACCEPT | S42 + `render_environment_id` clause, textually symmetric with S21 (mandate 1) |
+| B2 | BLK | ACCEPT | S1 image-decode readiness gate, bounded by the existing 10s cap (mandate 1) |
+| B4 | BLK | ACCEPT | S15 sentence retiring `continue-no-name`; deleted the `hasAccessibleName` computation + the `continue-no-name` sev() call from `scripts/structural-scan.mjs` (accessible-name sourced exclusively from S49 axe accname) |
+| B5 | BLK | ACCEPT | S21 covered set gains `impact` (S36 pins incomplete severity to 0, so impact is the sole S53/D7 field); +fixture `structural-determinism-impact-drift-bad.json` + S21-test assertion |
+| B6 | BLK | ACCEPT | S38 rewritten to block on the finding **code** (main-content-missing, continue-control-missing) read directly, never the derived severity integer (matches S52/S56); +fixture `structural-nonaxe-severity4-mismapped-bad.json` (code main-content-missing @ severity 3) + `sci()` assertion |
+| B7 | BLK | ACCEPT | +two advisory `sci()` negative controls (axe serious impact; advisory non-axe code) asserting exit 0 — proving the gate does not over-block (D1 reversible-advisory model) |
+| M1 | MAJ | ACCEPT (edit, net 0) | S9 narrowed to the accessible-name coverage-gap scan on section/[role=region]; removed the untestable role-membership dead text (an unlabeled section never acquires a landmark role); kept the 8-type enumeration as the reference set (S58 cross-ref). No S9b split — removal is minimal-growth + anti-slop |
+| M2 | MAJ | ACCEPT (edit) | S15 defines "flow step" = one route in the `--path` list (S39/S33); one continue-control expectation per route; closes the SPEC-0001-borrowed term with no operational unit |
+| M3/M8/M11 | MAJ | ACCEPT | one coordinated fix (mandate 2): Known-gaps disclosure + route-mismatch fixture pair |
+| M4 | MAJ | ACCEPT (edit) | S58 inlines the closed interactive-element selector union (a[href]/button/input/.../[role=*]/S9 landmarks/h1-h6) as the sole source of truth — no builder discretion |
+| M5 | MAJ | ACCEPT | +S61: non-axe `target_element_identifier` computed via 0001's F103/F183/F193 stable-selector algorithm, never an nth-child path that shifts with unrelated siblings (closes a same-environment determinism hole; additive + 0001-safe, references never mutates) |
+| M7 | MAJ | ACCEPT (document) | S12 `main-content-not-prominent` disclosed in Known-gaps as a raw-area heuristic known to misfire on narrow-column layouts — which is why it is pinned severity 2 / advisory (does not gate CI). Honest caveat, not a chased "perfect prominence" algorithm |
+| M9 | MAJ | ACCEPT (scoped) | +schema-test assertion locking an `axe_passes_count` field (S1's "collect passes" clause); softened from the directive's schema-required-array (avoids churning 200+ fixtures) — the tabindex-disable half is already locked by the S1/S47 settle test |
+| M10 | MAJ | ACCEPT | `structural-axe-execution-failed-bad.json` now carries a completed non-axe finding + the S45 test asserts a non-axe finding is retained AND no axe-sourced finding is emitted (S45 retention clause, both halves) |
+| M12 | MAJ | ACCEPT | +3 envelope assertions (logotype/incidental/inactive) locking S26b, previously zero-covered; +S26c render_environment_id disclosure assertion; test title renamed to include S26b/S26c |
+| Mn1 | MIN | ACCEPT (document) | spec.md bypass + use-of-color Non-goals bullets disclose the rule may still surface as a non-gating report entry (default axe impact serious, not critical); no rule-level exclusion configured (S1 disables only tabindex) |
+| Mn2 | MIN | ACCEPT | S26b trailing comment cites the already-listed brief source [2] (W3C Understanding SC 1.4.3); brief body §3 mirror still pending (out of write scope), recorded not skipped |
+
+### The 5 REJECTED — one-line cites, no re-litigation (per panel §3 + prior scrub-log)
+1. **0001 `report-gate.mjs` false-PASS on a misrouted structural bundle** — REJECTED: 5th verbatim
+   re-raise of a claim CONFIRMED once (CR3-B6) and disposed with the honest D6 naming-convention
+   disclosure already in spec.md; no spec-compliant builder wires the frozen 0001 gate. No req added.
+2. **0001 `ci-diff.mjs` incomplete-critical carve-out misapplied to a structural bundle** — REJECTED:
+   raised + rejected 4x (CR1/CR2/CR3/CR4); out of scope by design (fix would mutate frozen 0001),
+   mitigated by S57's separate self-validating gate. No req added.
+3. **S60 schema-requiredness for `impact` gameable by making it globally required** — REJECTED: S35's
+   existing `-ok` negative-control fixtures (dom-check findings with no impact field) already catch that
+   exploit when the full suite runs. No req added.
+4. **S57 trust-boundary omits browser_version/render_environment_id** — REJECTED: already disclosed as
+   an accepted residual in spec.md Known-gaps item 3 (CR3-M10); the proposed fix presupposes an
+   undefined canonical-value artifact. No req added.
+5. **S58 axe-execution-degraded only catches all-results-zero, not partial degradation** — REJECTED:
+   premised on a misread of axe-core — the described partial case is axe's documented `incomplete` path,
+   already CI-blocked by S18/S36/S53. No req added.
+Evidence-fidelity over-claims the panel's own §4 note flagged as adjudicated-to-MINOR (Mn1/Mn2) were
+applied at MINOR, not the input attack severity.
+
+### FREEZE-READINESS verdict
+No remaining defect is **product-wrong**. The determinism-BLOCKER cluster was a scoping/wording gap
+(the lane over-claimed cross-environment byte-identical rendering it cannot deliver) — now resolved by
+claiming exactly the within-environment guarantee that is true + disclosing the cross-environment
+residual. The residue on the panel's radar is determinism-wording (now honest), test-lag (M9/M10/M12
+fixture coverage, now closed), and re-litigation of frozen-0001 residuals (rejected with cites). Spec
+is freeze-ready pending founder approval.
