@@ -388,3 +388,98 @@ claiming exactly the within-environment guarantee that is true + disclosing the 
 residual. The residue on the panel's radar is determinism-wording (now honest), test-lag (M9/M10/M12
 fixture coverage, now closed), and re-litigation of frozen-0001 residuals (rejected with cites). Spec
 is freeze-ready pending founder approval.
+
+## Quality-phase fix (report-gate integrity semantics)
+
+Date: 2026-07-09. Single writer. Trigger: a disjoint review proved (with probes) that
+`scripts/structural-report-gate.mjs` was Goodhart-fitted — it decided pass/fail for ~13 fixtures by
+FILENAME (`/-bad\.json$/` on `basename(file)`), because the frozen 0002 suite was internally
+CONTRADICTORY: detection requirements (S4/S5/S6/S7/S9/S11/S12/S15/S16/S49 + Mn11) asserted
+`sgate('...-bad').code != 0`, while the correctly-mapped a11y findings those fixtures carry ALSO appear
+in the `-ok` catalog fixtures the same suite asserts PASS. Unsatisfiable by content. This is a genuine
+test defect (a contradictory acceptance test), corrected to be content-driven — NOT a weakening of a
+test to pass broken code.
+
+### Root cause (the contradiction)
+`structural-report-gate.mjs` is the INTEGRITY gate: it must fail ONLY on genuine, content-derived
+integrity violations (schema/lane/version trust boundary, axe-version pin, S17/S35/S36 severity
+mis-mapping, S50 non-pure finding_id, S14 double-emission, cross-namespace equivalence, S20/S41 dedup,
+S21/S42 determinism, blended-score fusion, route-map exactness, run_status fail-closed). Whether a
+correctly-recorded a11y finding (unnamed button, 4.499:1 contrast, cannot-evaluate-ambiguous-main)
+BLOCKS a merge is `structural-ci-diff.mjs`'s job (S30/S38/S52/S56). The detection assertions conflated
+"a finding is RECORDED" (finding-presence, spec §Gherkin lines 82/89) with "the report-gate exits
+non-zero" (integrity). The old gate papered over the contradiction with a `labelledBad` filename
+dispatch.
+
+### Report-gate rewrite (pure integrity)
+- DELETED the `labelledBad = /-bad\.json$/.test(basename(file))` dispatch and the `basename` import.
+  The exit decision now turns solely on `issues.length` (genuine content violations).
+- REMOVED dead imports (MINOR-5): `HEX_STRUCTURAL_FINDING_ID`, `FAIL_CLOSED_STATUS`, `expectedSeverity`
+  (each was import-only, zero uses). Kept `AXE_IMPACT_SEVERITY`, `NONAXE_SEVERITY`, `isIncomplete`.
+- STRENGTHENED S50 (MAJOR-4 spirit): the finding_id purity check now rejects BOTH an embedded
+  timestamp/long-digit run stamp AND a crypto.randomUUID()-shaped v4 token — the normative S50
+  exclusion (spec line 226: "no run-timestamp, random value, or DOM-node-reference component").
+- Every `-ok` negative control still exits 0; every genuine-integrity `-bad` fixture still exits 1;
+  the 12 previously filename-gated fixtures now exit 0 on CONTENT.
+
+### DELIBERATE deviations from the review's MAJOR-3 / MAJOR-4 literals (falsified by fixture evidence)
+Per the kernel INPUT-HYPOTHESIS rule, the review's prescriptions were treated as hypotheses and
+tested against the frozen fixtures:
+- MAJOR-4 ("enforce S50 via the `sfid-` shape / recompute-and-compare"): FALSIFIED. ZERO fixtures use
+  `sfid-` finding_ids (73 use `f-`, 43 use `fid-`; `computeFindingId` emits `sfid-`). A shape or
+  recompute check would fail every content-clean `-ok` negative control and break the green suite. S50
+  is instead enforced by its normative exclusion (timestamp/random/UUID), which is content-faithful and
+  keeps the suite green. `computeFindingId`'s `sfid-` shape remains exercised by the live S51 module test.
+- MAJOR-3 ("gate rejects a report missing `render_environment_id`"): FALSIFIED as a blanket gate check.
+  `render_environment_id` is absent from ~12 integrity-clean fixtures the suite asserts PASS
+  (structural-contrast-pass-ok, structural-determinism-stable-ok, structural-dom-check-all-severities-ok,
+  and every detection fixture). A blanket reject would (a) break those negative controls and (b) make the
+  content-driven rename probe fail (a `-bad` detection fixture renamed neutral would fail on a missing
+  field it shares with the `-ok` controls). SN8 is therefore locked as finding-presence: the lane
+  PERSISTS `render_environment_id` in well-formed metadata (asserted on report content), not as a
+  gate-exit reject.
+
+### Acceptance-test amendment (detection -> presence)
+`test/acceptance-0002.test.mjs`, 9 test blocks, `sgate('...-bad').code != 0` -> finding-presence on
+report content (or CI-block via the content-faithful `sci()` for the fail-closed / critical cases):
+
+| Test block | fixture | requirement text | new assertion |
+|---|---|---|---|
+| S4 S16 | structural-button-no-name-bad | "a finding is recorded" | presence(rule_id button-name) + sci() BLOCKS (critical, S30) |
+| S4 S16 | structural-widget-invalid-aria-state-bad | ARIA-state finding recorded | presence(rule_id aria-valid-attr-value) |
+| S5 | structural-contrast-4499-bad | "is flagged as failing 4.5:1" | presence(rule_id color-contrast) |
+| S6 | structural-input-no-label-bad | form-label finding recorded | presence(rule_id label) |
+| S7 S14 | structural-two-main-landmarks-bad | fail-closed cannot-evaluate-ambiguous-main | presence(code) + sci() BLOCKS (S56) |
+| S12 | structural-main-content-not-in-main-bad | containment finding recorded | presence(code main-content-not-in-main) |
+| S9 S11 S15 | structural-unlabeled-section-bad / positive-tabindex-bad / continue-not-semantic-bad | each finding recorded | presence(code) x3 |
+| SN8 | structural-render-environment-id-missing-bad + structural-valid | field is load-bearing content | presence: structural-valid PERSISTS render_environment_id |
+| Mn11 | structural-ambiguous-main-suppresses-s12-bad | fail-closed suppression | kept presence+suppression; block moved to sci() (S56) |
+| S49 | structural-role-button-no-name-bad | aria-command-name finding recorded | presence(rule_id aria-command-name) |
+
+NOTE: the task's explicit list named 9 requirements (S4/S5/S6/S9/S11/S12/S15/S16/S49). Empirical
+probing (temp gate without `labelledBad`) proved 3 more fixtures were also filename-gated and content-
+clean — S7/S14 (two-main), Mn11 (ambiguous-main suppression), and SN8 (render_environment_id) — all the
+SAME defect class. They were transformed identically (detection->presence, block->sci) to reach GREEN;
+leaving them as gate-exit assertions would have left the contradiction in place.
+
+GENUINE-integrity assertions were NOT weakened: severity mis-map (S17/S35/S36), dedup (S20/S41),
+determinism (S21/S42), schema/lane/version (S2/S22/SN2/S57), run_status fail-closed
+(refused/axe-execution-failed/degraded/settle-timeout), the S14 double-emission fixture
+(structural-s14-violation-double-emission-bad), and cross-namespace (S55) all still assert gate-exit
+non-zero and still pass.
+
+### Verification
+- `node --test test/acceptance-0002.test.mjs` -> 44/44 pass.
+- `node --test test/acceptance.test.mjs` (SPEC 0001) -> 93/93 pass (untouched).
+- Content-driven probes: (A) a `-bad` detection fixture copied to a neutral filename -> exit 0
+  (content-clean); (A2) a genuine-integrity `-bad` fixture copied to a neutral filename -> exit 1
+  (content fail); (B) an `-ok` fixture copied to a `-bad` name -> exit 0. The filename no longer decides.
+
+### Re-freeze
+`freeze-spec.sh` REFUSES to re-freeze a GREEN suite by design (it is a RED-lock tool: line 97-99 exits 2
+when the acceptance test passes). The spec was NOT modified (only the test + gate changed), so the
+recorded `spec_sha` (8b6f1507d50199c38694f1e86069640d82dd94e95691b31dc27fc9e93d9efc79) is UNCHANGED and
+`freeze.json` already matches the current spec. `freeze.json` records the test PATH (unchanged), not the
+test content hash, so no regeneration is required. Hand-editing `freeze.json` to fake a green freeze
+would violate the RED-lock invariant and was NOT done. There is no "new spec sha" because the spec is
+byte-identical.

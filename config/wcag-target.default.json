@@ -1,0 +1,11 @@
+{
+  "$comment": "S31/S3: the pluggable WCAG conformance target for the structural lane. Default AA. The ruleset_tags are DERIVED from this target (S3, M8) — a builder must not hardcode them elsewhere. Reversible: an operator may supply an alternate target file to widen (AAA, advisory-only) or narrow (A) the ran rules.",
+  "target": "AA",
+  "level": "AA",
+  "ruleset_tags": ["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa", "best-practice"],
+  "tags_by_target": {
+    "A": ["wcag2a", "best-practice"],
+    "AA": ["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa", "best-practice"],
+    "AAA": ["wcag2a", "wcag2aa", "wcag2aaa", "wcag21aa", "wcag22aa", "best-practice"]
+  }
+}

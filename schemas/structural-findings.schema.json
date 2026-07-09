@@ -1,0 +1,132 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://ux-gauntlet/schemas/structural-findings.schema.json",
+  "title": "UX Gauntlet structural-lane findings bundle (SPEC 0002)",
+  "description": "The DETERMINISTIC structural UI-quality lane output contract. One schema FAMILY with the persona lane (schemas/findings.schema.json), discriminated by a mandatory top-level + per-finding lane:\"structural\" field (D6). axe-core is pinned to 4.12.1 (S2) with the AA ruleset tag set (S3).",
+  "type": "object",
+  "required": ["run", "findings", "lane"],
+  "properties": {
+    "schema_version": { "$ref": "#/$defs/schema_version" },
+    "lane": { "const": "structural" },
+    "run": {
+      "type": "object",
+      "properties": {
+        "route": { "type": "string" },
+        "url": { "type": "string" },
+        "run_status": { "$ref": "#/$defs/run_status" }
+      }
+    },
+    "metadata": { "$ref": "#/$defs/metadata" },
+    "validity_envelope": { "type": "object" },
+    "violation_ids": { "type": "array", "items": { "type": "string" } },
+    "incomplete_ids": { "type": "array", "items": { "type": "string" } },
+    "findings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/finding" }
+    }
+  },
+  "$defs": {
+    "schema_version": {
+      "description": "SN2: the supported versioned schema value the gate checks before accepting the file.",
+      "const": 1
+    },
+    "run_status": {
+      "type": "string",
+      "enum": [
+        "completed",
+        "refused",
+        "axe-execution-failed",
+        "axe-execution-degraded",
+        "settle-timeout"
+      ]
+    },
+    "metadata": {
+      "type": "object",
+      "description": "S28 report metadata. Pins the axe-core version (S2), the WCAG-target-derived ruleset tags (S3), the Playwright browser binary version (SN7), and the render_environment_id that scopes the S42 determinism guarantee (SN8).",
+      "required": ["axe_version", "ruleset_tags", "browser_version"],
+      "properties": {
+        "axe_version": {
+          "description": "S2: axe-core is pinned exactly.",
+          "const": "4.12.1"
+        },
+        "ruleset_tags": {
+          "description": "S3: the AA-target ruleset tags. Derived from config/wcag-target.default.json, not hardcoded.",
+          "type": "array",
+          "items": {
+            "enum": ["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa", "best-practice"]
+          }
+        },
+        "wcag_target": { "type": "string" },
+        "browser_version": {
+          "description": "SN7: the pinned Playwright browser binary version.",
+          "type": "string"
+        },
+        "render_environment_id": {
+          "description": "SN8/D5b: the OS/font-rendering stack id that scopes the S42 cross-machine determinism guarantee.",
+          "type": "string"
+        },
+        "render_environment_version": { "type": "string" },
+        "axe_passes_count": {
+          "description": "S1/CR5-M9: the count of axe pass results, persisted so S1's pass-collection clause is not silently dropped.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "settle_precondition_met": { "type": "boolean" },
+        "timestamp": { "type": "string" },
+        "expected_main_content": { "type": "object" }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "required": ["lane", "finding_id", "severity"],
+      "properties": {
+        "lane": { "const": "structural" },
+        "finding_id": { "type": "string" },
+        "source": {
+          "type": "string",
+          "enum": ["axe", "axe-incomplete", "dom-check"]
+        },
+        "code": { "type": "string" },
+        "rule_id": { "type": "string" },
+        "impact": {
+          "description": "S60/M9: the RAW axe impact string, persisted distinct from the derived severity integer so the S53 critical-impact CI predicate (which reads impact, not severity) stays reachable.",
+          "type": "string",
+          "enum": ["critical", "serious", "moderate", "minor"]
+        },
+        "severity": {
+          "description": "S17: derived severity, bounded 0-4. 0 = incomplete/needs-manual-review (S18/S36).",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4
+        },
+        "result_type": {
+          "type": "string",
+          "enum": ["violation", "incomplete", "pass"]
+        },
+        "target_element_identifier": { "type": "string" },
+        "target_selector": { "type": "string" },
+        "route": { "type": "string" },
+        "needs_manual_review": { "type": "boolean" },
+        "help": { "type": "string" },
+        "detail": { "type": "string" }
+      },
+      "oneOf": [
+        {
+          "description": "axe-sourced records must persist a raw impact string (S60/M9).",
+          "properties": { "source": { "const": "axe" } },
+          "required": ["impact"]
+        },
+        {
+          "description": "axe incomplete-derived records carry an impact for the S53 CI predicate; severity is pinned 0 (S36).",
+          "properties": { "source": { "const": "axe-incomplete" } },
+          "required": ["impact"]
+        },
+        {
+          "description": "non-axe DOM-check records key on their finding code (S35 fixed severity table).",
+          "properties": { "source": { "const": "dom-check" } },
+          "required": ["code"]
+        }
+      ]
+    }
+  }
+}
