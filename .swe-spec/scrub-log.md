@@ -661,3 +661,72 @@ CRITICAL PASS** (+4: F203/F206/F207/F208 landed on CRITICAL bullets, each refere
 assertion; F202/F204/F205/F209 landed MEDIUM/HIGH); `node --test test/acceptance.test.mjs` → **86 tests,
 0 pass, 86 fail** (RED preserved; +3 new test blocks + 7 new fixtures). categorized-requirements.md +
 spec.md changelog + lint-result.txt updated in the same pass.
+
+## CR10 final pre-freeze cleanup
+
+Final spec-hardening pass before freeze (`.swe-spec/CHALLENGE-ROUND-10.md`, 17 confirmed: 3 BLOCKER,
+7 MAJOR, 7 MINOR; 3 panel-rejected). Posture per the standing executor contract: **cleanup, not
+redesign** — all 17 are prose/CLI-contract/disclosure/fixture consistency defects, none product-wrong
+behavior. **Net requirement delta = 0** (216 F/N lines before and after; ZERO new F/N lines, zero
+deleted). Every fix is an in-place wording edit, an ADR-prose clause (already normative via F36), a
+spec.md disclosure/residual, or a test-assertion edit. The round-10 fix_directives that proposed NEW
+requirements (F210, an "F196"/"F209"/"F46a" — several colliding with already-assigned IDs) were
+re-expressed as in-place/prose/disclosure fixes per the near-zero-delta mandate; see per-item below.
+
+### Per-item disposition
+
+| # | Sev | Defect | Disposition | Surface(s) | Trace |
+|---|-----|--------|-------------|-----------|-------|
+| B1 | BLOCKER | F10-per-action vs F136/F159 frequency>1 unreachable | Clarified F10 in place to "one instance per DISTINCT off-path action; a re-encounter increments the instance's within-run re-encounter count (F136), never a new instance" — uses the EXISTING F136 count, no new field/mechanism, no F210. Mirrored in spec.md:186. | requirements.txt F10; spec.md:186 | CR10-1 |
+| B2 | BLOCKER | ADR exit-code table double-buckets "missing required flag" at exit 1 AND exit 2 | Removed the stray "missing required flag" from the exit-2 definition; stated once: exit 2 = usage error (unknown flag, or `--max-parallel` < 2), NEVER an absent required flag (always exit-1 refusal per F107/F108). | ADR exit-code para | CR10-B2 |
+| B3 | BLOCKER | `--help` precedence over F107/F108 aggregation undefined | ADR `--help` row now grants explicit precedence: prints usage + exits 0, checked BEFORE any F107/F108 aggregation, independent of flag completeness in either direction. Added a companion `--help` precedence test (both directions: all-missing AND alongside a complete valid invocation). | ADR `--help` row; test (+1 test) | CR10-B3 |
+| M1 | MAJOR | spec.md:249 "precondition_step is the ONLY exemption" contradicts :201 | Reworded :249 to "one of the per-step submissions … full D15 list: precondition_step, audited_terminal_step, test_mode payment_step". Prose only. | spec.md:249 | CR10-MAJ1 |
+| M2 | MAJOR | Execution model undefined (ADR=plain CLI vs F30/F31/D8 agent-delegation) | Added ADR invocation-precondition sentence (runner makes no LLM calls; MUST run in an agent session supplying Task-delegation; F107/F108 do not test for it → F97 fallback). Extended N8's parenthetical to disclose the same. No new F-line (F97/DR-37 already own the disclosed behavior). | ADR (post-table); requirements.txt N8 | CR10-MAJ2, CR10-4 |
+| M3 | MAJOR | Shipped default file paths' cwd-vs-package resolution unspecified | Stated the resolution contract in the ADR `--tasks`/`--denylist` rows (shipped defaults resolve relative to the skill package dir; operator custom paths relative to cwd). Bound by existing F36 — no new requirement. | ADR `--tasks`/`--denylist` rows | CR10-MAJ3 |
+| M4 | MAJOR | No requirement announces where a completed run's output landed | Added ADR `--out` clause: on completion the CLI prints the resolved `--out` dir + summary.json path to stdout. Surfaces the existing F84 paths; bound by F36 — no new requirement. | ADR `--out` row | CR10-MAJ4 |
+| M5 | MAJOR | F206 cites F147 which explicitly excludes terminal_friction | **RECONCILED with MINOR-1 (near-duplicate) into ONE edit** — see below. | requirements.txt:378; spec.md:191 | CR10-5 |
+| M6 | MAJOR | spec.md:215 overclaims F209 "satisfies brief §2.3's mandate" | Narrowed to "implements the brief's cited PARADIGM case (first-load visual defect), a disclosed narrowing of §2.3's fuller concept"; folded in the F13 default-false clause + a pointer to the F46-merge residual. Prose only. | spec.md:215 | CR10-MAJ6 |
+| M7 | MAJOR | F206 disclosure test uses an over-broad 5-way OR (bare `round\(mean`) | Tightened to bounded-proximity (terminal_friction within a 0-140 window of the deterministic-cap language), mirroring the F181/CR6-B4 safeguard; dropped the standalone `round\(mean` branch. | test:584 | CR10-MAJ7 |
+| m1 | MINOR | F206 F147 mis-citation (2nd, independent confirmation) | Near-duplicate of M5 — see reconciliation. | (as M5) | CR10-5 |
+| m2 | MINOR | F179/F180 correlation-miss reads fail-OPEN in isolation | Reworded F180 to state fail-CLOSED self-containedly: not exempted by any per-step flag; stays subject to F40's default dry-run block (aborted). Aligns the requirement text with the already-frozen fail-closed fixture — no behavior change. | requirements.txt F180 | CR10-3 |
+| m3 | MINOR | ADR `--personas` "every file" looser than spec.md's `personas/*.yaml` | ADR `--personas` row → "every `*.yaml` file in personas/", citing spec.md:38. Prose consistency. | ADR `--personas` row | CR10-MIN3 |
+| m4 | MINOR | F161 impact input has no classification-boundary criterion | Disclosed as a documented residual in Known verification gaps (analogous to the friction_type/sk- residuals); no new disclosure-requirement F-line (near-zero-delta posture). | spec.md residuals | CR10-MIN4 |
+| m5 | MINOR | F13 market_impact has no default for the non-triggered case | Reworded F13 in place: "defaulting to false except where F209's trigger sets it true." Single atomic obligation. Closes the "arbitrary true elsewhere" loophole. | requirements.txt F13; spec.md:215 | CR10-2 |
+| m6 | MINOR | F46 merge silent on market_impact (true can be dropped) | Disclosed as a documented residual (exact sibling of the F177 friction_type merge-tiebreak residual); market_impact is a BLOCKS:low secondary signal → disclose-don't-add per CR7/CR8 precedent, no F46a. | spec.md residuals + :215 | CR10-MIN6 |
+| m7 | MINOR | spec.md:190 stale gate() counts (~112 / ~109) | Corrected to the exact current counts 134 (grep `= gate('`) and 132 (134 minus the 2 content-derivation-proven fields). Numeric-accuracy prose fix. | spec.md:190 | CR10-MIN7 |
+
+### Near-duplicate reconciliation (M5 + m1 → ONE edit)
+
+The panel flagged two independently-confirmed findings (one MAJOR, one MINOR) both targeting the F206
+"(F147)" mis-citation at requirements.txt:378, with overlapping but non-identical fix_directives (M5:
+re-ground in F7/F8/F16/F50/F51 + note F147's exclusion; m1: drop "(F147)" and ground in F50/F51). These
+were reconciled into ONE coherent edit — applied identically to requirements.txt:378 AND spec.md:191 —
+rather than two conflicting edits to the same line:
+
+> "…a task-abandonment friction is recorded once per F51 (F50 forces at most one patience-threshold
+> crossing per persona per run, so its identity-tuple step index cannot recur within one run; F147's
+> step-normalization governs only off-path extra_action/ambiguity_resolution frictions, never
+> terminal_friction, consistent with CR7-4)…"
+
+This drops the misleading citation (m1's ask), grounds non-recurrence in F50/F51 (both asks), and adds
+the explicit note that F147 excludes terminal_friction (M5's ask) — one edit satisfying both. The
+F206 frequency=0/persistence=0/severity=1 conclusion is unchanged (independently correct). No test edit
+needed for the citation (acceptance.test.mjs's F206 assertion regex-matches capping language, not the
+citation text) — the M7 regex tightening is the only F206 test change.
+
+### Rejected re-litigation guard
+
+The 3 panel-REJECTED attacks (denylist_override vs F40 exemption unbuildability; D15 audited_terminal_step
+multi-submission scope; N8 localhost-only scoping) were NOT applied — each is resolved by adjacent
+frozen scenario/fixture/requirement text (D15 decomposition; F126/F127 + F164; the twice-verbatim
+localhost scope at F67/F68/D15). No durable CR5-CR9 disposition was reopened by any CR10 edit.
+
+### CR10 count sync (fresh re-runs from repo root, pasted verbatim in the applier report)
+
+`req-lint.sh .swe-spec/requirements.txt` → **216/216 PASS, exit 0** (0 new F/N lines; net delta 0);
+`coverage-audit.sh --pre-freeze` → **8/8 stages PASS, exit 0**; `test-coverage-audit.sh …` → **99/99
+CRITICAL PASS, exit 0**; `node --test test/acceptance.test.mjs` → **87 tests, 0 pass, 87 fail** (RED
+preserved; +1 test block = the `--help` precedence test; +0 fixtures — no new fixtures this pass).
+lint-result.txt refreshed in the same pass.
+
+Post-CR10 state is a prose/contract-consistency delta from the round-10-challenged spec; no new mechanism or requirement surface added.

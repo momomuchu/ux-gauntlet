@@ -16,33 +16,39 @@ A CLI is a public interface — a material decision per decision-record discipli
 | Flag | Required | Meaning |
 |---|---|---|
 | `--url <target>` | yes | target application base URL |
-| `--tasks <file>` | yes | happy-path task list (JSON), validated against `schemas/tasks.schema.json` (F156, CR3-11); `examples/tasks.json` ships as the copyable default (F83, CR3-4) |
+| `--tasks <file>` | yes | happy-path task list (JSON), validated against `schemas/tasks.schema.json` (F156, CR3-11); `examples/tasks.json` ships as the copyable default (F83, CR3-4) — the shipped `examples/tasks.json` default resolves relative to the skill package's own directory (the installed runner script's location), never the operator's ambient `process.cwd()`; an operator-supplied custom `--tasks` path resolves relative to the invoking shell's cwd as normal (CR10-MAJ3, the working-directory contract SKILL.md documents) |
 | `--i-own-this-target` | yes | explicit operator-authority confirmation (F65) — no flag, no crawl |
 | `--env <local\|staging\|production>` | yes | target environment class declaration (F61) — hard-stop without it |
-| `--denylist <file>` | yes | action-level denylist of destructive element labels, validated as a non-empty JSON array of strings against `schemas/denylist.schema.json` (F37/F38/F106); `denylist/default-destructive-labels.json` ships as the copyable default (F105) |
+| `--denylist <file>` | yes | action-level denylist of destructive element labels, validated as a non-empty JSON array of strings against `schemas/denylist.schema.json` (F37/F38/F106); `denylist/default-destructive-labels.json` ships as the copyable default (F105) — the shipped default resolves relative to the skill package's own directory (the installed runner script's location), never the operator's ambient `process.cwd()`; an operator-supplied custom `--denylist` path resolves relative to the invoking shell's cwd as normal (CR10-MAJ3) |
 | `--test-mode` | conditional | declares payment flows sandboxed; payment-submission steps refuse without it (F39) |
 | `--confirm-third-party-data` | conditional | required for any non-localhost target: acknowledges evidence may contain third-party data (F67/F68); localhost = hostname `localhost`, `127.0.0.0/8`, or `::1` — see F155 (CR3-10) |
 | `--full-submission` | no | disables the default dry-run boundary on non-idempotent requests (F40) — does NOT affect a step flagged `precondition_step` or `audited_terminal_step` in the task list, both of which submit regardless (F126/F127 CR2-1; F145/F146 CR3-1, D15) |
 | `--override-robots` | no | overrides robots.txt disallow-abort (F41/F42); off by default; commonly needed against local/staging targets that ship a blanket `Disallow: /` robots.txt for search-index exclusion (F152, CR3-7) — see D15 for the full localhost/staging relaxation enumeration |
-| `--personas <paths...>` | no | persona data files; default = every file in `personas/` |
+| `--personas <paths...>` | no | persona data files; default = every `*.yaml` file in `personas/` (matches spec.md's `personas/*.yaml` data-flow notation, docs/specs/0001-ux-gauntlet-mvp.spec.md:38 — CR10-MIN3, aligns the ADR prose with the governing SSOT glob) |
 | `--max-parallel <n>` | no | concurrent persona subagent cap, minimum 2; default 5 (F98/F185, CR5-MIN2 — a value below 2 is rejected with exit code 2, the usage-error code, F185/CR9-6) |
 | `--max-tool-calls <n>` | no | per-persona-per-run LLM tool-call cap; default 250 (F99/F100/F154, CR3-9 — ties to F57's 50-action cap x ~5 tool-calls/action; the ~5 ratio is an UNVALIDATED agent-set estimate pending build-time measurement, F154 provenance/CR9-5, not an empirically-derived figure) |
 | `--headless` | no | forces headless browser mode; redundant with the auto-default below but kept for explicit CI invocations |
 | `--no-headless` | no | forces a visible-browser launch, overriding the auto-headless default (F135, CR2-10) |
 | `--timeout <minutes>` | no | run-level wallclock timeout; default 50 (F131, CR2-7) |
 | `--standardized-flow-allowlist <file>` | no | flow-name file naming standardized flows (e.g. login) whose findings receive the F27 lower-confidence label (F140/F141/F142, CR2-14) |
-| `--help` | no | prints usage text; per F152, MUST reference `--override-robots` as the resolution for a local/staging robots.txt disallow-all (CR6-MIN5 — closes the table/prose gap where the F152/CR4-MIN4 `--help` test invoked a flag the table never listed) |
+| `--help` | no | prints usage text and exits 0, checked BEFORE any F107/F108 static launch-precondition aggregation — always short-circuits regardless of which or how many required flags are present or absent, in either direction (CR10-B3 — F107/F108's imperative "check every precondition before refusing" has no textual `--help` exemption, so this row is the one that grants it; `--help` precedence is independent of flag completeness); per F152, MUST reference `--override-robots` as the resolution for a local/staging robots.txt disallow-all (CR6-MIN5 — closes the table/prose gap where the F152/CR4-MIN4 `--help` test invoked a flag the table never listed) |
 | `--ci --baseline <file>` | no | documented pass-through only, explicitly OUT of MVP test scope: `run-gauntlet.mjs` does NOT itself diff — CI-mode diffing is exclusively `ci-diff.mjs`'s responsibility (`--baseline`/`--current`, F72–F74), matching spec.md's CI-mode narrative and the F101 acceptance test, which invokes `ci-diff.mjs`, never `run-gauntlet.mjs --ci` (CR6-M3 — removes the interpretation surface where a builder could ship this flag unimplemented yet pass every F101/F26/F151 assertion) |
-| `--out <dir>` | no | output directory; default `runs/<timestamp>/` |
+| `--out <dir>` | no | output directory; default `runs/<timestamp>/` — on a completed run the CLI prints the resolved `--out` directory path, plus the `summary.json` path, to stdout, so an operator who accepted the unpredictable default `runs/<timestamp>/` path can locate the results without guessing which folder is theirs (CR10-MAJ4, surfacing the F84 summary/output paths on stdout) |
 
-Exit codes: `0` = run completed and gates passed; `1` = gate/validation failure (incl. refusal to
+`scripts/run-gauntlet.mjs` performs no LLM calls itself; it MUST be invoked from within an agent
+session (Claude Code, or Codex where F97 applies) that supplies Task-delegation for its persona
+subagents (F30/F31, spec.md D8) — this is an invocation precondition the static F107/F108 launch
+checks do NOT test for, so a bare-terminal run that satisfies every documented flag still falls under
+F97's disclosed sequential-fallback/unsupported path (DR-37), not a clean front-door refusal
+(CR10-MAJ2). Exit codes: `0` = run completed and gates passed; `1` = gate/validation failure (incl. refusal to
 start: missing task list, <3 personas, malformed persona, invalid denylist file, missing safety
 flags per F37/F39/F61/F65/F67/F106; a present-but-invalid `--env` value such as `--env prod` is an
 exit-1 gate refusal in the `env` precondition slot — treated identically to a missing `--env` flag,
 its stderr line naming the offending value, NOT an exit-2 usage error, F204/F205/CR9-9 — `env` is a
 static precondition SLOT (F107/F108), so a bad value in it refuses like a missing flag, distinct from
 `--max-parallel` below 2 which is a pure config-value usage error at exit 2, F185); `2` = usage error
-(unknown flag, missing required flag, a `--max-parallel` value below 2 per F185); `3` =
+(unknown flag, or a `--max-parallel` value below 2 per F185 — never an absent required flag, which is
+always the exit-1 refusal defined above per F107/F108, never double-bucketed at exit 2, CR10-B2); `3` =
 target unreachable at crawl start — DNS failure, connection refused, TLS handshake error (F80,
 distinct from gate refusals so CI can tell "new severity-4" from "app down"). Refusals print a
 one-line reason to stderr naming the violated rule (F108 governs the multi-violation case). In CI

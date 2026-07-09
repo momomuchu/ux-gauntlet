@@ -140,6 +140,22 @@ test('F108 CR9: the static-precondition stderr lines print in the fixed document
   }
 });
 
+test('F107 F108 --help precedence CR10-B3: --help short-circuits to exit 0 BEFORE F107/F108 static-precondition aggregation, independent of flag completeness in either direction', () => {
+  // Requirement ID: F107, F108, F152 (challenge round 10 BLOCKER — F107 mandates checking every static
+  // precondition before refusing, with no textual --help exemption; a builder placing F107's gate first in
+  // main() would print violation lines and exit 1 before reaching the --help branch, failing the frozen
+  // --help test. ADR-0001's --help row now grants --help explicit precedence over F107/F108 aggregation.)
+  // Direction A — --help wins with EVERY other required flag absent (the all-missing case).
+  const helpAlone = run(['scripts/run-gauntlet.mjs', '--help']);
+  assert.equal(helpAlone.code, 0, '--help alone (all 5 other required flags absent) prints usage text and exits 0 — it short-circuits before the F107/F108 exit-1 aggregate refusal (CR10-B3)');
+  assert.match(helpAlone.stdout + helpAlone.stderr, /override-robots/i, '--help usage text still references --override-robots (F152) even when all other required flags are absent');
+  // Direction B — --help ALSO wins alongside an otherwise-complete valid invocation (precedence is
+  // independent of flag completeness in EITHER direction; removes any doubt it depends on flags being absent).
+  const helpWithValid = run(['scripts/run-gauntlet.mjs', '--url', 'http://localhost:9', '--tasks', 'examples/tasks.json', '--i-own-this-target', '--env', 'local', '--denylist', 'denylist/default-destructive-labels.json', '--headless', '--help']);
+  assert.equal(helpWithValid.code, 0, '--help alongside a fully-complete, valid flag set still prints usage text and exits 0, never starting a crawl — --help precedence is independent of flag completeness in either direction (CR10-B3)');
+  assert.match(helpWithValid.stdout + helpWithValid.stderr, /override-robots/i, '--help usage text references --override-robots regardless of the surrounding flag set (F152, CR10-B3)');
+});
+
 test('F204 F205 CR9: a present-but-invalid --env value is an exit-1 gate refusal naming the value, not a silent accept or usage error', () => {
   // Requirement ID: F204, F205 (challenge round 9 MAJOR — F61 hard-stops on MISSING --env but said nothing
   // about a present-but-invalid value like "--env prod" (a plausible typo); one reading silently accepts any
@@ -581,7 +597,12 @@ test('F20 F21 F22 F35: validity envelope carries at least the 7 enumerated discl
   // CR9-10 (F206): the STRONGER deterministic fact (not F181's comparative "can invert") that under the
   // default rubric every terminal_friction has frequency=0/persistence=0 by construction, severity fixed at 1,
   // so it can never trip the F26 severity-4 CI gate even after MAX-based corroboration.
-  assert.match(md, /terminal_friction|patience-abandon|severity is fixed|capped at (severity )?1|round\(mean/i, 'F206: every default-rubric terminal_friction finding is capped at severity 1 and can never trigger the F26 gate — the deterministic cap, disclosed (CR9-10)');
+  // CR10-MAJ7: the prior 5-way OR (with a bare unbounded `round\(mean` branch) let a generic
+  // severity-formula blurb elsewhere in the report satisfy F206 without ever stating F206's SPECIFIC
+  // claim — inconsistent with the tighter bounded-proximity safeguard already applied to the analogous
+  // F181 disclosure (line 373). Tightened to require terminal_friction co-occurring with the deterministic
+  // cap language within a bounded window; the standalone `round\(mean` branch is dropped.
+  assert.match(md, /terminal_friction[^.]{0,140}(severity (is )?(fixed|capped)( at)?( severity)? 1|can(not| never) (trigger|trip))|((severity (is )?(fixed|capped)( at)?( severity)? 1|patience-abandon[a-z]*)[^.]{0,140}terminal_friction)/i, 'F206: every default-rubric terminal_friction finding is capped at severity 1 and can never trigger the F26 gate — the deterministic cap, disclosed within a bounded proximity to "terminal_friction" so a generic severity-formula explainer cannot satisfy it (CR9-10, tightened CR10-MAJ7)');
   // CR9-11 (F207): the 3-persona floor's reliability rationale is NN/g human-evaluator research, extrapolated
   // cross-domain, not independently verified for LLM-simulated personas.
   assert.match(md, /human (usability )?evaluator|not independently verified for LLM|persona.agent evidence/i, 'F207: 3-persona floor reliability rationale derives from NN/g human-evaluator research, not verified for LLM personas (CR9-11)');
