@@ -5,7 +5,12 @@
   "type": "object",
   "required": ["run", "findings"],
   "properties": {
-    "run": { "type": "object" },
+    "run": {
+      "type": "object",
+      "properties": {
+        "route": { "type": "string" }
+      }
+    },
     "run_status": { "$ref": "#/$defs/run_status" },
     "personas": {
       "type": "array",

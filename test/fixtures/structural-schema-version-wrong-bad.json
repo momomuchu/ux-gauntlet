@@ -1,0 +1,44 @@
+{
+  "schema_version": 999,
+  "lane": "structural",
+  "run": {
+    "route": "/signup",
+    "url": "http://localhost:3000/signup",
+    "run_status": "completed"
+  },
+  "metadata": {
+    "axe_version": "4.12.1",
+    "ruleset_tags": [
+      "wcag2a",
+      "wcag2aa",
+      "wcag21aa",
+      "wcag22aa",
+      "best-practice"
+    ],
+    "wcag_target": "AA",
+    "browser_version": "chromium/1179",
+    "timestamp": "2026-07-09T12:00:00Z",
+    "expected_main_content": {
+      "/signup": "#audiobook-text"
+    }
+  },
+  "validity_envelope": {
+    "criteria_count_pct": 32,
+    "criteria_count": "16 of 50",
+    "issue_volume_pct": 57,
+    "vendor_reported": true,
+    "independently_audited": false,
+    "disclaimer": "Both the ~32 percent criteria-count figure and the ~57 percent issue-volume figure are vendor-reported by Deque, not independently audited. A structural pass is not usable, is not good UI. This is not a WCAG conformance certification.",
+    "non_automatable_classes": [
+      "focus order",
+      "focus visible",
+      "keyboard operability"
+    ],
+    "best_practice_labeled": [
+      "heading-order"
+    ]
+  },
+  "violation_ids": [],
+  "incomplete_ids": [],
+  "findings": []
+}

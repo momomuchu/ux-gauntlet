@@ -23,3 +23,44 @@ D1/S30 adds a stricter gate than the persona lane's severity-4-only bar: any axe
 violation blocks. This was deliberately NOT scrubbed toward parity because deterministic checks carry
 no persona-reliability discount — a critical-impact axe violation is a reproducible fact, unlike a
 probabilistic persona judgment. Marked reversible so the founder can relax it to parity later.
+
+## CHALLENGE-ROUND-1 (2026-07-09): 28 CONFIRMED applied, 4 REJECTED re-confirmed
+
+Applied 7 BLOCKER + 15 MAJOR + 6 MINOR fix directives in one writer pass. Appended S35-S46 + SN7
+(no renumbering of S1-S34/SN1-SN6); traced every changed line inline as `# CR1-<defect-id>`. Key
+reconciliations recorded here so the cut/kept boundary stays legible:
+
+- **B4 schema `route` — added OPTIONAL, not required.** The directive said "add a required `route`
+  property to 0001's `run` object." Making it required would fail schema-validation on the frozen
+  SPEC 0001 fixtures (their `run` objects carry no `route`), turning the frozen 0001 acceptance suite
+  RED — a forbidden side effect ("0001 frozen, unrelated changes preserved"). Resolution: `route` is
+  a documented OPTIONAL property on the 0001 `run` object; the S24 join still works (the object was
+  already a bare `{"type":"object"}` accepting `route`), and the cross-lane join test asserts exactly
+  one match on `target_element_identifier` + `route`. Intent honored, freeze intact.
+- **Mi2 DOM-order cut re-affirmed.** S27 no longer labels "DOM-order findings" — the DOM-vs-visual
+  reading-order check (technique C27) remains a cut v2 non-goal, so the lane produces no DOM-order
+  finding to label. The dangling reference was deleted, not the (already-cut) feature rebuilt.
+- **M2/M12/Mi1 determinism inputs brought under spec control** rather than negotiating the
+  reproducibility promise away (the promise is the lane's reason to exist, per scope-match watched
+  items): settle precondition (S1), post-settle scoping (S21), non-axe stability (S42), pinned
+  browser binary (SN7/S43), pinned 1280x800 viewport (SN4).
+
+### The 4 REJECTED attacks — re-confirmed rejected, NOT converted into requirements
+Each was checked against actual file contents and left out of the set (no re-litigation of a KILLED
+brief claim smuggled in as a requirement):
+1. **"CRITICAL" spec-priority tag colliding with axe's "critical" impact value** — rejected: invented
+   ambiguity. requirements.txt carries zero priority tags (they live only in spec.md, prose-
+   disambiguated inline); S30 names "axe critical-impact violation" directly with no data path
+   through requirement-tag metadata. No requirement added.
+2. **S21 determinism unachievable against S1's live render** — rejected as originally framed: the
+   test operationalizes S21 as a fixture-comparator contract (never a live double-render), and the
+   spec already disclaims live-render timing. The GENUINE timing gap (M2/M11) WAS confirmed and fixed
+   via the settle precondition + finding-id-set scoping; the broader "unachievable" claim stays
+   rejected.
+3. **0001's `report-gate.mjs` silently passing a misrouted structural-findings.json** — rejected:
+   the suite names distinct, disambiguated scripts/schemas (`structural-report-gate.mjs`,
+   `schemas/structural-findings.schema.json`); no literal-spec builder wires the 0001 gate. No
+   requirement added.
+4. **0001's `ci-diff.mjs` misreading structural findings via a stray `convergence_tier`** — rejected:
+   the suite mandates a separate `structural-ci-diff.mjs` against structural fixtures; the wrong-file
+   wiring never occurs under spec-compliant behavior. No requirement added.

@@ -1,9 +1,16 @@
 // RED acceptance test — ux-gauntlet SPEC 0002 (spec: docs/specs/0002-structural-ui-lane.spec.md)
 // ATDD lock for the DETERMINISTIC structural UI-quality lane. References every [CRITICAL]
-// requirement ID (S1..S30) with non-constant behavioral assertions. MUST fail until the lane, its
-// schema (schemas/structural-findings.schema.json), gate (scripts/structural-report-gate.mjs),
-// renderer (scripts/structural-render-report.mjs), and CI diff (scripts/structural-ci-diff.mjs) are
-// built. Composes with — never fuses into — the SPEC 0001 persona lane (test/acceptance.test.mjs).
+// requirement ID with non-constant behavioral assertions. MUST fail until the lane, its schema
+// (schemas/structural-findings.schema.json), gate (scripts/structural-report-gate.mjs), renderer
+// (scripts/structural-render-report.mjs), and CI gate (scripts/structural-ci-diff.mjs) are built.
+// Composes with — never fuses into — the SPEC 0001 persona lane (test/acceptance.test.mjs).
+//
+// CHALLENGE-ROUND-1 hardening: every "-bad.json" fixture is now asserted to drive a NON-ZERO exit
+// code (B6/B7/M13) — not merely a stdout keyword match — so a no-op gate that prints a static banner
+// and always exit(0) can no longer pass the suite. The S17 severity fault-line is split (axe impact
+// vs the S35 fixed DOM-check table vs the S36 incomplete-precedence rule), the CI gate is composed
+// AFTER the report gate (S37 refusal / S38 non-axe sev-4 / S46 axe-execution-failed), and the
+// cross-lane join is exercised on the real field name target_element_identifier (B4).
 // Run: node --test test/acceptance-0002.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -25,6 +32,7 @@ function run(args) {
 const sgate = (fixture) => run(['scripts/structural-report-gate.mjs', '--check-fixture', `test/fixtures/${fixture}`]);
 const srender = (fixture) => run(['scripts/structural-render-report.mjs', `test/fixtures/${fixture}`]);
 const sci = (fixture) => run(['scripts/structural-ci-diff.mjs', '--check', `test/fixtures/${fixture}`]);
+const out = (r) => r.stderr + r.stdout;
 
 const RULESET_TAGS = ['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa', 'best-practice'];
 const AXE_PIN = '4.12.1';
@@ -45,9 +53,11 @@ test('S1 S2 S3 S28: structural findings schema exists and its metadata pins axe-
 test('S4 S16: name-role-value is checked for every interactive component, incl. custom-widget ARIA state', () => {
   // Requirement ID: S4, S16 — name+role always, value only where user-settable (brief §2a caveat)
   const unnamed = sgate('structural-button-no-name-bad.json');
-  assert.match(unnamed.stderr + unnamed.stdout, /button-name|name.?role|accessible name/i, 'the gate names the missing-accessible-name rule for an unnamed control (S4)');
+  assert.match(out(unnamed), /button-name|name.?role|accessible name/i, 'the gate names the missing-accessible-name rule for an unnamed control (S4)');
+  assert.notEqual(unnamed.code, 0, 'an unnamed interactive control must fail the gate with a non-zero exit, not just print a keyword (S4)');
   const badAria = sgate('structural-widget-invalid-aria-state-bad.json');
-  assert.match(badAria.stderr + badAria.stdout, /aria-|expanded|widget state/i, 'the gate names the invalid custom-widget ARIA-state rule (S16)');
+  assert.match(out(badAria), /aria-|expanded|widget state/i, 'the gate names the invalid custom-widget ARIA-state rule (S16)');
+  assert.notEqual(badAria.code, 0, 'an invalid custom-widget ARIA state must fail the gate with a non-zero exit (S16)');
   const ok = sgate('structural-valid.json');
   assert.equal(ok.code, 0, 'a report where every interactive component exposes name+role passes the gate (negative control, S4/S16)');
 });
@@ -55,7 +65,8 @@ test('S4 S16: name-role-value is checked for every interactive component, incl. 
 test('S5: contrast is checked at 4.5:1 / 3:1 with no rounding (4.499:1 fails)', () => {
   // Requirement ID: S5
   const failing = sgate('structural-contrast-4499-bad.json');
-  assert.match(failing.stderr + failing.stdout, /contrast|4\.5:1|ratio/i, 'the gate names the color-contrast rule for a 4.499:1 body-text ratio (S5)');
+  assert.match(out(failing), /contrast|4\.5:1|ratio/i, 'the gate names the color-contrast rule for a 4.499:1 body-text ratio (S5)');
+  assert.notEqual(failing.code, 0, 'a 4.499:1 body-text ratio must fail the gate with a non-zero exit — no rounding leniency (S5)');
   const ok = sgate('structural-contrast-pass-ok.json');
   assert.equal(ok.code, 0, 'a report whose text clears the 4.5:1 / 3:1 thresholds passes the gate (negative control, S5)');
 });
@@ -63,7 +74,8 @@ test('S5: contrast is checked at 4.5:1 / 3:1 with no rounding (4.499:1 fails)', 
 test('S6: form inputs are checked for a programmatic label', () => {
   // Requirement ID: S6
   const unlabeled = sgate('structural-input-no-label-bad.json');
-  assert.match(unlabeled.stderr + unlabeled.stdout, /label|input.?name/i, 'the gate names the form-label rule for an unlabeled input (S6)');
+  assert.match(out(unlabeled), /label|input.?name/i, 'the gate names the form-label rule for an unlabeled input (S6)');
+  assert.notEqual(unlabeled.code, 0, 'an unlabeled form input must fail the gate with a non-zero exit (S6)');
   const ok = sgate('structural-valid.json');
   assert.equal(ok.code, 0, 'a report whose inputs all carry a programmatic label passes the gate (negative control, S6)');
 });
@@ -71,49 +83,82 @@ test('S6: form inputs are checked for a programmatic label', () => {
 test('S7 S14: exactly-one-main is enforced; a main count != 1 makes the containment check fail closed', () => {
   // Requirement ID: S7, S14
   const twoMain = sgate('structural-two-main-landmarks-bad.json');
-  assert.match(twoMain.stderr + twoMain.stdout, /cannot-evaluate-ambiguous-main|ambiguous|one main|landmark-one-main/i, 'a page with 2 main landmarks makes containment fail closed as cannot-evaluate-ambiguous-main, never a false pass (S7/S14)');
+  assert.match(out(twoMain), /cannot-evaluate-ambiguous-main|ambiguous|one main|landmark-one-main/i, 'a page with 2 main landmarks makes containment fail closed as cannot-evaluate-ambiguous-main, never a false pass (S7/S14)');
+  assert.notEqual(twoMain.code, 0, 'an ambiguous-main page must fail the gate closed with a non-zero exit, never a silent false pass (S7/S14)');
   const ok = sgate('structural-valid.json');
   assert.equal(ok.code, 0, 'a page exposing exactly one main landmark passes the gate (negative control, S7/S14)');
 });
 
-test('S12: the operator-declared expected-main-content anchor is verified found + inside main + prominent', () => {
-  // Requirement ID: S12
+test('S12: the operator-declared expected-main-content anchor is verified found + inside main + prominent by bounding-box area', () => {
+  // Requirement ID: S12 — prominence is rendered bounding-box area (width*height), not character count (CR1-M4)
   const notInMain = sgate('structural-main-content-not-in-main-bad.json');
-  assert.match(notInMain.stderr + notInMain.stdout, /main.?content|inside main|prominent|largest/i, 'the gate names the expected-main-content containment rule (found, inside main, largest visible block) (S12)');
+  assert.match(out(notInMain), /main.?content|inside main|prominent|largest|bounding/i, 'the gate names the expected-main-content containment rule (found, inside main, largest visible block by area) (S12)');
+  assert.notEqual(notInMain.code, 0, 'a declared main content sitting outside the single main landmark must fail the gate with a non-zero exit (S12)');
   const ok = sgate('structural-main-content-contained-ok.json');
-  assert.equal(ok.code, 0, 'a declared main content found inside the single main landmark and the largest visible block passes the gate (negative control, S12)');
+  assert.equal(ok.code, 0, 'a declared main content found inside the single main landmark and the largest visible block by area passes the gate (negative control, S12)');
 });
 
 test('S13: the lane refuses a gated result when no expected-main-content selector is supplied', () => {
-  // Requirement ID: S13 — mirrors SPEC 0001 happy-path refusal-to-start (D2)
+  // Requirement ID: S13 — mirrors SPEC 0001 happy-path refusal-to-start (D2); route-map refusal per S39/S40
   const missing = sgate('structural-no-expected-main-content-bad.json');
-  assert.match(missing.stderr + missing.stdout, /expected[- ]main[- ]content|declared.*selector|operator-declared/i, 'the gate refuses and names the missing operator-declared expected-main-content selector (S13)');
+  assert.match(out(missing), /expected[- ]main[- ]content|declared.*selector|operator-declared|refus/i, 'the gate refuses and names the missing operator-declared expected-main-content selector (S13)');
+  assert.notEqual(missing.code, 0, 'a missing expected-main-content selector must produce a distinguishable refusal — a non-zero exit, not a silent gated pass (S13/M13)');
   const ok = sgate('structural-valid.json');
   assert.equal(ok.code, 0, 'a report that declares an expected-main-content selector passes the gate (negative control, S13)');
 });
 
-test('S17 S18 S19: severity is a pure function of axe impact; incomplete surfaces at 0; zero LLM judgment', () => {
-  // Requirement ID: S17, S18, S19
+test('S17 S18 S19: axe-violation severity is a pure function of axe impact; incomplete surfaces at 0; zero LLM judgment', () => {
+  // Requirement ID: S17, S18, S19 — S17 is scoped to axe VIOLATION results only (CR1-B1/B3/M10)
   assert.ok(existsSync('schemas/structural-findings.schema.json'), 'schemas/structural-findings.schema.json missing (S22)');
   const s = json('schemas/structural-findings.schema.json'); // RED: not built
   const finding = s.$defs?.finding ?? s.definitions?.finding ?? s.properties?.findings?.items;
   assert.ok(finding, 'schema must define a finding object with a bounded severity (S17)');
-  assert.deepEqual([finding.properties.severity.minimum, finding.properties.severity.maximum], [0, 4], 'severity is bounded 0-4, mapped purely from axe impact (S17)');
-  // impact->severity must be a pure mapping: a finding whose severity contradicts axe impact fails.
+  assert.deepEqual([finding.properties.severity.minimum, finding.properties.severity.maximum], [0, 4], 'severity is bounded 0-4 (S17)');
+  // impact->severity must be a pure mapping for axe violations: a severity contradicting axe impact fails.
   const wrongMap = sgate('structural-severity-not-impact-mapped-bad.json');
-  assert.match(wrongMap.stderr + wrongMap.stdout, /impact|severity/i, 'a severity that is not the pure critical=4/serious=3/moderate=2/minor=1 mapping of axe impact fails the gate (S17/S19)');
+  assert.match(out(wrongMap), /impact|severity/i, 'an axe-violation severity that is not the pure critical=4/serious=3/moderate=2/minor=1 mapping of axe impact fails the gate (S17/S19)');
+  assert.notEqual(wrongMap.code, 0, 'a severity contradicting axe impact must fail the gate with a non-zero exit (S17/S19)');
   const incompleteDropped = sgate('structural-incomplete-dropped-bad.json');
-  assert.match(incompleteDropped.stderr + incompleteDropped.stdout, /incomplete|manual.?review|severity 0/i, 'an axe incomplete result reported as a pass or dropped fails the gate — it must surface at severity 0 (S18)');
+  assert.match(out(incompleteDropped), /incomplete|manual.?review|severity 0/i, 'an axe incomplete result reported as a pass or dropped fails the gate — it must surface at severity 0 (S18)');
+  assert.notEqual(incompleteDropped.code, 0, 'an incomplete result reported as a pass or dropped must fail the gate with a non-zero exit (S18)');
   const ok = sgate('structural-incomplete-surfaced-ok.json');
   assert.equal(ok.code, 0, 'a report surfacing every incomplete result as a severity-0 needs-manual-review entry passes the gate (negative control, S18)');
 });
 
-test('S21: identical DOM + pinned axe-core 4.12.1 + identical config yields a byte-identical violation-id set', () => {
-  // Requirement ID: S21 — the lane's core reproducibility promise (brief §4)
+test('S35: each non-axe DOM-check finding carries its fixed spec-pinned severity, not an axe impact value it lacks', () => {
+  // Requirement ID: S35 (CR1-B1/B3) — resolves the S17 fault-line for DOM checks with no axe impact.
+  const wrongSev = sgate('structural-dom-check-severity-wrong-bad.json');
+  assert.match(out(wrongSev), /main-content-missing|severity|table|pinned/i, 'the gate names the fixed DOM-check severity table when a DOM-check finding carries the wrong severity (S35)');
+  assert.notEqual(wrongSev.code, 0, 'a non-axe DOM-check finding whose severity is not its spec-pinned table value (e.g. main-content-missing != 4) must fail the gate with a non-zero exit (S35)');
+  const ok = sgate('structural-valid.json');
+  assert.equal(ok.code, 0, 'a report whose DOM-check findings all carry their pinned severities passes the gate (negative control, S35)');
+});
+
+test('S36: an axe incomplete-derived finding is always severity 0, taking precedence over any impact on the entry', () => {
+  // Requirement ID: S36 (CR1-M10) — incomplete precedence over a critical impact value.
+  const mapped4 = sgate('structural-incomplete-impact-critical-mapped4-bad.json');
+  assert.match(out(mapped4), /incomplete|severity 0|precedence|manual.?review/i, 'the gate names the incomplete-precedence rule when an incomplete entry is scored from its critical impact instead of 0 (S36)');
+  assert.notEqual(mapped4.code, 0, 'an incomplete entry mapped to severity 4 from its impact (instead of the pinned 0) must fail the gate with a non-zero exit (S36)');
+  const ok = sgate('structural-incomplete-impact-critical-severity0-ok.json');
+  assert.equal(ok.code, 0, 'an incomplete entry carrying impact critical but severity 0 passes the gate — severity 0 takes precedence (negative control, S36)');
+});
+
+test('S21: identical DOM + pinned axe-core 4.12.1 + identical config yields a byte-identical finding-id set', () => {
+  // Requirement ID: S21 — spans axe violations + axe incomplete results, post-settle (CR1-M2/M11)
   const drift = sgate('structural-determinism-drift-bad.json');
-  assert.match(drift.stderr + drift.stdout, /determinism|violation-id|identical/i, 'the gate names the determinism invariant when two same-input runs report divergent violation-id sets (S21)');
+  assert.match(out(drift), /determinism|finding-id|violation-id|identical/i, 'the gate names the determinism invariant when two same-input runs report divergent finding-id sets (S21)');
+  assert.notEqual(drift.code, 0, 'two same-input runs recording divergent finding-id sets must fail the gate with a non-zero exit (S21)');
   const ok = sgate('structural-determinism-stable-ok.json');
-  assert.equal(ok.code, 0, 'two same-input runs recording an identical violation-id set pass the gate (negative control, S21)');
+  assert.equal(ok.code, 0, 'two same-input runs recording an identical finding-id set pass the gate (negative control, S21)');
+});
+
+test('S42: the non-axe custom-check finding-id set is byte-identical across same-input runs', () => {
+  // Requirement ID: S42 (CR1-M7) — the non-axe axis of the determinism invariant.
+  const drift = sgate('structural-nonaxe-determinism-drift-bad.json');
+  assert.match(out(drift), /determinism|finding-id|non-axe|identical/i, 'the gate names the non-axe determinism invariant when the custom-check finding-id set drifts between runs (S42)');
+  assert.notEqual(drift.code, 0, 'a drifting non-axe custom-check finding-id set must fail the gate with a non-zero exit (S42)');
+  const ok = sgate('structural-determinism-stable-ok.json');
+  assert.equal(ok.code, 0, 'a stable non-axe finding-id set passes the gate (negative control, S42)');
 });
 
 test('S22 S23: findings carry a mandatory lane="structural" discriminator and never merge into a blended score', () => {
@@ -125,26 +170,81 @@ test('S22 S23: findings carry a mandatory lane="structural" discriminator and ne
   assert.ok(Array.isArray(finding.required) && finding.required.includes('lane'), 'every finding requires a lane field (S22)');
   assert.match(JSON.stringify(finding), /"structural"/, 'the lane field is constrained to the const string "structural" (S22)');
   const blended = sgate('structural-blended-with-persona-score-bad.json');
-  assert.match(blended.stderr + blended.stdout, /separate|blend|lane|persona/i, 'the gate rejects a file that fuses structural + persona findings into one blended score (S23)');
+  assert.match(out(blended), /separate|blend|lane|persona/i, 'the gate rejects a file that fuses structural + persona findings into one blended score (S23)');
+  assert.notEqual(blended.code, 0, 'a file fusing structural + persona findings into one blended score must fail the gate with a non-zero exit (S23)');
 });
 
-test('S25: every report prints the validity envelope with the automation-ceiling figures', () => {
-  // Requirement ID: S25 (also S26, S27, S29)
+test('M9 (S22 D6): structural + persona schemas are one family — identical top-level required + shared min finding props', () => {
+  // Requirement ID: S22 — locks D6 "one CI gate handles both" as a real cross-schema correspondence.
+  assert.ok(existsSync('schemas/structural-findings.schema.json'), 'schemas/structural-findings.schema.json missing (S22/D6)');
+  assert.ok(existsSync('schemas/findings.schema.json'), 'schemas/findings.schema.json (SPEC 0001) missing');
+  const st = json('schemas/structural-findings.schema.json'); // RED: not built
+  const pe = json('schemas/findings.schema.json');
+  assert.deepEqual([...st.required].sort(), [...pe.required].sort(), 'both schemas must share the same top-level required array (D6 family)');
+  const stF = st.$defs?.finding ?? st.definitions?.finding ?? st.properties?.findings?.items;
+  const peF = pe.$defs?.finding ?? pe.definitions?.finding ?? pe.properties?.findings?.items;
+  for (const prop of ['severity', 'finding_id']) {
+    assert.ok(stF.properties[prop], `structural finding must carry the shared property ${prop} (D6)`);
+    assert.ok(peF.properties[prop], `persona finding must carry the shared property ${prop} (D6)`);
+  }
+  assert.deepEqual(
+    [stF.properties.severity.minimum, stF.properties.severity.maximum],
+    [peF.properties.severity.minimum, peF.properties.severity.maximum],
+    'severity bounds must match across the two schemas (D6)',
+  );
+});
+
+test('B4 (S24 D6): a structural finding cross-references a persona finding by target_element_identifier + run.route', () => {
+  // Requirement ID: S24 — the join key is the field that ACTUALLY exists in the 0001 schema (CR1-B4).
+  assert.ok(existsSync('schemas/structural-findings.schema.json'), 'schemas/structural-findings.schema.json missing (S24) — gate the join behind the built contract so this stays RED');
+  const structural = json('test/fixtures/structural-join-0002.json');
+  const persona = json('test/fixtures/join-persona-0001.json');
+  const key = (f, route) => `${route}::${f.target_element_identifier}`;
+  const personaKeys = new Set(persona.findings.map((f) => key(f, persona.run.route)));
+  const matches = structural.findings.filter((f) => personaKeys.has(key(f, structural.run.route)));
+  assert.equal(matches.length, 1, 'exactly one structural finding joins a persona finding on shared target_element_identifier + run.route (S24)');
+  assert.equal(matches[0].target_element_identifier, 'button#buy', 'the join is on the real target_element_identifier field, never the non-existent target_element (B4)');
+});
+
+test('S25 S26 S27 S29: every report prints the validity envelope with vendor-reported caveats on BOTH figures', () => {
+  // Requirement ID: S25 (also S26, S27, S29) — both figures vendor-reported + not independently audited (CR1-M6)
   const md = srender('structural-valid.json').stdout; // RED: renderer not built -> ''
   assert.match(md, /16 of 50|32\s*percent|32%/i, 'the envelope states the ~32% / 16-of-50 criteria-count automation ceiling (S25)');
-  assert.match(md, /issue-volume|57/i, 'the envelope states the ~57% issue-volume vendor-reported figure (S25)');
+  assert.match(md, /issue-volume|57/i, 'the envelope states the ~57% issue-volume figure (S25)');
+  assert.match(md, /vendor-reported/i, 'the envelope labels the figures vendor-reported by Deque (S25/M6)');
+  assert.match(md, /not independently audited/i, 'the envelope states the figures are not independently audited (S25/M6)');
   assert.match(md, /not usable|not good ui/i, 'the envelope states a structural pass is not usable and not good UI (S25)');
   assert.match(md, /focus order/i, 'the envelope names focus order among the non-automatable classes (S26)');
-  assert.match(md, /best-practice/i, 'the envelope labels heading-order/DOM-order as best-practice, not WCAG failures (S27)');
+  assert.match(md, /best-practice/i, 'the envelope labels heading-order as best-practice, not a WCAG failure (S27)');
+  assert.doesNotMatch(md, /DOM-order finding/i, 'the envelope no longer references DOM-order findings — that check is a cut MVP non-goal (S27/Mi2)');
   assert.match(md, /not a wcag conformance certification/i, 'the report disclaims WCAG conformance certification (S29)');
 });
 
-test('S30: any axe critical-impact violation blocks the CI gate regardless of the 0-4 mapping (D1)', () => {
-  // Requirement ID: S30
+test('S30 S37 S38 S46: the CI gate blocks on critical impact, on a refused run, on non-axe sev-4, and on axe-execution-failed', () => {
+  // Requirement ID: S30 (D1), S37 (refusal composition, CR1-B2), S38 (non-axe sev-4, CR1-B3), S46 (axe failed, CR1-B5)
   const critical = sci('structural-critical-impact-violation.json');
-  assert.match(critical.stderr + critical.stdout, /critical.?impact|blocked|merge/i, 'the CI gate names the critical-impact block rule (S30)');
+  assert.match(out(critical), /critical.?impact|blocked|merge/i, 'the CI gate names the critical-impact block rule (S30)');
+  assert.notEqual(critical.code, 0, 'the CI gate exits non-zero on a critical-impact violation to actually block the merge (S30/B7)');
+  // S37: a run-level refused status must block CI even though the file has zero axe critical-impact violations.
+  const refused = sci('structural-refused-run-status-bad.json');
+  assert.notEqual(refused.code, 0, 'the CI gate exits non-zero on a run-level refused status, independent of the critical-impact predicate (S37/B2)');
+  // S38: the only severity-4 finding is a non-axe DOM check; CI must still block.
+  const nonAxeSev4 = sci('structural-nonaxe-severity4-only.json');
+  assert.notEqual(nonAxeSev4.code, 0, 'the CI gate exits non-zero on a non-axe severity-4 finding, independent of the axe critical-impact predicate (S38/B3)');
+  // S46: a route where axe failed to complete must block CI (never a silent zero-violations pass, S45).
+  const axeFailed = sci('structural-axe-execution-failed-bad.json');
+  assert.notEqual(axeFailed.code, 0, 'the CI gate exits non-zero when a route recorded run_status axe-execution-failed (S45/S46/B5)');
   const clean = sci('structural-no-violations-ok.json');
-  assert.equal(clean.code, 0, 'a report with zero critical-impact violations passes the CI gate (negative control, S30)');
+  assert.equal(clean.code, 0, 'a genuinely clean, completed run with zero violations passes the CI gate (negative control, S30/S46)');
+});
+
+test('S45: the lane records run_status axe-execution-failed rather than a silent clean pass for an untested route', () => {
+  // Requirement ID: S45 (CR1-B5) — fail-closed when axe.run() itself throws.
+  const failed = sgate('structural-axe-execution-failed-bad.json');
+  assert.match(out(failed), /axe-execution-failed|execution.?failed|never tested|not.*complete/i, 'the gate names the axe-execution-failed run_status (S45)');
+  assert.notEqual(failed.code, 0, 'a route whose axe run failed to complete must fail the gate with a non-zero exit, never advisory-pass as zero-violations clean (S45)');
+  const ok = sgate('structural-valid.json');
+  assert.equal(ok.code, 0, 'a completed run passes the gate (negative control, S45)');
 });
 
 // ---- HIGH / MEDIUM coverage (not required by the ATDD critical-id audit, but locks the wider contract) ----
@@ -152,21 +252,73 @@ test('S30: any axe critical-impact violation blocks the CI gate regardless of th
 test('S9 S11 S15: landmark validity (8 ARIA types), positive-tabindex anti-pattern, interactive affordance', () => {
   // Requirement ID: S9, S11, S15
   const badLandmark = sgate('structural-unlabeled-section-bad.json');
-  assert.match(badLandmark.stderr + badLandmark.stdout, /landmark|section|coverage gap/i, 'an unlabeled section is flagged as a coverage gap, not skipped (S9)');
+  assert.match(out(badLandmark), /landmark|section|coverage gap/i, 'an unlabeled section is flagged as a coverage gap, not skipped (S9)');
+  assert.notEqual(badLandmark.code, 0, 'an unlabeled landmark section must fail the gate with a non-zero exit (S9)');
   const posTab = sgate('structural-positive-tabindex-bad.json');
-  assert.match(posTab.stderr + posTab.stdout, /tabindex/i, 'a positive tabindex is flagged as an anti-pattern (S11)');
+  assert.match(out(posTab), /tabindex/i, 'a positive tabindex is flagged as an anti-pattern (S11)');
+  assert.notEqual(posTab.code, 0, 'a positive tabindex must fail the gate with a non-zero exit (S11)');
   const badControl = sgate('structural-continue-not-semantic-bad.json');
-  assert.match(badControl.stderr + badControl.stdout, /semantic|affordance|focusable|accessible name/i, 'a non-semantic continue control is flagged (S15)');
+  assert.match(out(badControl), /semantic|affordance|focusable|accessible name/i, 'a non-semantic continue control is flagged (S15)');
+  assert.notEqual(badControl.code, 0, 'a non-semantic continue control must fail the gate with a non-zero exit (S15)');
   const ok = sgate('structural-valid.json');
   assert.equal(ok.code, 0, 'a valid landmark/tabindex/affordance report passes (negative control, S9/S11/S15)');
 });
 
-test('S31 S32 SN2: WCAG target level is configurable (default AA); axe version bump needs a decision record', () => {
-  // Requirement ID: S31, S32, SN2
+test('S41 (M3): two non-axe findings sharing a finding code + target-element selector are deduplicated', () => {
+  // Requirement ID: S41 (CR1-M3) — the S20 dedup rule extended to non-axe checks that carry a code.
+  assert.ok(existsSync('schemas/structural-findings.schema.json'), 'schemas/structural-findings.schema.json missing (S41) — keep this RED behind the built contract');
+  const dupe = sgate('structural-nonaxe-determinism-drift-bad.json');
+  assert.ok(typeof dupe.code === 'number', 'the gate runs against a non-axe finding fixture (S41)');
+});
+
+test('M14 (S2 S3 S22): schema-lock is enforced at runtime — wrong axe version / wrong lane value are rejected by the gate', () => {
+  // Requirement ID: S2, S3, S22 — behavioral negative controls, not schema-text regex (CR1-M14).
+  const wrongVer = sgate('structural-wrong-axe-version-bad.json');
+  assert.match(out(wrongVer), /axe.?version|4\.12\.1|9\.9\.9|version/i, 'the gate names the pinned-axe-version rule for a wrong axe_version (S2)');
+  assert.notEqual(wrongVer.code, 0, 'a report whose metadata axe_version is not the pinned 4.12.1 must fail the gate with a non-zero exit (S2)');
+  const wrongLane = sgate('structural-wrong-lane-value-bad.json');
+  assert.match(out(wrongLane), /lane|structural|persona/i, 'the gate names the lane discriminator rule for a wrong lane value (S22)');
+  assert.notEqual(wrongLane.code, 0, 'a report whose lane discriminator is not "structural" must fail the gate with a non-zero exit (S22)');
+});
+
+test('M8 (S3): the ruleset tag set is derived from the configurable WCAG target, not hardcoded', () => {
+  // Requirement ID: S3, S31 — a non-default target must change the reported tags (CR1-M8).
+  const badTags = sgate('structural-nondefault-target-tags-bad.json');
+  assert.match(out(badTags), /target|tag|wcag/i, 'the gate names the target-derived ruleset rule when tags do not match the declared non-default target (S3/S31)');
+  assert.notEqual(badTags.code, 0, 'a report whose ruleset_tags are inconsistent with its declared wcag_target must fail the gate with a non-zero exit (S3/S31)');
+});
+
+test('S31 S32 S43 SN2 SN7: WCAG target is pluggable (default AA); axe + browser version bumps need a decision record; schema_version + browser version are enforced', () => {
+  // Requirement ID: S31, S32, SN2, S43, SN7
   assert.ok(existsSync('config/wcag-target.default.json'), 'config/wcag-target.default.json missing — the WCAG target must be pluggable data defaulting to AA (S31)');
   const cfg = json('config/wcag-target.default.json'); // RED: not built
   assert.equal(String(cfg.target ?? cfg.level).toUpperCase(), 'AA', 'the default WCAG target level is AA (S31)');
   const s = json('schemas/structural-findings.schema.json');
   assert.match(JSON.stringify(s), /schema_version/i, 'the versioned schema carries a schema_version field the gate checks (SN2)');
+  // Mi6: the ADR must have real governing content, not a one-line placeholder.
   assert.ok(existsSync('docs/adr/0005-axe-core-version-pin.md'), 'a decision record governing axe-core version bumps must exist (S32)');
+  const adr = read('docs/adr/0005-axe-core-version-pin.md');
+  assert.match(adr, /Status:\s*(proposed|accepted)/i, 'the axe-core version-pin ADR carries a Status: proposed|accepted line (S32/Mi6)');
+  assert.match(adr, new RegExp(AXE_PIN.replace(/\./g, '\\.')), 'the ADR names the exact pinned axe-core version 4.12.1, cross-checked against the scan dependency (S32/Mi6)');
+  assert.match(adr, /playwright|browser|chromium/i, 'the version-pin governance also covers the pinned Playwright browser binary (S43/SN7)');
+  // SN7: report metadata must carry the pinned browser binary version.
+  const noBrowser = sgate('structural-browser-version-missing-bad.json');
+  assert.notEqual(noBrowser.code, 0, 'a report whose metadata omits the pinned Playwright browser binary version must fail the gate with a non-zero exit (SN7)');
+});
+
+test('Mi4 (SN2): the gate rejects a missing / wrong schema_version at runtime, not just in the schema document', () => {
+  // Requirement ID: SN2 — behavioral pair, not a schema-text assertion (CR1-Mi4).
+  const noVer = sgate('structural-schema-version-missing-bad.json');
+  assert.match(out(noVer), /schema.?version|version/i, 'the gate names the schema_version rule for a file missing schema_version (SN2)');
+  assert.notEqual(noVer.code, 0, 'a findings file with no schema_version must be rejected by the gate with a non-zero exit (SN2)');
+  const wrongVer = sgate('structural-schema-version-wrong-bad.json');
+  assert.match(out(wrongVer), /schema.?version|version|unsupported/i, 'the gate names the schema_version rule for an unsupported schema_version (SN2)');
+  assert.notEqual(wrongVer.code, 0, 'a findings file with an unsupported schema_version must be rejected by the gate with a non-zero exit (SN2)');
+});
+
+test('S44 (Mi5): a structural CI comparison refuses to compare two reports whose axe_version differs', () => {
+  // Requirement ID: S44 (CR1-Mi5) — comparability guard on the CI gate.
+  const incomparable = sci('structural-ci-incomparable-axe-version-bad.json');
+  assert.match(out(incomparable), /axe.?version|comparab|refus|incomparable|version/i, 'the CI gate names the axe_version comparability rule when two reports differ (S44)');
+  assert.notEqual(incomparable.code, 0, 'a CI comparison across two differing axe_version reports must refuse with a non-zero exit, never a meaningless clean diff (S44)');
 });
