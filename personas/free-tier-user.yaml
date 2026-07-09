@@ -1,0 +1,8 @@
+name: free-tier-user
+goal: "sign up on the free tier and reach the dashboard without paying"
+success_criteria: "dashboard visible on the free tier, no payment required"
+budget_authority: "none - personal use, refuses to pay"
+patience_threshold_steps: 12
+forbidden_claims:
+  - willingness_to_pay_estimates
+  - population_percentages

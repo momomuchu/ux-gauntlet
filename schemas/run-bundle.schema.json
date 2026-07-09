@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://ux-gauntlet/schemas/run-bundle.schema.json",
+  "title": "UX Gauntlet run bundle (the shape report-gate.mjs --check-fixture consumes)",
+  "type": "object",
+  "required": ["run", "findings"],
+  "properties": {
+    "run": {
+      "type": "object",
+      "properties": {
+        "target_url": { "type": "string" },
+        "task_list": { "type": "string" },
+        "personas": { "type": "array", "items": { "type": "string" } },
+        "denylist": { "type": "array", "items": { "type": "string" } },
+        "test_mode": { "type": "boolean" },
+        "full_submission_mode": { "type": "boolean" },
+        "full_submission": { "type": "boolean" },
+        "robots_override": { "type": "boolean" },
+        "robots_txt_fetch_status": { "type": ["integer", "null"] },
+        "robots_txt_fetch_error": { "type": "string" },
+        "standardized_flow_allowlist": { "type": "array", "items": { "type": "string" } },
+        "heuristic_set_file": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "run_status": { "$ref": "findings.schema.json#/$defs/run_status" },
+    "personas": { "type": "array", "items": { "$ref": "findings.schema.json#/$defs/persona_entry" } },
+    "walkthrough": { "type": "array" },
+    "walkthrough_progress": { "type": "array" },
+    "actions": { "type": "array" },
+    "task_list_steps": { "type": "array" },
+    "tasks_ledger": { "type": "array" },
+    "app_errors": { "type": "array" },
+    "denylist_override_events": { "type": "array" },
+    "validity_envelope_text": { "type": "string" },
+    "summary": { "type": "object" },
+    "findings": { "type": "array", "items": { "$ref": "findings.schema.json#/$defs/finding" } }
+  },
+  "additionalProperties": true
+}

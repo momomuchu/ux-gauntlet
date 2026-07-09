@@ -1,0 +1,29 @@
+{
+  "set_name": "nielsen-10",
+  "criteria": [
+    { "id": "visibility-of-system-status", "label": "Visibility of system status" },
+    { "id": "match-system-real-world", "label": "Match between system and the real world" },
+    { "id": "user-control-freedom", "label": "User control and freedom" },
+    { "id": "consistency-standards", "label": "Consistency and standards" },
+    { "id": "error-prevention", "label": "Error prevention" },
+    { "id": "recognition-rather-than-recall", "label": "Recognition rather than recall" },
+    { "id": "flexibility-efficiency-of-use", "label": "Flexibility and efficiency of use" },
+    { "id": "aesthetic-minimalist-design", "label": "Aesthetic and minimalist design" },
+    { "id": "help-users-recognize-recover-errors", "label": "Help users recognize, diagnose, and recover from errors" },
+    { "id": "help-and-documentation", "label": "Help and documentation" }
+  ],
+  "patience_abandonment_tag": "flexibility-efficiency-of-use",
+  "severity_rubric": {
+    "scale_labels": ["none", "minor", "moderate", "major", "critical"],
+    "formula": "round-mean-of-3-factors",
+    "frequency_buckets": { "1": 0, "2-3": 1, "4-6": 2, "7-10": 3, "11-plus": 4 },
+    "impact_buckets": {
+      "self-recovered-no-detour": 0,
+      "recovered-with-minor-detour": 1,
+      "recovered-with-major-detour": 2,
+      "recovered-only-via-support-or-workaround": 3,
+      "task-abandoned-or-never-resumed": 4
+    },
+    "persistence_buckets": { "0": 0, "1-2": 1, "3-5": 2, "6-9": 3, "10-plus": 4 }
+  }
+}

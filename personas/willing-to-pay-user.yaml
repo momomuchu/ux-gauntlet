@@ -1,0 +1,8 @@
+name: willing-to-pay-user
+goal: "evaluate the paid plan and complete checkout for a single-seat subscription"
+success_criteria: "checkout completes in test mode and the paid features unlock"
+budget_authority: "personal card, up to 50 USD per month, decides alone"
+patience_threshold_steps: 15
+forbidden_claims:
+  - willingness_to_pay_estimates
+  - population_percentages

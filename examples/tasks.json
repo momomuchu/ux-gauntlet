@@ -1,0 +1,10 @@
+{
+  "goal": "sign up on the free tier and reach the dashboard",
+  "steps": [
+    { "label": "open the landing page" },
+    { "label": "click the signup CTA" },
+    { "label": "fill in the signup form fields" },
+    { "label": "confirm the account details" },
+    { "label": "submit the signup form", "audited_terminal_step": true }
+  ]
+}

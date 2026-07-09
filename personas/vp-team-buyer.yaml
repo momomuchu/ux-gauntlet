@@ -1,0 +1,8 @@
+name: vp-team-buyer
+goal: "assess the product for a 20-person team and invite a teammate to the workspace"
+success_criteria: "team plan understood, a teammate invite is sent successfully"
+budget_authority: "team budget owner, can approve annual contracts up to 25000 USD"
+patience_threshold_steps: 18
+forbidden_claims:
+  - willingness_to_pay_estimates
+  - population_percentages

@@ -1,0 +1,114 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://ux-gauntlet/schemas/findings.schema.json",
+  "title": "UX Gauntlet findings bundle",
+  "type": "object",
+  "required": ["run", "findings"],
+  "properties": {
+    "run": { "type": "object" },
+    "run_status": { "$ref": "#/$defs/run_status" },
+    "personas": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/persona_entry" }
+    },
+    "findings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/finding" }
+    }
+  },
+  "$defs": {
+    "run_status": {
+      "type": "string",
+      "enum": [
+        "completed",
+        "crashed",
+        "timed-out",
+        "patience-exhausted",
+        "runner-capped",
+        "BLOCKED"
+      ]
+    },
+    "persona_entry": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "run_status": {
+          "type": "string",
+          "enum": [
+            "completed",
+            "crashed",
+            "timed-out",
+            "patience-exhausted",
+            "runner-capped"
+          ]
+        },
+        "action_count": { "type": "integer" },
+        "tool_call_count": { "type": "integer" },
+        "patience_threshold_steps": { "type": "integer" },
+        "start_ts": { "type": "string" },
+        "end_ts": { "type": "string" },
+        "last_completed_step": { "type": "integer" }
+      },
+      "additionalProperties": true
+    },
+    "finding": {
+      "type": "object",
+      "required": [
+        "friction_name",
+        "friction_type",
+        "step",
+        "heuristic_tag",
+        "personas_flagging",
+        "convergence_tier",
+        "severity",
+        "severity_factors",
+        "finding_id"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "finding_id": { "type": "string" },
+        "friction_name": { "type": "string", "minLength": 1 },
+        "friction_type": {
+          "type": "string",
+          "enum": [
+            "walkthrough_failure",
+            "ambiguity_resolution",
+            "extra_action",
+            "terminal_friction"
+          ]
+        },
+        "step": { "type": "integer" },
+        "target_element_identifier": { "type": "string" },
+        "target_selector": { "type": "string" },
+        "concurrent_candidates": { "type": "integer" },
+        "personas_flagging": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "convergence_tier": { "type": "integer", "minimum": 0 },
+        "partial_tier": { "type": "integer", "minimum": 0 },
+        "heuristic_tag": { "type": "string", "minLength": 1 },
+        "severity": { "type": "integer", "minimum": 0, "maximum": 4 },
+        "severity_factors": {
+          "type": "object",
+          "properties": {
+            "frequency": {},
+            "impact": {},
+            "persistence": {}
+          }
+        },
+        "component_severities": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 0, "maximum": 4 }
+        },
+        "confidence": { "type": "string" },
+        "confidence_label": { "type": "string" },
+        "standardized_flow": { "type": "string" },
+        "market_impact": { "type": "boolean" },
+        "evidence": { "type": "array" },
+        "narrative": { "type": "string" }
+      },
+      "additionalProperties": true
+    }
+  }
+}
