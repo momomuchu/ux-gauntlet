@@ -1,0 +1,1 @@
+{ "spec": "docs/specs/0001-ux-gauntlet-mvp.spec.md", "spec_sha": "da91e06970e5eda550d79df71295f00e9c69f7f098769551b51b2c7635ccf380", "acceptance_test": "test/acceptance.test.mjs", "frozen": true }
