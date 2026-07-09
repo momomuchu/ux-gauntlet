@@ -1,1 +1,12 @@
-{"name":"ux-gauntlet","version":"0.3.0","type":"module","private":true,"scripts":{"test":"node --test test/acceptance.test.mjs test/acceptance-0002.test.mjs","test:ux":"node --test test/acceptance.test.mjs","test:structural":"node --test test/acceptance-0002.test.mjs"}}
+{
+  "name": "ux-gauntlet",
+  "version": "0.3.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test test/acceptance.test.mjs test/acceptance-0002.test.mjs",
+    "test:ux": "node --test test/acceptance.test.mjs",
+    "test:structural": "node --test test/acceptance-0002.test.mjs",
+    "test:live": "node --test test/acceptance-live.test.mjs"
+  }
+}

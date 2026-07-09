@@ -67,11 +67,18 @@ function grounded(f, persona) {
     groundLog.push(`DROPPED-UNGROUNDED ${persona} "${f.friction_name}" — cited step ${f.step} is not present in trace.json (ungrounded-step, B4)`);
     return false;
   }
+  // A page-prefixed target_element_identifier ("<page>:<element>") must refer to a page the persona
+  // ACTUALLY visited. Strict: an UNKNOWN page prefix (one that maps to no known route, e.g. an
+  // invented "admin:panel") is ungrounded and dropped — the earlier logic kept unknown pages, which
+  // let a hallucinated page slip through (caught by the live e2e test). Only a prefix that both maps
+  // to a known route AND was visited in this persona's trace survives.
   const page = pageOf(f.target_element_identifier);
-  if (page && PAGE_PATH[page]) {
+  if (page) {
+    const knownPath = PAGE_PATH[page];
     const visited = new Set(tr.steps.map((s) => pathOf(s.url)));
-    if (!visited.has(PAGE_PATH[page])) {
-      groundLog.push(`DROPPED-UNGROUNDED ${persona} "${f.friction_name}" — cites ${PAGE_PATH[page]} (page "${page}") which was never visited in this persona's trace (ungrounded-route, B4/B5)`);
+    if (!knownPath || !visited.has(knownPath)) {
+      const why = knownPath ? `route ${knownPath} was never visited` : `page "${page}" maps to no known route (likely fabricated)`;
+      groundLog.push(`DROPPED-UNGROUNDED ${persona} "${f.friction_name}" — cites page "${page}" but ${why} in this persona's trace (ungrounded-route, B4/B5)`);
       return false;
     }
   }
