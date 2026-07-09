@@ -1,0 +1,1 @@
+{ "spec": "docs/specs/0002-structural-ui-lane.spec.md", "spec_sha": "8b6f1507d50199c38694f1e86069640d82dd94e95691b31dc27fc9e93d9efc79", "acceptance_test": "test/acceptance-0002.test.mjs", "frozen": true }
