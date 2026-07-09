@@ -59,6 +59,14 @@ function main() {
   const dropLog = [];
   const add = (m) => violations.push(m);
 
+  // Lane discriminator trust boundary (B9, mirrors structural-ci-diff.mjs S57 in reverse): this is the
+  // PERSONA-lane gate. A structural-lane bundle must never be silently processed here — its critical
+  // a11y findings would otherwise be dropped as a coincidental "zero evidence" (F14/F15) side effect
+  // rather than caught. Absent lane defaults to persona (0001-safe: existing persona fixtures omit it).
+  if (bundle.lane === 'structural') {
+    add('bundle top-level lane is "structural" — the persona-lane report-gate refuses to evaluate a structural-lane bundle; route it to scripts/structural-report-gate.mjs (S22 lane trust boundary, B9)');
+  }
+
   const run = bundle.run || {};
   const allFindings = Array.isArray(bundle.findings) ? bundle.findings : [];
   const walkthrough = Array.isArray(bundle.walkthrough) ? bundle.walkthrough : null;
@@ -171,14 +179,23 @@ function main() {
 
   // --- BLOCKED derivation (F49/F191) + disclosure (F54) + degraded confidence (F124) ---
   // Derived by the pure core (D-DET): the same input yields the same verdict in gate and ci-diff.
-  if (personaEntries && storedRunStatus !== undefined) {
-    const derivedBlocked = deriveBlocked(personaEntries);
+  // B8 (quality-phase fix 2026-07-10): compute derivedBlocked whenever run_status is present OR the
+  // bundle carries a real (>=3) persona set. Previously the derivation only ran when run_status was
+  // present, so OMITTING the field entirely bypassed F191/F49 — a [completed,crashed,crashed] run
+  // (floorCount=1<3 => BLOCKED) shipped a clean PASS just by dropping run_status. A missing run_status
+  // is treated as NOT-BLOCKED (storedBlocked=false), so a real run that derives BLOCKED now mismatches
+  // and fails. The >=3-persona guard keeps isolated 1-2 persona single-check fixtures (which are not
+  // full runs and would false-derive BLOCKED under the fixed CONVERGENCE_FLOOR=3) from being flagged.
+  let derivedBlocked = false;
+  if (personaEntries && (storedRunStatus !== undefined || personaEntries.length >= 3)) {
+    derivedBlocked = deriveBlocked(personaEntries);
     const storedBlocked = storedRunStatus === 'BLOCKED';
     if (derivedBlocked !== storedBlocked) {
-      add(`run_status derivation mismatch: per-persona terminal states derive ${derivedBlocked ? 'BLOCKED' : 'NOT-BLOCKED'} but stored run_status is "${storedRunStatus}" (F191)`);
+      add(`run_status derivation mismatch: per-persona terminal states derive ${derivedBlocked ? 'BLOCKED' : 'NOT-BLOCKED'} but stored run_status is "${storedRunStatus === undefined ? '(absent)' : storedRunStatus}" (F191)`);
     }
   }
-  if (storedRunStatus === 'BLOCKED') {
+  // F54/F124 disclosure gates fire on the DERIVED blocked value, not solely the stored field (B8).
+  if (storedRunStatus === 'BLOCKED' || derivedBlocked) {
     if (typeof bundle.validity_envelope_text === 'string' && !/did not complete/i.test(bundle.validity_envelope_text)) {
       add('BLOCKED run validity envelope omits the non-completed-persona count/disclosure (F54)');
     }

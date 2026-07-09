@@ -5,6 +5,21 @@
 // S17: axe VIOLATION severity is a pure function of axe impact.
 export const AXE_IMPACT_SEVERITY = { critical: 4, serious: 3, moderate: 2, minor: 1 };
 
+// B6 (quality-phase fix 2026-07-10): axe impact strings must be matched CASE-INSENSITIVELY. axe-core
+// emits lowercase, but a bundle can carry a case variant ("Critical") that a raw === 'critical' /
+// map[impact] lookup silently no-ops on — bypassing both the severity mapping (S17) and the S30/S53
+// CI-block predicate for the single highest-severity defect class. canonicalImpact() folds case so a
+// variant maps like its canonical form; isValidImpact() lets the gates fail CLOSED on a non-canonical
+// impact string (a typo / unknown value) rather than silently treating it as "no known severity".
+export function canonicalImpact(impact) {
+  if (typeof impact !== 'string') return impact;
+  const lc = impact.toLowerCase();
+  return lc in AXE_IMPACT_SEVERITY ? lc : impact;
+}
+export function isValidImpact(impact) {
+  return typeof impact === 'string' && impact.toLowerCase() in AXE_IMPACT_SEVERITY;
+}
+
 // S35: the 9 non-axe DOM-check finding codes, each pinned to a fixed severity.
 export const NONAXE_SEVERITY = {
   'main-content-missing': 4,
@@ -38,18 +53,19 @@ export function isIncomplete(f) {
 export function expectedSeverity(f) {
   if (isIncomplete(f)) return 0;
   if (f.source === 'axe' || (typeof f.code === 'string' && f.code.startsWith('axe:'))) {
-    return AXE_IMPACT_SEVERITY[f.impact];
+    return AXE_IMPACT_SEVERITY[canonicalImpact(f.impact)];
   }
   return NONAXE_SEVERITY[f.code];
 }
 
 // S30/S52/S53/S38/S56: does this finding BLOCK a CI merge? Reads raw impact / code, never severity.
+// Impact comparison is case-folded (B6) so a "Critical" variant blocks exactly like "critical".
 export function findingBlocksCi(f) {
   if (f.source === 'axe' || (typeof f.code === 'string' && f.code.startsWith('axe:'))) {
-    return f.impact === 'critical'; // S30 via raw impact (S52)
+    return canonicalImpact(f.impact) === 'critical'; // S30 via raw impact (S52)
   }
   if (isIncomplete(f)) {
-    return f.impact === 'critical'; // S53/D7: incomplete whose underlying impact is critical
+    return canonicalImpact(f.impact) === 'critical'; // S53/D7: incomplete whose underlying impact is critical
   }
   return NONAXE_BLOCK_CODES.has(f.code); // S38/S56 by code
 }

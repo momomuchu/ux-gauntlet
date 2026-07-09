@@ -4,6 +4,8 @@
 // 3 = target unreachable at crawl start. This layer implements argument validation + refusal;
 // the live Playwright crawl is stubbed behind the validated entry (TODO: wire persona subagents).
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { denylistViolation } from './core/denylist.mjs';
 
 const USAGE = `ux-gauntlet run-gauntlet.mjs — multi-persona UX friction audit runner
@@ -88,7 +90,28 @@ function personaCount(flags) {
   } catch { return 0; }
 }
 
-function main() {
+function personaNames(flags) {
+  if (flags.personas.length > 0) return flags.personas.map((p) => p.split('/').pop().replace(/\.ya?ml$/, ''));
+  try { return readdirSync('personas').filter((f) => f.endsWith('.yaml')).map((f) => f.replace(/\.yaml$/, '')); }
+  catch { return []; }
+}
+
+// F80: is the target actually reachable before we claim to start a crawl? A short GET with a hard
+// timeout; connection-refused / timeout => target-availability outcome (exit 3), never a fake exit 0.
+async function reachable(url) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 2500);
+  try {
+    await fetch(url, { signal: ctrl.signal, redirect: 'manual' });
+    return true;   // any HTTP response (2xx/3xx/4xx/5xx) means the server is up
+  } catch {
+    return false;  // connection-refused / DNS failure / timeout => unreachable
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function main() {
   const flags = parseArgs(process.argv.slice(2));
 
   // --help short-circuits BEFORE any F107/F108 static-precondition aggregation (CR10-B3).
@@ -123,12 +146,41 @@ function main() {
     process.exit(1);
   }
 
-  // Validation cleared. The live crawl requires an agent session that supplies persona subagents
-  // (F30/F31, ADR-0001). No live browser/target here, so we do not fabricate a crawl result.
-  // TODO: wire Playwright persona subagents + emit runs/<timestamp>/{findings.json,summary.json}.
+  // Validation cleared. Probe the target before claiming to start a crawl (F80).
   process.stdout.write(`run-gauntlet: preconditions satisfied for ${flags.url} (env=${flags.env}).\n`);
-  process.stdout.write('run-gauntlet: crawl entry reached (Playwright persona-subagent integration is stubbed in this build).\n');
-  process.exit(0);
+  return reachable(flags.url).then((up) => {
+    if (!up) {
+      process.stderr.write(`run-gauntlet: target unreachable at ${flags.url} — cannot start the crawl (F80, exit 3)\n`);
+      process.exit(3);
+    }
+
+    // Target is up: DRIVE the real crawl. This is no longer a stub — run-gauntlet spawns the live
+    // Playwright capture (scripts/crawl.mjs) for every persona and writes runs/<ts>/<persona>/trace.json.
+    const runDir = `runs/${Date.now()}`;
+    const names = personaNames(flags);
+    const tasks = flags.tasks || 'examples/tasks.json';
+    const crawlPath = fileURLToPath(new URL('./crawl.mjs', import.meta.url));
+    const captured = [];
+    for (const name of names) {
+      const out = `${runDir}/${name}`;
+      const r = spawnSync('node', [crawlPath, '--url', flags.url, '--tasks', tasks, '--persona', name, '--viewport', '390x844', '--out', out], { stdio: 'inherit' });
+      if (r.status === 0) captured.push(name);
+    }
+    process.stdout.write(`run-gauntlet: captured ${captured.length}/${names.length} persona traces -> ${runDir}\n`);
+
+    // Persona JUDGMENT (the 4-question walkthrough -> friction ledger) is an LLM persona-subagent step
+    // per ADR-0002 — it is NOT fabricated here. If ledgers are already present for every captured
+    // persona, run the deterministic tail (assemble + GATE) to emit a gate-clean findings.json; else
+    // report that the persona-subagent judgment step must run next against the captured traces.
+    const haveLedgers = captured.length > 0 && captured.every((n) => existsSync(`${runDir}/${n}/ledger.json`));
+    if (haveLedgers) {
+      const assemblePath = fileURLToPath(new URL('./assemble-run.mjs', import.meta.url));
+      const a = spawnSync('node', [assemblePath, '--write', runDir, ...captured], { stdio: 'inherit' });
+      process.exit(a.status === 0 ? 0 : 1);
+    }
+    process.stdout.write('run-gauntlet: capture complete. Next: run the persona-subagent judgment step to write each <persona>/ledger.json, then `node scripts/assemble-run.mjs --write ' + runDir + ' ' + captured.join(' ') + '` to assemble + gate (ADR-0002 persona-judgment boundary).\n');
+    process.exit(0);
+  });
 }
 
 main();

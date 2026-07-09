@@ -81,7 +81,13 @@ and exits 0.
 
 ## What this tool does NOT claim
 
-It is **not a replacement for real user research**. It makes no **willingness-to-pay** estimate, no
-**population** percentage extrapolation, and no **ISO 9241-11** compliance claim. Severity is not
+It is **not a replacement for real user research**. Persona narratives make no **willingness-to-pay**
+estimate and no **population** percentage extrapolation, and this is **enforced by `report-gate.mjs`** as
+a real pipeline step (a hit fails the run, it is never silently rewritten). That enforcement is
+**shape-anchored** (`scripts/core/claims.mjs`): it detects a price magnitude next to a currency token or
+billing period, spelled/word-form currency ("twenty dollars", "20 bucks", "USD 20"), and explicit
+"willing/would pay" phrasing — a WTP or population assertion phrased with **no** number, currency, or
+period (e.g. "worth every penny") is a known residual it does not catch. It makes no **ISO 9241-11**
+compliance claim. Severity is not
 guaranteed reproducible across runs; convergence tiers can undercount on apps with unstable selectors.
 Per-persona verdicts are simulated judgments — treat corroboration, not any single "No", as the signal.

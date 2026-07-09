@@ -10,7 +10,18 @@
 // Exit: non-zero when the report is not a clean, trustworthy, internally-consistent structural pass.
 // It emits a content-derived diagnostic per finding and per failed invariant so the exact rule is named.
 import { readFileSync, existsSync } from 'node:fs';
-import { AXE_IMPACT_SEVERITY, NONAXE_SEVERITY, isIncomplete } from './core/structural-severity.mjs';
+import { AXE_IMPACT_SEVERITY, NONAXE_SEVERITY, isIncomplete, canonicalImpact, isValidImpact } from './core/structural-severity.mjs';
+
+// B7 (quality-phase fix 2026-07-10): the source axis for BOTH the display line and the S20/S41 dedup
+// key must be the CODE-INFERRED source, never the raw f.source field. Keying dedup on raw f.source
+// while the display path infers it from the axe:/axe-incomplete: code prefix let a byte-identical
+// duplicate finding dodge dedup simply by OMITTING its source field ("axe|..." vs "|...").
+function inferSource(f) {
+  if (f.source) return f.source;
+  if (typeof f.code === 'string' && f.code.startsWith('axe-incomplete:')) return 'axe-incomplete';
+  if (typeof f.code === 'string' && f.code.startsWith('axe:')) return 'axe';
+  return 'dom-check';
+}
 
 const PINNED_AXE = '4.12.1';
 const SCHEMA_VERSION = 1;
@@ -88,7 +99,7 @@ if (meta.settle_precondition_met === false) violate('metadata.settle_preconditio
 // ---- per-finding severity + shape ---------------------------------------------------------------
 const codes = findings.map((f) => f.code);
 for (const f of findings) {
-  const src = f.source ?? (typeof f.code === 'string' && f.code.startsWith('axe:') ? 'axe' : typeof f.code === 'string' && f.code.startsWith('axe-incomplete:') ? 'axe-incomplete' : 'dom-check');
+  const src = inferSource(f);
   say(`finding: source=${src} code=${f.code} rule_id=${f.rule_id ?? '-'} impact=${f.impact ?? '-'} severity=${f.severity} tei=${f.target_element_identifier ?? f.target_selector ?? '-'}`);
 
   if (f.lane !== 'structural') violate(`a finding carries lane "${f.lane}", not "structural" (S22)`);
@@ -100,9 +111,10 @@ for (const f of findings) {
     }
   } else if (src === 'axe') {
     if (f.impact == null) violate(`an axe-sourced finding (${f.code}) omits its required raw impact string — the S53 critical-impact CI predicate reads impact, not severity (S60/M9)`);
+    else if (!isValidImpact(f.impact)) violate(`axe finding ${f.code} carries a non-canonical impact string "${f.impact}" — impact must be one of critical|serious|moderate|minor (case-insensitive); the gate fails CLOSED rather than silently no-op'ing the S17 mapping on a lookup miss (S17/B6)`);
     else {
-      const want = AXE_IMPACT_SEVERITY[f.impact];
-      if (want != null && f.severity !== want) violate(`axe ${f.impact}-impact violation ${f.code} carries severity ${f.severity}; the pure S17 impact→severity mapping requires ${want} (S17/S19)`);
+      const want = AXE_IMPACT_SEVERITY[canonicalImpact(f.impact)];
+      if (f.severity !== want) violate(`axe ${f.impact}-impact violation ${f.code} carries severity ${f.severity}; the pure S17 impact→severity mapping requires ${want} (S17/S19)`);
     }
   } else { // dom-check
     const want = NONAXE_SEVERITY[f.code];
@@ -139,7 +151,7 @@ const seen = new Map();
 for (const f of findings) {
   const rule = f.rule_id ?? f.code ?? '';
   const id = f.target_element_identifier ?? f.target_selector ?? '';
-  const key = `${f.source ?? ''}|${rule}|${id}`;
+  const key = `${inferSource(f)}|${rule}|${id}`; // B7: inferred source, not raw f.source
   seen.set(key, (seen.get(key) ?? 0) + 1);
 }
 for (const [key, n] of seen) {

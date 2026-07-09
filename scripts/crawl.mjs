@@ -56,10 +56,18 @@ try {
   await page.goto(base, { waitUntil: 'domcontentloaded' });
   await snap(1, tasks.steps[0]?.label || 'open landing', 'goto ' + base, 1);
 
-  // Step 2 — find & click the signup CTA. Cost = 1 + scrolls needed to bring it into view (real friction signal).
+  // Step 2 — find & click the signup CTA. Cost = 1 + scrolls needed to bring it into view (real friction
+  // signal). M4: viewport-intersection via getBoundingClientRect() — isVisible() returns true even when
+  // the element is far below the fold, silently undercounting the scroll cost to the ideal 1.
   let scrolls = 0;
   let cta = page.locator('a.btn:has-text("Get started"), a:has-text("Get started")').first();
-  while (!(await cta.isVisible().catch(() => false)) && scrolls < 12) { await page.mouse.wheel(0, 700); scrolls++; }
+  const ctaInView = () => page.evaluate(() => {
+    const el = [...document.querySelectorAll('a,button,[role=button]')].find((n) => /get started/i.test(n.textContent || ''));
+    if (!el) return false;
+    const r = el.getBoundingClientRect();
+    return r.bottom > 0 && r.top < (window.innerHeight || 800);
+  }).catch(() => false);
+  while (!(await ctaInView()) && scrolls < 12) { await page.mouse.wheel(0, 700); scrolls++; }
   const ctaBox = await cta.boundingBox().catch(() => null);
   await cta.click({ timeout: 5000 }).catch(() => {});
   await page.waitForLoadState('domcontentloaded').catch(() => {});
@@ -91,6 +99,15 @@ try {
   await snap(5, tasks.steps[4]?.label || 'submit / reach dashboard', 'enter code + verify', hitVerifyWall ? 2 : 1);
   trace.task_completed = reachedDash;
   trace.run_status = reachedDash ? 'completed' : 'timed-out';
+
+  // Step 6 — review the /pricing page the personas reason about, so pricing-referencing findings can be
+  // GROUNDED against a page that was actually visited (B4/B5). Personas quoting pricing copy against a
+  // trace that never contains /pricing are dropped as ungrounded by assemble-run.mjs; capturing it here
+  // means a legitimate pricing observation now has real evidence to be grounded against.
+  try {
+    await page.goto(base + '/pricing', { waitUntil: 'domcontentloaded' });
+    await snap(6, 'review pricing', 'goto ' + base + '/pricing', 1);
+  } catch { /* pricing route optional; the run is still complete without it */ }
 } catch (e) {
   trace.error = String(e).slice(0, 300);
   trace.run_status = 'crashed';

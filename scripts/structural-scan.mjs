@@ -169,15 +169,27 @@ const structure = await page.evaluate((mainWanted) => {
   const visible = (el) => { const s = getComputedStyle(el); return s.display !== 'none' && s.visibility !== 'hidden'; };
   let mc = null;
   if (mainCount === 1) {
-    let el = null;
-    try { el = document.querySelector(mainWanted); } catch { el = null; }
+    let el = null; let selectorValid = true; let matchedVia = 'selector';
+    try { el = document.querySelector(mainWanted); } catch { el = null; selectorValid = false; }
+    if (!el) {
+      // Text-substring fallback (M6/M7/M8): the documented --main-content <css|text> contract accepts
+      // literal VISIBLE TEXT, not only a CSS selector. The pre-build spike had this fallback; the shipped
+      // build dropped it, so `--main-content "Create your account"` (real, present text) produced a false
+      // main-content-missing S4 that CI blocked on. Restore it: the smallest visible element whose text
+      // contains the string is the anchor.
+      const pool0 = q('h1,h2,h3,h4,h5,h6,main,article,section,div,p,button,a,label,span,li,td');
+      const cand = pool0.filter((e) => visible(e) && area(e) > 0 && (e.innerText || '').trim().includes(mainWanted));
+      if (cand.length) { el = cand.reduce((min, e) => (area(e) < area(min) ? e : min)); matchedVia = 'text'; }
+    }
     if (el) {
       const anchorArea = area(el);
       const pool = q('main,article,section,div,p,h1').filter((e) => e !== el && !e.contains(el) && !el.contains(e) && visible(e) && area(e) > 0 && (e.innerText || '').trim().length > 0);
       const maxOther = pool.reduce((mx, e) => Math.max(mx, area(e)), 0);
-      mc = { found: true, insideMain: !!el.closest('main,[role=main]'), largest: anchorArea >= maxOther };
+      mc = { found: true, matchedVia, insideMain: !!el.closest('main,[role=main]'), largest: anchorArea >= maxOther };
     } else {
-      mc = { found: false };
+      // Split diagnostic (M6): distinguish a syntactically INVALID selector that also matches no visible
+      // text (probable operator misuse) from a valid selector that is genuinely absent.
+      mc = { found: false, selectorValid };
     }
   }
   return { mainCount, headingSkip, positiveTabindex, unlabeledSection, mc };
@@ -202,8 +214,15 @@ for (const v of axeResult.incomplete) {
 if (structure.mainCount !== 1) {
   push({ source: 'dom-check', code: 'cannot-evaluate-ambiguous-main', severity: NONAXE_SEVERITY['cannot-evaluate-ambiguous-main'], target_element_identifier: mainWanted, target_selector: mainWanted, detail: `page exposes ${structure.mainCount} main landmarks; containment fails closed (S7/S14)` });
 } else if (structure.mc) {
-  if (!structure.mc.found) push({ source: 'dom-check', code: 'main-content-missing', severity: NONAXE_SEVERITY['main-content-missing'], target_element_identifier: mainWanted, target_selector: mainWanted, detail: 'declared main content not found (S12)' });
-  else {
+  if (!structure.mc.found) {
+    if (structure.mc.selectorValid === false) {
+      // invalid selector + no visible-text match → ADVISORY misuse diagnostic (severity 1, not in the
+      // S38/S56 CI-block set), never a blind severity-4 main-content-missing block (M6/M7/M8).
+      push({ source: 'dom-check', code: 'main-content-selector-invalid', severity: 1, possible_selector_misuse: true, target_element_identifier: mainWanted, target_selector: mainWanted, detail: `--main-content "${mainWanted}" is neither a valid CSS selector matching an element nor visible text present on the page — likely an operator selector-misuse, not a genuine missing-main-content site defect (S12, M6 split-diagnostic)` });
+    } else {
+      push({ source: 'dom-check', code: 'main-content-missing', severity: NONAXE_SEVERITY['main-content-missing'], target_element_identifier: mainWanted, target_selector: mainWanted, detail: 'declared main content not found — selector is syntactically valid but matches no element and no visible text (S12)' });
+    }
+  } else {
     if (!structure.mc.insideMain) push({ source: 'dom-check', code: 'main-content-not-in-main', severity: NONAXE_SEVERITY['main-content-not-in-main'], target_element_identifier: mainWanted, target_selector: mainWanted, detail: 'declared main content sits outside the single main landmark (S12)' });
     if (!structure.mc.largest) push({ source: 'dom-check', code: 'main-content-not-prominent', severity: NONAXE_SEVERITY['main-content-not-prominent'], target_element_identifier: mainWanted, target_selector: mainWanted, detail: 'declared main content is not the largest visible block by bounding-box area (S12)' });
   }

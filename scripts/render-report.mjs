@@ -51,7 +51,7 @@ w('- (f) Cognitive walkthroughs are weaker on standardized, well-learned pattern
 w('- (7) Per-persona task-outcome and walkthrough verdicts are simulated judgments with a demonstrated real-user agreement ceiling as low as ~45% ("Lost in Simulation"); treat each atomic "No"/task_completed:false as a simulated judgment, not ground truth.');
 w('');
 w('Rerun variance: a rerun can produce a **differing**, **non-superset**/**non-subset** finding set; this single run is **not** claimed to be complete.');
-w('Convergence tiers can **undercount** on apps that lack stable selectors, so corroboration may be understated.');
+w('Convergence tiers can **undercount** real cross-persona agreement for three distinct reasons (F104): (a) apps that lack stable selectors, so the same control resolves to different target-element identifiers across personas; (b) heuristic_tag judgment divergence — two personas legitimately tag the same friction with different Nielsen heuristics; and (c) target-element-identifier identity leakage, where the same element is anchored to different identifiers. In all three, one real convergent issue can split into separate lower-tier findings, so corroboration may be understated.');
 w('A new severity-4 finding carries the same **rerun**-instability caveat as any other finding; before treating a single red CI run as a confirmed regression, **manually re-run** the gauntlet to confirm it reproduces.');
 w('');
 w('Severity attribution: the severity scale and the frequency/impact/persistence bucket **thresholds** are the skill/operator\'s **own rubric** (the spec author\'s own operationalization of NN/g\'s qualitative concept), **not independently NN/g-verified** numbers.');
