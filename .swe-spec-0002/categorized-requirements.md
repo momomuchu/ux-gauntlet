@@ -65,7 +65,8 @@ sibling is SN1 (the reproducibility *quality attribute* across repeated runs).
 | S52 | functional | CR2-B17 — evaluating the critical-impact predicate on raw impact (never derived severity) is a gate-correctness rule protecting the S17 mapping |
 | S53 | functional | CR2-M2 — CI blocking on an incomplete finding whose raw impact is critical closes the incomplete-critical carve-out (D7), a gate policy |
 | S54 | functional | CR2-M3 — CI blocking on the S40 route-level refused status is a gate policy so an unmapped route can never go silently unaudited |
-| S55 | functional | CR2-M10 — the cross-namespace equivalence-table suppression is a finding-identity policy reconciling S20/S41 across the axe/non-axe boundary |
+| S55 | functional | CR2-M10 / CR3-2 — the cross-namespace equivalence-table suppression is a finding-identity policy reconciling S20/S41 across the axe/non-axe boundary; CR3 dropped the dead tabindex pair (S1 disables the axe tabindex rule), leaving the one live landmark-one-main <-> cannot-evaluate-ambiguous-main pair pinned to :root |
+| S56 | functional | CR3-1 — CI blocking on the fail-closed cannot-evaluate-ambiguous-main code is a gate policy: a severity-3 "could-not-evaluate" containment result is unmergeable like a refused run, closing the CR3-B1 inversion where it merged clean while a narrower severity-4 defect blocked |
 | SN1 | nonfunctional | reproducibility quality attribute — a perfect machine removes the sampling variance this line guards, so it is a real-world tech-property requirement |
 | SN2 | nonfunctional | versioned-schema robustness is a maintainability/evolution quality, not a domain behavior |
 | SN3 | nonfunctional | no-third-party-egress is a data-locality quality constraint |
@@ -75,12 +76,13 @@ sibling is SN1 (the reproducibility *quality attribute* across repeated runs).
 | SN7 | nonfunctional | CR1-M12 — pinned browser-binary version in metadata is a rendering-environment reproducibility property (sibling of SN4/S2) |
 | SN8 | nonfunctional | CR2-M20 — the pinned OS/font-rendering container render_environment_id is a rendering-environment reproducibility property closing the cross-machine glyph-shaping variance (sibling of SN7) |
 
-Summary: 55 functional (S1-S55), 8 nonfunctional (SN1-SN8). CHALLENGE-ROUND-1 appended S35-S46 + SN7;
+Summary: 56 functional (S1-S56), 8 nonfunctional (SN1-SN8). CHALLENGE-ROUND-1 appended S35-S46 + SN7;
 CHALLENGE-ROUND-2 appended S47-S55 + SN8 (the settle-timeout fail-closed + CI pair, the accname-engine
 source, the deterministic finding_id derivation + double-invoke proof, the raw-impact predicate, the
 incomplete-critical CI block, the route-refused CI block, the cross-namespace dedup table, the
-container render_environment_id) and edited S1/S4/S12/S14/S15/S39/S44 in place, with no renumbering of
-S1-S46/SN1-SN7. The
+container render_environment_id) and edited S1/S4/S12/S14/S15/S39/S44 in place; CHALLENGE-ROUND-3
+appended S56 (CI-block on cannot-evaluate-ambiguous-main) and edited S1/S12/S21/S22/S24/S42/S44/S45/S49/S55/SN8
+in place, with no renumbering of S1-S55/SN1-SN8. The
 Perfect Technology Filter keeps
 determinism/reproducibility on both sides deliberately: the *contract* (identical output for
 identical input, S2/S21) is functional; the *quality attribute* (no sampling variance across runs,

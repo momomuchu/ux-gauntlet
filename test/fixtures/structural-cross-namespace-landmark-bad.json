@@ -17,6 +17,7 @@
     ],
     "wcag_target": "AA",
     "browser_version": "chromium/1179",
+    "render_environment_id": "ubuntu-22.04-fontconfig-2.13.1@sha256:3f1a9c",
     "timestamp": "2026-07-09T12:00:00Z",
     "expected_main_content": {
       "/signup": "#audiobook-text"
@@ -39,33 +40,34 @@
     ]
   },
   "violation_ids": [
-    "tabindex"
+    "landmark-one-main"
   ],
   "incomplete_ids": [],
   "findings": [
     {
       "lane": "structural",
       "source": "axe",
-      "finding_id": "f-signup-axe-tabindex",
-      "code": "axe:tabindex",
-      "rule_id": "tabindex",
-      "impact": "serious",
-      "severity": 3,
-      "target_element_identifier": "button#next",
-      "target_selector": "button#next",
+      "finding_id": "f-signup-axe-landmark-one-main",
+      "code": "axe:landmark-one-main",
+      "rule_id": "landmark-one-main",
+      "impact": "moderate",
+      "severity": 2,
+      "target_element_identifier": ":root",
+      "target_selector": ":root",
       "route": "/signup",
-      "detail": "axe built-in 'tabindex' rule (serious -> severity 3) — S55 requires this to be SUPPRESSED when the paired non-axe positive-tabindex shares the selector"
+      "detail": "axe whole-document 'landmark-one-main' rule (moderate -> severity 2) — S55 requires this to be SUPPRESSED when the paired non-axe cannot-evaluate-ambiguous-main shares the :root selector"
     },
     {
       "lane": "structural",
       "source": "dom-check",
-      "finding_id": "f-signup-positive-tabindex",
-      "code": "positive-tabindex",
-      "severity": 1,
-      "target_element_identifier": "button#next",
-      "target_selector": "button#next",
+      "finding_id": "f-signup-cannot-evaluate-ambiguous-main",
+      "code": "cannot-evaluate-ambiguous-main",
+      "severity": 3,
+      "target_element_identifier": ":root",
+      "target_selector": ":root",
       "route": "/signup",
-      "detail": "non-axe positive-tabindex (severity 1) — S55 requires THIS to be the sole emitted finding for the shared selector"
+      "detail": "non-axe cannot-evaluate-ambiguous-main (severity 3) — the sole live cross-namespace pair (S55/CR3-2): this MUST be the only emitted finding for :root, the axe landmark-one-main finding suppressed"
     }
-  ]
+  ],
+  "main_landmark_count": 2
 }

@@ -1,7 +1,8 @@
 # Scrub log — SPEC 0002 structural lane: what was cut and why (2026-07-09)
 
 The brief (§5) already ran the scope discipline; this log records which candidate checks were cut
-from the MVP set and why, so the 40-line requirements set carries no speculative padding.
+from the MVP set and why, so the requirements set (40 lines at scrub time; 64 after CR1-CR3) carries
+no speculative padding.
 
 | Cut item | Reason |
 |---|---|
@@ -107,3 +108,112 @@ rejections and are re-confirmed rejected here in one line each, with no re-litig
 The other 3 CR2 rejections (S14/S35 zero-main collision; S7-vs-S14/S35 "duplicate" severities; S21/S42
 "no pinned hash formula" as an independent gap) were resolved by reading spec.md's Gherkin + the
 already-disclosed MVP scope boundary — no new requirement warranted.
+
+## CR3 arbitration + consolidation (2026-07-09): 27 CONFIRMED adjudicated, 2 REJECTED, systemic fixes
+
+Single-writer arbitration pass. The panel plateaued at ~27/round (28 -> 25 -> 27); like SPEC 0001's
+plateau, the driver is ADDITIVE GROWTH (40 -> 63 reqs) creating contradictions BETWEEN requirements,
+not new missing behavior. This pass resolves the PATTERNS the panel kept re-discovering, not the 27
+instances one by one. Net requirement delta: **+1** (S56 only); everything else is edit-in-place or
+removal. No renumbering. Every changed requirement line traced inline `# CR3-<defect-id>`.
+
+### Systemic mandate 1 — CI-block predicate exhaustiveness (closes B1)
+The gate had no predicate for `cannot-evaluate-ambiguous-main` (severity 3), so a fail-closed
+"could-not-evaluate" page merged clean while a narrower severity-4 `main-content-missing` blocked —
+inverting the lane's own fail-closed philosophy, and directly contradicting the Mn11 acceptance
+fixture which asserts the ambiguous-main page must block. Fix: appended **S56** (CI-block on
+`cannot-evaluate-ambiguous-main`) and authored ONE exhaustive classification — spec.md
+"## CI-block predicate table (exhaustive)". Every `run_status` and every finding source/code is now
+BLOCK or advisory; no value is unclassified. Principle: the gate blocks on (a) a hard defect
+(axe critical impact incl. incomplete-critical; non-axe severity 4) or (b) any route the lane could
+not trustworthily verdict (refused run/route, axe-execution-failed, settle-timeout, ambiguous-main).
+Added a CI-gate (`sci`) assertion on the ambiguous-main fixture in the S30/S37/S38/S46 test.
+
+### Systemic mandate 2 — dead-requirement removal (closes B8, M1, M8, Mn1, Mn3 — one root cause)
+The S1/S55 tabindex collision was re-discovered FIVE times across three rounds at four severities.
+Root cause: S1 sets `rules:{tabindex:{enabled:false}}` (CR2-B13), so axe can NEVER emit a `tabindex`
+finding for S55's suppression logic to act on — half of S55's equivalence table was permanently
+unreachable dead code, and the ONLY S55 fixture tested exactly that impossible half. Fixed ONCE at the
+requirement level: S55 now carries only the live pair (`landmark-one-main` <-> `cannot-evaluate-
+ambiguous-main`), both pinned to the `:root` selector (M8's missing-selector gap), with an explicit
+note that the tabindex pair is intentionally omitted per S1's rule-disable. Replaced the impossible
+fixture `structural-cross-namespace-dup-bad.json` (deleted) with `structural-cross-namespace-landmark-
+bad.json` exercising the actually-reachable pairing; rewrote the S55 test accordingly.
+Dead-req sweep: no OTHER whole requirement was made dead by a config-level fix. Only S55's tabindex
+BRANCH was dead (S55 itself stays live via the landmark pair). No requirement removed; S55 edited.
+
+### Systemic mandate 3 — spec.md / requirements.txt desync sweep (closes B2, B4, B6-prose)
+CR2 edited requirements.txt "in place" but never re-synced spec.md's per-ID restatement bullets. Swept
+every CRITICAL/HIGH/MEDIUM bullet against its binding requirement + the RED test:
+- **S4** (B2): spec.md bullet omitted `aria-command-name` (requirements.txt S4 + the S49 test require
+  it) — added. spec.md had ZERO occurrences of the string; now on S4 + S49 bullets.
+- **S1** (B4): bullet lacked the settle precondition + tabindex config — synced.
+- **S14** (B4): bullet lacked the S12-suppression clause the Mn11 test locks — synced.
+- **S39** (B4): bullet lacked the exact-match / no-normalization clause the Mn8 test locks — synced.
+- **S44** (B4/M4): bullet named only `axe_version` — widened to axe_version/browser_version/
+  ruleset_tags/render_environment_id (matches requirements.txt + the S44 test).
+- **S12** (B3/M14/M3): synced the ancestor-of-ANCHOR exclusion + visibility filter (see mandate 4).
+- **S49** (M2): synced the axe.setup/teardown lifecycle bracket.
+- **S55** (mandate 2): synced to the single live pair.
+- **D6 "structurally impossible" overclaim** (B6): softened. D6 claimed two differently-named scripts
+  make misrouting "structurally impossible"; that is a naming/CONVENTION guard, not a runtime check —
+  the frozen 0001 `report-gate.mjs`/`ci-diff.mjs` carry no runtime `lane`-rejection. Reworded to
+  "a spec-compliant builder never wires the persona gate to a structural bundle ... a naming/convention
+  guard, NOT a runtime type-check." (The additive-runtime-guard half of B6 is REJECTED — see below.)
+- **Counts**: Traceability "63 lines / 55 functional S1-S55 / req-lint 63/63" -> "64 / 56 / 64/64";
+  scrub-log "40-line" annotated as scrub-time. Also added the top-level `lane` discriminator (B5).
+
+### Systemic mandate 4 — remaining confirmed defects applied at judge severity (edit-first)
+| # | sev | disposition | how |
+|---|-----|-------------|-----|
+| B1 | BLK | ACCEPT | +S56 + exhaustive CI-block table + CI assertion (mandate 1) |
+| B2 | BLK | ACCEPT | spec.md S4/S49 bullets gain aria-command-name (mandate 3) |
+| B3 | BLK | ACCEPT | S12: exclude only ancestors OF THE ANCHOR; anchor never disqualified by its own descendants |
+| B4 | BLK | ACCEPT | 5-bullet spec.md re-sync (mandate 3) |
+| B5 | BLK | ACCEPT | S22 + M9 test: mandatory TOP-LEVEL lane field (clean zero-findings bundle still carries the discriminator) |
+| B6 | BLK | PARTIAL | prose overclaim softened (mandate 3); runtime-guard-on-frozen-0001-scripts REJECTED (below) |
+| B7 | BLK | ACCEPT (scoped) | S1 waits for `document.getAnimations({subtree:true})` empty (CSS-transition settle hole); S21/S42 require byte-identical finding RECORDS (id, severity, result-type) so an incomplete<->violation flip on a stable finding_id is caught. S50 finding_id UNCHANGED (records-level detection is sufficient; avoids churning S51). |
+| B8 | BLK | ACCEPT | folded into mandate 2 (S55 dead-branch removal + :root pin + real fixture) |
+| M1,Mn1,Mn3 | MAJ/MIN | ACCEPT | folded into mandate 2 (same root cause) |
+| M2 | MAJ | ACCEPT (edit) | S49 + spec.md bullet: axe.setup(document)/teardown() bracket around accessibleText. Edited S49 rather than adding S49a (minimal growth). |
+| M3 | MAJ | ACCEPT | S12 visibility filter: exclude display:none / visibility:hidden / zero bounding-box candidates |
+| M4 | MAJ | ACCEPT | S44 + render_environment_id; +sci assertion + `structural-ci-incomparable-render-environment-bad.json` |
+| M5 | MAJ | ACCEPT (document) | bypass-mechanism (WCAG 2.4.1): added spec.md Non-goals bullet + this cut-table row (below) — the silent vanish is now a decision trail, not a rebuilt check |
+| M6 | MAJ | ACCEPT | test: +`focus visible` +`keyboard operability` assertions in the S25/S26 block |
+| M7 | MAJ | ACCEPT (scoped) | S24: route compared verbatim (no normalization either side), report discloses a no-match rather than a silent empty join. Shared-`resolveRoute`-module addition REJECTED (touches frozen 0001; structural side already covered by S39). |
+| M8 | MAJ | ACCEPT | folded into mandate 2 (:root pin on both sides of the live pair) |
+| M9 | MAJ | DEFER (document) | multi-route CI orchestration is a v2 `structural-ci-gate-all-routes.mjs` wrapper; MVP gates each bundle independently — recorded in spec.md Known-gaps. Not a new requirement. |
+| M10 | MAJ | DEFER (document) | S44 two-report `--baseline/--current` invocation is a build-time wiring detail; asserted structurally, recorded as a Known-gap residual. |
+| M11 | MAJ | DEFER (document) | axe.run() wall-clock bound — panel itself noted external CI timeouts bound it; `axe-execution-timeout` run_status is a v2 hardening, recorded in Known-gaps. |
+| M12 | MAJ | ACCEPT | SN8: render_environment_id computed as a hash of installed OS/font-lib package versions, not a hand-typed label |
+| M13 | MAJ | DEFER (document) | live-execution/spike char-count already disclosed in Known-gaps (precedented v2 residual); reaffirmed, spike untouched (out of spec-consolidation scope) |
+| M14 | MAJ | ACCEPT | same S12 single-line fix as B3 |
+| M15 | MAJ | ACCEPT | test: +`structural-render-environment-id-missing-bad.json` negative control (SN8 was zero-covered) |
+| Mn2 | MIN | ACCEPT | Gherkin: +"a structural pass is not usable and is not good UI" Then-line |
+| Mn4 | MIN | ACCEPT (edit) | S45: non-axe DOM checks completed before the axe failure are still emitted; only axe-derived findings are omitted for that route |
+
+### The 2 REJECTED (+ 1 partial-reject) — one-line cites, no re-litigation
+1. **B6 additive runtime guards (proposed S56/S57 forcing 0001's `report-gate.mjs`/`ci-diff.mjs` to
+   reject a `lane` field)** — REJECTED: verbatim re-raise of CR1 REJECTED #3/#4 and CR2 REJECTED #1/#2
+   ("0001's gate is never wired under spec-compliant behavior"); additionally it would mutate frozen
+   SPEC 0001 scripts and risk the 0001 acceptance suite (93/0). The GENUINE part of B6 — D6's
+   "structurally impossible" OVERCLAIM — was accepted and softened (mandate 3). Stands rejected as a
+   runtime requirement. No requirement added to 0001.
+2. **M7 shared `resolveRoute` module across both lane CLIs** — REJECTED: adding a shared module
+   contract reaches into the frozen SPEC 0001 lane; the structural side's normalization is already
+   pinned by S39, and the advisory join degradation is closed by S24's new no-match disclosure clause.
+3. **CR1/CR2 panel's own rejections** (SN1-vs-S21 determinism-scope fork; S12 fixed-tag-vs-S39
+   membership; the two 0001-misrouting re-raises; S7-vs-S14/S35 duplicate severities; S21/S42 "no
+   hash formula") — remain rejected; not re-opened.
+
+### Cut-table addendum (mandate 3, M5)
+| Cut item | Reason |
+|---|---|
+| Bypass-mechanism / skip-link check (WCAG 2.4.1) | brief §2b/§5 named it an MVP MUST-check but it silently vanished from requirements.txt with no trail; deferred here (axe `bypass` has known FP/FN on SPA routing; not load-bearing for the main-content/NRV/contrast core). Now a decision trail, not a silent drop (CR3-M5). v2 advisory-only candidate. |
+
+### Desync sweep result (post-edit)
+Every CRITICAL/HIGH/MEDIUM spec.md acceptance bullet was diffed against its requirements.txt line and
+its RED-test assertion. Remaining known deltas are DELIBERATE and disclosed: spec.md prose elaborates
+(Gherkin, D-table rationale) beyond the terse requirement line; the exhaustive CI-block table is the
+single SSOT for gate verdicts. No stale count, no "one gate"/"structurally impossible" overclaim, and
+no CR2-in-place edit remains unsynced in spec.md.

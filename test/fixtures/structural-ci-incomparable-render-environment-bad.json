@@ -17,7 +17,7 @@
     ],
     "wcag_target": "AA",
     "browser_version": "chromium/1179",
-    "render_environment_id": "ubuntu-22.04-fontconfig-2.13.1@sha256:3f1a9c",
+    "render_environment_id": "ubuntu-24.04-fontconfig-2.15.0@sha256:9be220",
     "timestamp": "2026-07-09T12:00:00Z",
     "expected_main_content": {
       "/signup": "#audiobook-text"
@@ -41,5 +41,6 @@
   },
   "violation_ids": [],
   "incomplete_ids": [],
-  "findings": []
+  "findings": [],
+  "comparison_note": "axe_version, browser_version, and ruleset_tags all match the baseline but render_environment_id differs (ubuntu-24.04-fontconfig-2.15.0 vs baseline ubuntu-22.04-fontconfig-2.13.1); font-rendering/glyph-shaping variance can flip a borderline contrast finding or S12's tie-break, so S44 must refuse to treat the two reports as comparable (CR3-M4)"
 }

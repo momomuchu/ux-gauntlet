@@ -192,7 +192,7 @@ test('M9 (S22 D6): structural + persona schemas are one family — identical top
   assert.ok(existsSync('schemas/findings.schema.json'), 'schemas/findings.schema.json (SPEC 0001) missing');
   const st = json('schemas/structural-findings.schema.json'); // RED: not built
   const pe = json('schemas/findings.schema.json');
-  assert.deepEqual([...st.required].sort(), [...pe.required].sort(), 'both schemas must share the same top-level required array (D6 family)');
+  assert.deepEqual([...st.required].sort(), [...pe.required, 'lane'].sort(), 'structural adds a mandatory top-level lane discriminator to the shared 0001 family required set (D6/B5 — a clean zero-findings bundle still carries lane where per-finding markers are absent)');
   const stF = st.$defs?.finding ?? st.definitions?.finding ?? st.properties?.findings?.items;
   const peF = pe.$defs?.finding ?? pe.definitions?.finding ?? pe.properties?.findings?.items;
   for (const prop of ['severity', 'finding_id']) {
@@ -229,6 +229,8 @@ test('S25 S26 S27 S29: every report prints the validity envelope with vendor-rep
   assert.match(md, /not independently audited/i, 'the envelope states the figures are not independently audited (S25/M6)');
   assert.match(md, /not usable|not good ui/i, 'the envelope states a structural pass is not usable and not good UI (S25)');
   assert.match(md, /focus order/i, 'the envelope names focus order among the non-automatable classes (S26)');
+  assert.match(md, /focus visible/i, 'the envelope names focus visible among the non-automatable classes (S26/M6)');
+  assert.match(md, /keyboard operability/i, 'the envelope names keyboard operability among the non-automatable classes (S26/M6)');
   assert.match(md, /best-practice/i, 'the envelope labels heading-order as best-practice, not a WCAG failure (S27)');
   assert.doesNotMatch(md, /DOM-order finding/i, 'the envelope no longer references DOM-order findings — that check is a cut MVP non-goal (S27/Mi2)');
   assert.match(md, /not a wcag conformance certification/i, 'the report disclaims WCAG conformance certification (S29)');
@@ -253,8 +255,13 @@ test('S30 S37 S38 S46: the CI gate blocks on critical impact, on a refused run, 
   // S46: a route where axe failed to complete must block CI (never a silent zero-violations pass, S45).
   const axeFailed = sci('structural-axe-execution-failed-bad.json');
   assert.notEqual(axeFailed.code, 0, 'the CI gate exits non-zero when a route recorded run_status axe-execution-failed (S45/S46/B5)');
+  // S56 (CR3-1): cannot-evaluate-ambiguous-main is a fail-closed severity-3 code that MUST block CI
+  // even though it is not severity 4 and not a run_status — closing the CR3-B1 inversion where an
+  // advisory sev-3 ambiguous-main merged clean while a narrower sev-4 defect blocked.
+  const ambiguousMain = sci('structural-ambiguous-main-suppresses-s12-bad.json');
+  assert.notEqual(ambiguousMain.code, 0, 'the CI gate exits non-zero on a cannot-evaluate-ambiguous-main finding — the fail-closed containment result blocks the merge despite its pinned severity 3 (S56/CR3-1)');
   const clean = sci('structural-no-violations-ok.json');
-  assert.equal(clean.code, 0, 'a genuinely clean, completed run with zero violations passes the CI gate (negative control, S30/S46)');
+  assert.equal(clean.code, 0, 'a genuinely clean, completed run with zero violations passes the CI gate (negative control, S30/S46/S56)');
 });
 
 test('S45: the lane records run_status axe-execution-failed rather than a silent clean pass for an untested route', () => {
@@ -352,6 +359,22 @@ test('S44 (Mi5, CR2-M7/M19): CI comparison refuses on axe_version, browser_versi
   const badTags = sci('structural-ci-incomparable-ruleset-tags-bad.json');
   assert.match(out(badTags), /ruleset.?tags|tag|comparab|refus|incomparable/i, 'the CI gate names the ruleset_tags comparability rule when axe_version matches but ruleset_tags differ (S44/M19)');
   assert.notEqual(badTags.code, 0, 'a CI comparison whose reports share axe_version but differ in ruleset_tags must refuse with a non-zero exit (S44/M19)');
+  // CR3-M4: render_environment_id (OS/font-rendering stack) is the fourth comparability-breaking
+  // dimension — SN8/D5b scope S42's determinism guarantee to matching render_environment_id.
+  const badEnv = sci('structural-ci-incomparable-render-environment-bad.json');
+  assert.match(out(badEnv), /render.?environment|environment.?id|comparab|refus|incomparable/i, 'the CI gate names the render_environment_id comparability rule when axe_version matches but render_environment_id differs (S44/CR3-M4)');
+  assert.notEqual(badEnv.code, 0, 'a CI comparison whose reports share axe_version but differ in render_environment_id must refuse with a non-zero exit (S44/CR3-M4)');
+});
+
+test('CR3-M15 (SN8): render_environment_id is load-bearing for S42 — a report omitting it is rejected by the gate', () => {
+  // Requirement ID: SN8 — SN8/D5b scope S42's cross-machine determinism guarantee to a matching
+  // render_environment_id; a lane that never emits it silently voids that scoping condition, so the
+  // gate must reject a findings file whose metadata omits render_environment_id.
+  const missing = sgate('structural-render-environment-id-missing-bad.json');
+  assert.match(out(missing), /render.?environment|environment.?id|SN8/i, 'the gate names the render_environment_id metadata rule when the field is absent (SN8/M15)');
+  assert.notEqual(missing.code, 0, 'a report whose metadata omits render_environment_id must fail the gate with a non-zero exit (SN8/M15)');
+  const ok = sgate('structural-valid.json');
+  assert.equal(ok.code, 0, 'a report carrying render_environment_id in metadata passes the gate (negative control, SN8/M15)');
 });
 
 // ==== CHALLENGE-ROUND-2 additions ====
@@ -457,13 +480,16 @@ test('Mn11 (S14 S12): ambiguous main (count != 1) suppresses the entire S12 eval
   assert.equal(ok.code, 0, 'a page exposing exactly one main landmark passes the gate (negative control, S14/Mn11)');
 });
 
-test('S55 (M10): one physical defect flagged by both an axe rule and a non-axe check is not double-counted', () => {
-  // Requirement ID: S55 (CR2-M10) — the cross-namespace equivalence table: when the axe 'tabindex'
-  // rule and the non-axe 'positive-tabindex' check share a selector, the non-axe finding is emitted
-  // and the axe finding is suppressed (else one defect ships as two contradictory-severity entries).
-  const dup = sgate('structural-cross-namespace-dup-bad.json');
-  assert.match(out(dup), /cross-namespace|tabindex|positive-tabindex|suppress|equivalence|dedup/i, 'the gate names the cross-namespace equivalence rule when an axe finding + its paired non-axe finding share a selector (S55)');
-  assert.notEqual(dup.code, 0, 'a report emitting BOTH the axe tabindex finding and the non-axe positive-tabindex finding for one selector must fail the gate — the axe finding must be suppressed (S55/M10)');
+test('S55 (M10/B8): the one live cross-namespace pair (landmark-one-main <-> cannot-evaluate-ambiguous-main) is not double-counted', () => {
+  // Requirement ID: S55 (CR2-M10, CR3-2/B8) — the tabindex/positive-tabindex pair is DEAD CODE: S1
+  // disables the axe tabindex rule (CR2-B13), so axe can never emit a tabindex finding for it to act
+  // on. The sole live pair is the axe landmark-one-main rule vs the non-axe cannot-evaluate-ambiguous-
+  // main check, both pinned to the :root selector: when both appear for :root, the non-axe finding is
+  // emitted and the axe finding is suppressed (else one 0-or-2-main defect ships as two entries at two
+  // severities). The fixture exercises the ACTUALLY-REACHABLE pairing, not the impossible tabindex one.
+  const dup = sgate('structural-cross-namespace-landmark-bad.json');
+  assert.match(out(dup), /cross-namespace|landmark-one-main|cannot-evaluate-ambiguous-main|suppress|equivalence|dedup/i, 'the gate names the cross-namespace equivalence rule when the axe landmark-one-main finding + its paired non-axe cannot-evaluate-ambiguous-main finding share the :root selector (S55)');
+  assert.notEqual(dup.code, 0, 'a report emitting BOTH the axe landmark-one-main finding and the non-axe cannot-evaluate-ambiguous-main finding for the :root selector must fail the gate — the axe finding must be suppressed (S55/M10/B8)');
 });
 
 test('S49 S4 S15 (B9/B5): a role=button control sources its accessible name via aria-command-name / the accname engine', () => {

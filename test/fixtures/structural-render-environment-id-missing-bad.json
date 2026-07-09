@@ -17,7 +17,6 @@
     ],
     "wcag_target": "AA",
     "browser_version": "chromium/1179",
-    "render_environment_id": "ubuntu-22.04-fontconfig-2.13.1@sha256:3f1a9c",
     "timestamp": "2026-07-09T12:00:00Z",
     "expected_main_content": {
       "/signup": "#audiobook-text"
@@ -41,5 +40,6 @@
   },
   "violation_ids": [],
   "incomplete_ids": [],
-  "findings": []
+  "findings": [],
+  "missing_field_note": "metadata omits render_environment_id — SN8 requires the OS/font-rendering container fingerprint in every report because S42's cross-machine determinism guarantee is scoped to a matching render_environment_id; the gate must reject this file (SN8/CR3-M15)"
 }
