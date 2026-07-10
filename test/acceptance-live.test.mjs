@@ -8,28 +8,78 @@
 //  separate `npm run test:live`, not the default `npm test`).
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { spawn, execFileSync } from 'node:child_process';
-import { readFileSync, writeFileSync, existsSync, statSync, mkdtempSync, openSync } from 'node:fs';
+import { spawn, execFileSync, spawnSync } from 'node:child_process';
+import { readFileSync, writeFileSync, existsSync, statSync, mkdtempSync, mkdirSync, openSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import net from 'node:net';
 
 const PORT = 4337;
 const BASE = `http://localhost:${PORT}`;
-let server;
+let server = null;
+let ownedServer = false; // did WE spawn it? (ownership — never kill a pre-existing process, R2 items 12/20)
+
+// Real HTTP status of a route (not mere TCP reachability): curl prints the code, 000/non-zero on failure.
+function httpStatus(url) {
+  const r = spawnSync('curl', ['-s', '-o', '/dev/null', '-m', '2', '-w', '%{http_code}', url], { encoding: 'utf8' });
+  return r.status === 0 ? parseInt((r.stdout || '').trim(), 10) || 0 : 0;
+}
+// Quick TCP probe for a pre-existing listener on the port (ownership pre-flight).
+function portInUse(port) {
+  return new Promise((resolve) => {
+    const sock = net.connect({ port, host: '127.0.0.1' });
+    sock.setTimeout(600);
+    sock.once('connect', () => { sock.destroy(); resolve(true); });
+    sock.once('timeout', () => { sock.destroy(); resolve(false); });
+    sock.once('error', () => resolve(false));
+  });
+}
 
 before(async () => {
+  // Ownership pre-flight (R2 items 12/20): if a process already holds the port, do NOT spawn our own and
+  // do NOT kill it in after(). Still assert it serves a real 200 on an actual app route, else fail LOUD —
+  // a decoy/stray server must not silently produce product-shaped failures.
+  if (await portInUse(PORT)) {
+    if (httpStatus(`${BASE}/signup`) !== 200) {
+      throw new Error(`port ${PORT} is already occupied by a process that does not serve HTTP 200 on /signup — refusing to run the live suite against an unknown pre-existing server (ownership + readiness guard, R2 item 20)`);
+    }
+    ownedServer = false;
+    return;
+  }
   server = spawn('node', ['examples/staging-demo/server.mjs', String(PORT)], { stdio: 'ignore' });
-  // wait for reachability
-  for (let i = 0; i < 40; i++) {
-    try { execFileSync('curl', ['-s', '-o', '/dev/null', '-m', '1', BASE]); break; }
-    catch { await new Promise((r) => setTimeout(r, 150)); }
+  ownedServer = true;
+  let spawnError = null;
+  server.once('error', (e) => { spawnError = e; });
+  // Readiness ASSERTION (R2 item 12): poll until a REAL 200 on an actual route, with a hard timeout that
+  // THROWS — never proceed on unverified reachability. Also bail if the child exits early.
+  const deadline = Date.now() + 15000;
+  let ready = false;
+  while (Date.now() < deadline) {
+    if (spawnError) throw new Error(`failed to spawn staging server: ${spawnError.message}`);
+    if (server.exitCode !== null) throw new Error(`staging server exited early (code ${server.exitCode}) before becoming ready`);
+    if (httpStatus(`${BASE}/signup`) === 200) { ready = true; break; }
+    await new Promise((r) => setTimeout(r, 200));
+  }
+  if (!ready) {
+    try { server.kill('SIGKILL'); } catch { /* already gone */ }
+    throw new Error(`staging server never returned HTTP 200 on ${BASE}/signup within 15s — readiness assertion failed (R2 item 12), refusing to run a flaky green`);
   }
 });
-after(() => { if (server) server.kill(); });
 
+// Reap OUR child unconditionally (even if a test threw); never kill an unowned pre-existing server.
+after(() => {
+  if (ownedServer && server) {
+    try { server.kill('SIGKILL'); } catch { /* already gone */ }
+    server = null;
+  }
+});
+
+// spawnSync so BOTH stdout and stderr are captured on EVERY exit path — the prior execFileSync form
+// discarded stderr on success (masking diagnostics) and on a JSON-parse crash surfaced only "Unexpected
+// end of JSON input" with no reason (R2 item 13). stderr is now always available to assert on.
 const run = (args) => {
-  try { return { code: 0, stdout: execFileSync('node', args, { stdio: 'pipe' }).toString(), stderr: '' }; }
-  catch (e) { return { code: e.status ?? 1, stdout: e.stdout?.toString() ?? '', stderr: e.stderr?.toString() ?? '' }; }
+  const r = spawnSync('node', args, { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
+  return { code: r.status ?? 1, stdout: r.stdout ?? '', stderr: r.stderr ?? '' };
 };
 const scan = (mainContent, path = '/signup') =>
   JSON.parse(run(['scripts/structural-scan.mjs', '--url', BASE, '--path', path, '--main-content', mainContent, '--continue-name', 'Continue']).stdout);
@@ -106,4 +156,38 @@ test('LIVE end-to-end: crawl trace grounds a persona ledger — an off-trace fin
   const names = bundle.findings.map((f) => f.friction_name);
   assert.ok(names.includes('cta hidden'), 'the grounded landing-page finding ships');
   assert.ok(!names.includes('invented admin page'), 'the ungrounded finding citing a never-crawled admin page is DROPPED (trace grounding, B4/B5)');
+});
+
+test('LIVE persona-LLM residual: a realistic NO-target_element_identifier ledger degrades LOUDLY, never fabricates convergence (R2 items 2/14/17)', () => {
+  // The named, previously-untested residual: crawl.mjs emits ZERO selector/tei data, so a real LLM
+  // persona routinely omits target_element_identifier. The prior clusterKey fell back to
+  // (heuristic_tag, step) ALONE, so two independent personas whose tei-less findings shared only
+  // tag+step FALSE-MERGED into one convergence_tier-2 finding — fabricated cross-persona agreement.
+  // This test feeds that exact realistic shape and asserts the pipeline (a) keeps them SEPARATE at
+  // tier 1, (b) flags them low-confidence, (c) never leaks an internal key into the public tei field,
+  // and (d) says so LOUDLY on stderr instead of silently reporting convergence.
+  const dir = mkdtempSync(join(tmpdir(), 'uxg-notei-'));
+  const mkTrace = (persona) => ({ persona, base: BASE, steps: [
+    { step: 1, label: 'open the landing page', url: `${BASE}/`, title: 'Cloudly' },
+    { step: 2, label: 'click the signup CTA', url: `${BASE}/signup`, title: 'Sign up' },
+  ], run_status: 'completed', task_completed: true });
+  for (const p of ['p1', 'p2']) {
+    mkdirSync(join(dir, p), { recursive: true });
+    writeFileSync(join(dir, p, 'trace.json'), JSON.stringify(mkTrace(p)));
+    // exactly what a real persona subagent produces: NO target_element_identifier, identical tag+step.
+    const led = { persona: p, run_status: 'completed', findings: [
+      { friction_name: `${p} confusion`, friction_type: 'walkthrough_failure', step: 1, heuristic_tag: 'match-system-real-world', severity: 3, severity_factors: { frequency: 'x', impact: 'y', persistence: 'z' }, evidence: [{ type: 'screenshot', path: `${p}.png` }], narrative: 'the wording did not match what I expected' },
+    ] };
+    writeFileSync(join(dir, p, 'ledger.json'), JSON.stringify(led));
+  }
+  const out = run(['scripts/assemble-run.mjs', dir, 'p1', 'p2']);
+  const bundle = JSON.parse(out.stdout);
+  assert.equal(bundle.findings.length, 2, 'two tei-less findings from two personas must NOT false-merge into one convergence_tier-2 finding');
+  for (const f of bundle.findings) {
+    assert.equal(f.convergence_tier, 1, 'each ungrounded (no-tei) finding stays convergence_tier 1 — no fabricated cross-persona convergence');
+    assert.equal(f.confidence, 'ungrounded-no-target-element', 'each tei-less finding is flagged low-confidence/ungrounded');
+    assert.ok(f.target_element_identifier == null, 'the internal cluster key is NEVER leaked into the public target_element_identifier field (R2 item 16)');
+    assert.ok(!/^fid-[0-9a-f]{16}$/.test(f.finding_id), 'a tei-less finding does not receive a hex F165 finding_id it cannot back with a real target_element_identifier');
+  }
+  assert.match(out.stderr, /UNGROUNDED-FINDINGS|ungrounded/i, 'the pipeline degrades LOUDLY — it names the ungrounded findings on stderr rather than silently fabricating convergence (persona-LLM residual made loud)');
 });

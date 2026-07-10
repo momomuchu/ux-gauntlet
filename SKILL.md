@@ -84,10 +84,14 @@ and exits 0.
 It is **not a replacement for real user research**. Persona narratives make no **willingness-to-pay**
 estimate and no **population** percentage extrapolation, and this is **enforced by `report-gate.mjs`** as
 a real pipeline step (a hit fails the run, it is never silently rewritten). That enforcement is
-**shape-anchored** (`scripts/core/claims.mjs`): it detects a price magnitude next to a currency token or
-billing period, spelled/word-form currency ("twenty dollars", "20 bucks", "USD 20"), and explicit
-"willing/would pay" phrasing — a WTP or population assertion phrased with **no** number, currency, or
-period (e.g. "worth every penny") is a known residual it does not catch. It makes no **ISO 9241-11**
+**shape-anchored plus a closed idiom list** (`scripts/core/claims.mjs`): it detects a price magnitude
+next to a currency token or billing period, spelled/word-form currency ("twenty dollars", "20 bucks",
+"USD 20"), explicit "willing/would pay" phrasing, **and** a closed set of non-numeric WTP idioms
+("worth every penny", "worth paying for", "take my money", "shut up and take my money", "happy/gladly
+to pay", "would gladly/happily pay"). It remains a **lexical heuristic, not a semantic classifier** and
+is **deliberately not exhaustive**: a WTP or population assertion paraphrased outside both the numeric
+shapes and this idiom list (e.g. "customers would not hesitate to open their wallets") is a **known
+residual it does not catch** — reliable coverage needs semantics beyond a regex. It makes no **ISO 9241-11**
 compliance claim. Severity is not
 guaranteed reproducible across runs; convergence tiers can undercount on apps with unstable selectors.
 Per-persona verdicts are simulated judgments — treat corroboration, not any single "No", as the signal.

@@ -18,10 +18,20 @@
 const SPELLED_NUM = '(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|' +
   'thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|' +
   'sixty|seventy|eighty|ninety|hundred|thousand)';
+// R2 item 10 (2026-07-10): add a CLOSED set of non-numeric WTP IDIOMS the shape-anchored patterns
+// missed — a persona can assert willingness-to-pay with zero number/currency ("worth every penny",
+// "take my money"). These are exact idioms, not a general semantic model, so ordinary prose and
+// hyphenated persona names still never match. This is a HEURISTIC widening, NOT exhaustive coverage
+// (see the residual note at the foot of this file + SKILL.md) — a paraphrase outside this idiom list
+// is still uncaught by a lexical regex.
 export const WTP_RE = new RegExp(
   [
     'willing(?:ness)?\\s+to\\s+pay',                 // "willing to pay" (space-separated, not hyphenated)
-    'would\\s+pay',                                  // "would pay"
+    'happy\\s+to\\s+pay',                            // "happy to pay"
+    'glad(?:ly)?\\s+to?\\s*pay',                     // "gladly pay", "glad to pay"
+    'would\\s+(?:gladly\\s+|happily\\s+)?pay',       // "would pay", "would gladly pay", "would happily pay"
+    'worth\\s+(?:every\\s+penny|paying\\s+for|the\\s+(?:money|price|cost))', // "worth every penny", "worth paying for"
+    '(?:shut\\s+up\\s+and\\s+)?take\\s+my\\s+money', // "take my money", "shut up and take my money"
     'pay(?:s|ing)?\\s+(?:\\$|€|£)?\\d',              // "pay 29", "pays $29"
     '(?:\\$|€|£)\\s?\\d',                            // "$29", "€ 29"
     '\\d+\\s*(?:usd|dollars?|bucks?|eur|euros?|gbp|pounds?|quid)\\b', // "29 dollars", "20 bucks"
@@ -54,7 +64,11 @@ export function forbiddenClaims(narrative) {
   return out;
 }
 
-// Residual (m4, noted): a WTP or population assertion phrased with NO number, currency, or period
-// (e.g. "most users would happily pay", "a large share of visitors abandon") is not caught by a
-// shape-anchored regex; catching it reliably needs semantics beyond a lexical pattern. Deferred as
-// a v2 residual rather than risk false positives on ordinary narrative prose.
+// Residual (HONEST, do not over-claim — R2 item 10): the WTP detector now catches a CLOSED set of
+// common non-numeric idioms ("worth every penny", "take my money", "happy/gladly/would pay") IN
+// ADDITION to the shape-anchored numeric/currency patterns. It remains a lexical HEURISTIC, not a
+// semantic classifier: a WTP or population assertion phrased outside both the numeric shapes AND this
+// idiom list (e.g. "customers would not hesitate to open their wallets", "a large share of visitors
+// abandon") is still NOT caught — reliable coverage needs semantics beyond a regex. This is a
+// deliberately incomplete v2 residual, disclosed here and in SKILL.md, kept lexical to avoid false
+// positives on ordinary narrative prose.

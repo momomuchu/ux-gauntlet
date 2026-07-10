@@ -6,6 +6,7 @@
 // about whether the same run is BLOCKED (B1, quality-phase fix 2026-07-09).
 import { readFileSync, existsSync } from 'node:fs';
 import { deriveBlocked } from './core/run-status.mjs';
+import { assertLane } from './core/lane.mjs';
 
 function arg(name) {
   const i = process.argv.indexOf(name);
@@ -21,6 +22,18 @@ if (!basePath || !curPath || !existsSync(basePath) || !existsSync(curPath)) {
 
 const base = JSON.parse(readFileSync(basePath, 'utf8'));
 const cur = JSON.parse(readFileSync(curPath, 'utf8'));
+
+// Lane trust boundary (R2 item 18): ci-diff is the PERSONA-lane merge gate and previously had NO lane
+// discriminator at all — a structural bundle fed in produced a misleading "may be LLM/persona
+// stochasticity — re-run" caveat on a deterministic axe finding. Fail closed via the shared helper, on
+// both the baseline and the current bundle, exactly like the three sibling gates (S22).
+for (const [label, b] of [['baseline', base], ['current', cur]]) {
+  const laneErr = assertLane(b, 'persona');
+  if (laneErr) {
+    process.stderr.write(`REFUSE: ${label} bundle is not persona-lane — ${laneErr}\n`);
+    process.exit(1);
+  }
+}
 
 const key = (f) => f.finding_id || f.id;
 const baseByKey = new Map();

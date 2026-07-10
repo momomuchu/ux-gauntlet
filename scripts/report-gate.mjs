@@ -11,6 +11,7 @@ import { hasCredentialLeak } from './core/redaction.mjs';
 import { NIELSEN_10, DEFAULT_RUBRIC, bucketNumeric, numericFactors, convergenceCounts } from './core/severity.mjs';
 import { forbiddenClaims } from './core/claims.mjs';
 import { isValidDenylist } from './core/denylist.mjs';
+import { assertLane } from './core/lane.mjs';
 
 const LEDGER_REASON_CODES = new Set([
   'task-completed', 'denylist-abort', 'patience-exhausted', 'runner-capped',
@@ -59,12 +60,16 @@ function main() {
   const dropLog = [];
   const add = (m) => violations.push(m);
 
-  // Lane discriminator trust boundary (B9, mirrors structural-ci-diff.mjs S57 in reverse): this is the
-  // PERSONA-lane gate. A structural-lane bundle must never be silently processed here — its critical
-  // a11y findings would otherwise be dropped as a coincidental "zero evidence" (F14/F15) side effect
-  // rather than caught. Absent lane defaults to persona (0001-safe: existing persona fixtures omit it).
-  if (bundle.lane === 'structural') {
-    add('bundle top-level lane is "structural" — the persona-lane report-gate refuses to evaluate a structural-lane bundle; route it to scripts/structural-report-gate.mjs (S22 lane trust boundary, B9)');
+  // Lane discriminator trust boundary (B9 + R2 item 6): this is the PERSONA-lane gate. A structural
+  // bundle must never be silently processed here — its critical a11y findings would otherwise be
+  // dropped as a coincidental "zero evidence" (F14/F15) side effect rather than caught. The shared
+  // core/lane.mjs assertLane rejects an explicit lane:"structural" AND a bundle whose SHAPE is
+  // structural even when `lane` is omitted (omission is not a safe default for a structural-shaped
+  // bundle). A genuine persona bundle that omits `lane` and has no structural markers still passes
+  // (frozen 0001-safe default). One helper, all four gates fail-closed identically.
+  {
+    const laneErr = assertLane(bundle, 'persona');
+    if (laneErr) add(laneErr);
   }
 
   const run = bundle.run || {};

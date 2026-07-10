@@ -11,6 +11,7 @@
 // It emits a content-derived diagnostic per finding and per failed invariant so the exact rule is named.
 import { readFileSync, existsSync } from 'node:fs';
 import { AXE_IMPACT_SEVERITY, NONAXE_SEVERITY, isIncomplete, canonicalImpact, isValidImpact } from './core/structural-severity.mjs';
+import { assertLane } from './core/lane.mjs';
 
 // B7 (quality-phase fix 2026-07-10): the source axis for BOTH the display line and the S20/S41 dedup
 // key must be the CODE-INFERRED source, never the raw f.source field. Keying dedup on raw f.source
@@ -71,7 +72,7 @@ say(`bundle: lane=${bundle.lane} schema_version=${bundle.schema_version}`);
 say(`metadata: axe_version=${meta.axe_version} browser_version=${meta.browser_version} wcag_target=${meta.wcag_target}`);
 say(`metadata.render_environment_id: ${meta.render_environment_id ?? 'ABSENT'} (SN8 scopes the S42 determinism guarantee to a matching render_environment_id)`);
 
-if (bundle.lane !== 'structural') violate(`top-level lane is "${bundle.lane}", not the required "structural" discriminator — a persona bundle must not be gated here (S22)`);
+{ const laneErr = assertLane(bundle, 'structural'); if (laneErr) violate(laneErr); }
 if (bundle.schema_version == null) violate('schema_version is missing — the versioned schema value the gate checks is absent (SN2)');
 else if (bundle.schema_version !== SCHEMA_VERSION) violate(`schema_version ${bundle.schema_version} is an unsupported version (expected ${SCHEMA_VERSION}) (SN2)`);
 if (meta.axe_version !== PINNED_AXE) violate(`metadata.axe_version is "${meta.axe_version}", not the pinned axe-core ${PINNED_AXE} (S2)`);

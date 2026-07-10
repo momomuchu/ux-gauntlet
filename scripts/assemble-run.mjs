@@ -4,16 +4,17 @@
 // clustered issue, assigns the deterministic finding_id via the pure core, derives the run-level
 // run_status, and writes a gate-ready findings bundle. When run with --write it persists findings.json
 // and enforces the run through report-gate.mjs (the WTP/forbidden-claim gate is a REAL pipeline step —
-// not a silent pre-scrub).
+// not a silent pre-scrub), persisting the file ONLY after the gate passes (R2 item 21).
 //
 // Usage:
 //   node scripts/assemble-run.mjs <runDir> <persona1> <persona2> ...            > findings.json
 //   node scripts/assemble-run.mjs --write <runDir> <persona1> <persona2> ...    (writes + gates)
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, unlinkSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { findingId } from './core/identity.mjs';
+import { createHash } from 'node:crypto';
+import { findingId, normalizeTei } from './core/identity.mjs';
 import { deriveBlocked } from './core/run-status.mjs';
 import { forbiddenClaims } from './core/claims.mjs';
 
@@ -27,75 +28,113 @@ if (!runDir || personas.length === 0) {
 }
 
 // ------------------------------------------------------------------------------------------------
-// STRUCTURAL clustering (B1/B2 fix). The prior build clustered on a table of free-text narrative
-// regexes (KEY_RULES) — it BOTH under-merged real convergence ("isn't visible" != "not visible") and
-// FALSE-merged unrelated frictions that happened to share one word ("probably"). It is replaced by the
-// spec's own finding-identity rule (F45): two findings merge iff they share the structural key
+// STRUCTURAL clustering (R2 items 2/7/11/14). Two findings merge iff they share the FULL F45 3-tuple
 //   (heuristic_tag, step, normalized target_element_identifier).
-// The target_element_identifier is the DOMINANT axis when present (personas that tag the SAME element
-// with two different Nielsen heuristics still converge — that divergence is F104 cause (b), a judgment
-// difference about ONE element, not two issues). When no element identifier was emitted the key falls
-// back to (heuristic_tag, step). NO narrative text is read for clustering.
-const normTei = (t) => (t == null ? '' : String(t)).trim().toLowerCase();
-function clusterKey(f) {
-  const tei = normTei(f.target_element_identifier);
-  if (tei) return `tei|${f.step}|${tei}`;           // element-anchored structural identity (F45)
-  return `tag|${f.heuristic_tag}|step${f.step}`;    // fallback when no element identifier is present
-}
+// The prior build dropped heuristic_tag from the tei-present branch (R2 item 7 OVER-merge: a sev-1
+// contrast finding and an unrelated sev-4 finding on the same element collapsed into one) and did not
+// collapse internal whitespace (R2 item 11 UNDER-merge: "signup  button" != "signup button"). Both are
+// fixed by keying on the ONE canonical normalizeTei() (core/identity.mjs) plus heuristic_tag. A finding
+// with NO element identifier is UNGROUNDED: it is given a UNIQUE key so it can never false-merge across
+// personas (R2 item 2 — it stays convergence_tier 1) and is flagged low-confidence. NO narrative text is
+// read for clustering, and the internal cluster key is NEVER written into the public
+// target_element_identifier field (R2 item 16).
 
 // ------------------------------------------------------------------------------------------------
-// TRACE GROUNDING (B4/B5 fix). Before a finding is allowed into a cluster it must be grounded against
-// the SAME persona's captured trace.json: (1) its step must actually exist in the trace, and (2) the
-// page/route it is about (derived from the target_element_identifier's "<page>:" prefix) must have been
-// visited during that persona's crawl. A finding that quotes a page nobody crawled (the fabricated
-// /pricing findings) is DROPPED and never counts toward convergence_tier or ships in the report.
-const PAGE_PATH = { landing: '/', nav: '/', signup: '/signup', verify: '/verify', dashboard: '/dashboard', pricing: '/pricing' };
-const pageOf = (tei) => { const m = /^([a-z-]+):/.exec(String(tei || '')); return m ? m[1] : null; };
-const pathOf = (u) => { try { return new URL(u).pathname; } catch { return u; } };
+// TRACE GROUNDING (R2 items 3/4/5/8). Before a finding enters a cluster it must be grounded against the
+// SAME persona's captured trace.json:
+//   (1) FAIL-CLOSED on a MISSING/empty trace — a persona with no trace can ground NOTHING; its findings
+//       are dropped and it is counted as a non-floor (crashed) persona so deriveBlocked catches the
+//       aggregate (item 3/5). The prior code returned true here (fail-OPEN), letting fabricated findings
+//       ship at convergence_tier 3.
+//   (2) the cited step must actually exist in the trace (item 4);
+//   (3) a page-prefixed identifier ("<page>:<element>") must refer to a route the persona ACTUALLY
+//       visited — the grounded route set is DERIVED FROM THE TRACE (visited URL path segments + the
+//       cited step's own label/route), NOT a hardcoded name->path allowlist (item 8: the old 6-route
+//       PAGE_PATH table dropped genuinely-visited pages like /settings and misparsed tier-1 selector
+//       identifiers such as data-testid:cta-signup). Known SELECTOR-STRATEGY prefixes (data-testid,
+//       aria-label, css, ...) are not page names and are never route-grounded.
+const pathOf = (u) => { try { return new URL(u).pathname; } catch { return String(u ?? ''); } };
+const pageOf = (tei) => { const m = /^([a-z0-9][a-z0-9-]*):/i.exec(String(tei || '')); return m ? m[1].toLowerCase() : null; };
+// Selector-strategy prefixes are element-addressing schemes, NOT page names — never treated as a route
+// to ground (prevents the item-8 false drop of a canonical data-testid:... tier-1 identifier).
+const SELECTOR_STRATEGIES = new Set([
+  'data-testid', 'data-test', 'testid', 'aria-label', 'aria', 'aria-labelledby', 'role', 'id', 'css',
+  'xpath', 'text', 'name', 'class', 'placeholder', 'label', 'selector', 'title', 'alt', 'href',
+]);
+const labelWords = (s) => new Set(String((s && s.label) || '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean));
+
+function traceIndex(tr) {
+  const stepByNum = new Map();
+  const visitedSegments = new Set();
+  for (const s of (tr.steps || [])) {
+    stepByNum.set(s.step, s);
+    for (const seg of pathOf(s.url).split('/').filter(Boolean)) visitedSegments.add(seg.toLowerCase());
+  }
+  return { stepByNum, visitedSegments };
+}
 
 const traces = {};
 for (const p of personas) {
   const tp = join(runDir, p, 'trace.json');
   traces[p] = existsSync(tp) ? JSON.parse(readFileSync(tp, 'utf8')) : null;
 }
+const traceIdx = {};
+const traceMissing = new Set();
+for (const p of personas) {
+  const tr = traces[p];
+  if (!tr || !Array.isArray(tr.steps) || tr.steps.length === 0) traceMissing.add(p);
+  else traceIdx[p] = traceIndex(tr);
+}
+
 const groundLog = [];
 function grounded(f, persona) {
-  const tr = traces[persona];
-  if (!tr || !Array.isArray(tr.steps)) return true; // no trace to check against — cannot disprove (kept)
-  const steps = new Set(tr.steps.map((s) => s.step));
-  if (typeof f.step === 'number' && !steps.has(f.step)) {
-    groundLog.push(`DROPPED-UNGROUNDED ${persona} "${f.friction_name}" — cited step ${f.step} is not present in trace.json (ungrounded-step, B4)`);
-    return false;
+  if (traceMissing.has(persona)) {
+    return { ok: false, reason: `no usable trace.json for persona "${persona}" — the finding is ungroundable; FAIL-CLOSED drop (ungrounded-no-trace, R2 item 3)` };
   }
-  // A page-prefixed target_element_identifier ("<page>:<element>") must refer to a page the persona
-  // ACTUALLY visited. Strict: an UNKNOWN page prefix (one that maps to no known route, e.g. an
-  // invented "admin:panel") is ungrounded and dropped — the earlier logic kept unknown pages, which
-  // let a hallucinated page slip through (caught by the live e2e test). Only a prefix that both maps
-  // to a known route AND was visited in this persona's trace survives.
+  const idx = traceIdx[persona];
+  if (typeof f.step === 'number' && !idx.stepByNum.has(f.step)) {
+    return { ok: false, reason: `cited step ${f.step} is not present in trace.json (ungrounded-step, B4)` };
+  }
   const page = pageOf(f.target_element_identifier);
-  if (page) {
-    const knownPath = PAGE_PATH[page];
-    const visited = new Set(tr.steps.map((s) => pathOf(s.url)));
-    if (!knownPath || !visited.has(knownPath)) {
-      const why = knownPath ? `route ${knownPath} was never visited` : `page "${page}" maps to no known route (likely fabricated)`;
-      groundLog.push(`DROPPED-UNGROUNDED ${persona} "${f.friction_name}" — cites page "${page}" but ${why} in this persona's trace (ungrounded-route, B4/B5)`);
-      return false;
+  if (page && !SELECTOR_STRATEGIES.has(page)) {
+    const step = typeof f.step === 'number' ? idx.stepByNum.get(f.step) : null;
+    const inLabel = step ? labelWords(step).has(page) : false;
+    const stepSegs = step ? new Set(pathOf(step.url).split('/').filter(Boolean).map((x) => x.toLowerCase())) : new Set();
+    const isVisited = idx.visitedSegments.has(page) || inLabel || stepSegs.has(page);
+    if (!isVisited) {
+      return { ok: false, reason: `cites page "${page}" but no route the persona actually visited corresponds to it (ungrounded-route, B4/B5; grounded set derived from the trace, not a hardcoded allowlist)` };
     }
   }
-  return true;
+  return { ok: true };
 }
 
 const norm = (v) => (typeof v === 'number' ? String(v) : (v || ''));
 
 const clusters = new Map();
 const personaStatus = [];
+let ungroundedCounter = 0;
+let ungroundedTeiCount = 0;
 for (const p of personas) {
   const led = JSON.parse(readFileSync(join(runDir, p, 'ledger.json'), 'utf8'));
-  personaStatus.push({ name: p, run_status: led.run_status || 'completed' });
+  // R2 item 5: a trace-less persona is reflected as non-floor (crashed) so the pure deriveBlocked() can
+  // catch the aggregate "too few grounded personas" case, regardless of what the ledger self-reports.
+  const status = traceMissing.has(p) ? 'crashed' : (led.run_status || 'completed');
+  personaStatus.push({ name: p, run_status: status });
   for (const f of led.findings) {
-    if (!grounded(f, p)) continue;
-    const key = clusterKey(f);
-    if (!clusters.has(key)) clusters.set(key, { key, findings: [], personas: new Set() });
+    const g = grounded(f, p);
+    if (!g.ok) { groundLog.push(`DROPPED-UNGROUNDED ${p} "${f.friction_name}" — ${g.reason}`); continue; }
+    const normed = normalizeTei(f.target_element_identifier);
+    let key, hasTei;
+    if (normed) {
+      key = `tei|${f.heuristic_tag}|${f.step}|${normed}`; // full F45 3-tuple (heuristic_tag kept, item 7)
+      hasTei = true;
+    } else {
+      // UNGROUNDED (no element identifier): UNIQUE key => never false-merges (item 2), stays tier-1.
+      ungroundedCounter++; ungroundedTeiCount++;
+      key = `ungrounded|${p}|${f.step}|${f.heuristic_tag}|${f.friction_name}|${ungroundedCounter}`;
+      hasTei = false;
+    }
+    if (!clusters.has(key)) clusters.set(key, { key, findings: [], personas: new Set(), hasTei });
     const c = clusters.get(key);
     c.findings.push({ ...f, persona: p });
     c.personas.add(p);
@@ -106,16 +145,13 @@ const findings = [...clusters.values()].map((c) => {
   // representative = highest-severity flag of this issue
   const rep = c.findings.slice().sort((a, b) => b.severity - a.severity)[0];
   const step = rep.step;
-  // The stable target-element identifier for the merged issue: the shared element the personas flagged.
-  const tei = rep.target_element_identifier || c.key;
-  const fid = findingId(rep.heuristic_tag, step, tei);
+  const rawTei = (rep.target_element_identifier != null && String(rep.target_element_identifier).trim() !== '')
+    ? rep.target_element_identifier : null;
   const evidence = [...new Map(c.findings.flatMap((f) => (f.evidence || []).map((e) => [e.path, e]))).values()];
-  return {
-    finding_id: fid,
+  const out = {
     friction_name: rep.friction_name,
     friction_type: rep.friction_type,
     step,
-    target_element_identifier: tei,
     heuristic_tag: rep.heuristic_tag,
     personas_flagging: [...c.personas],
     convergence_tier: c.personas.size,
@@ -132,6 +168,18 @@ const findings = [...clusters.values()].map((c) => {
     narrative: rep.narrative,
     persona_voices: c.findings.map((f) => ({ persona: f.persona, note: f.narrative })),
   };
+  if (c.hasTei && rawTei) {
+    // Element-anchored finding: the stable identifier + its deterministic F165 hash.
+    out.target_element_identifier = rawTei;
+    out.finding_id = findingId(rep.heuristic_tag, step, rawTei);
+  } else {
+    // UNGROUNDED finding: NEVER leak the internal cluster key into the public tei field (item 16) —
+    // omit the field entirely. Use a NON-hex finding_id so report-gate does not try (and fail) the
+    // F165 tei recompute, and flag the finding low-confidence so consumers see it is ungrounded.
+    out.finding_id = 'ungrounded-' + createHash('sha256').update(c.key).digest('hex').slice(0, 16);
+    out.confidence = 'ungrounded-no-target-element';
+  }
+  return out;
 }).sort((a, b) => b.convergence_tier - a.convergence_tier || b.severity - a.severity);
 
 const runStatus = deriveBlocked(personaStatus) ? 'BLOCKED' : 'completed';
@@ -149,8 +197,15 @@ const bundle = {
   findings,
 };
 
-// --- surface (never silently rewrite) the grounding drops + any forbidden claim -------------------
+// --- surface (never silently rewrite) grounding drops, the ungrounded-residual, + any forbidden claim -
 for (const line of groundLog) process.stderr.write(line + '\n');
+if (traceMissing.size) {
+  process.stderr.write(`UNGROUNDED-RUN: ${traceMissing.size} persona(s) had NO usable trace.json (${[...traceMissing].join(', ')}) — ALL their findings were DROPPED as ungroundable and each is counted as non-floor (crashed); convergence is unreliable, run may derive BLOCKED (R2 items 3/5)\n`);
+}
+if (ungroundedTeiCount) {
+  // The persona-LLM residual made LOUD (not silent): a real un-annotated LLM run degrades visibly.
+  process.stderr.write(`UNGROUNDED-FINDINGS: ${ungroundedTeiCount} finding(s) lack a target_element_identifier — kept tier-1, flagged confidence "ungrounded-no-target-element", and NEVER merged into cross-persona convergence; any convergence signal that would have required these to merge is UNRELIABLE (R2 items 2/14, persona-LLM residual)\n`);
+}
 const wtpLog = [];
 for (const f of findings) {
   for (const reason of forbiddenClaims(f.narrative)) wtpLog.push(`WTP/FORBIDDEN ${f.finding_id} "${f.friction_name}" — ${reason} (surfaced, will fail report-gate)`);
@@ -162,19 +217,22 @@ if (!writeMode) {
   process.exit(0);
 }
 
-// --- --write: persist findings.json and ENFORCE it through report-gate.mjs (B3 wiring) ------------
+// --- --write: gate BEFORE persist (R2 item 21). Write to a temp file, run it through report-gate.mjs,
+// and RENAME to findings.json ONLY if the gate passes — a violating bundle is never left on disk.
 const outPath = join(runDir, 'findings.json');
-writeFileSync(outPath, JSON.stringify(bundle, null, 2) + '\n');
-process.stderr.write(`assemble-run: wrote ${outPath} (${findings.length} findings, ${groundLog.length} ungrounded dropped)\n`);
+const tmpPath = outPath + '.tmp';
+writeFileSync(tmpPath, JSON.stringify(bundle, null, 2) + '\n');
 const gatePath = fileURLToPath(new URL('./report-gate.mjs', import.meta.url));
 try {
-  const out = execFileSync('node', [gatePath, outPath], { encoding: 'utf8' });
+  const out = execFileSync('node', [gatePath, tmpPath], { encoding: 'utf8' });
+  renameSync(tmpPath, outPath);
   process.stdout.write(out);
-  process.stderr.write('assemble-run: report-gate PASS — findings.json is gate-clean\n');
+  process.stderr.write(`assemble-run: wrote ${outPath} (${findings.length} findings, ${groundLog.length} ungrounded dropped) — report-gate PASS, findings.json is gate-clean\n`);
   process.exit(0);
 } catch (e) {
+  try { if (existsSync(tmpPath)) unlinkSync(tmpPath); } catch { /* best-effort cleanup */ }
   process.stdout.write(e.stdout || '');
   process.stderr.write(e.stderr || '');
-  process.stderr.write('assemble-run: report-gate FAILED — pipeline blocks rather than shipping a violating bundle (B3)\n');
+  process.stderr.write('assemble-run: report-gate FAILED — NOT persisting findings.json; the pipeline blocks rather than shipping (or leaving on disk) a violating bundle (B3/R2 item 21)\n');
   process.exit(1);
 }

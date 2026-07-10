@@ -10,7 +10,8 @@
 // axe_version / browser_version / ruleset_tags / render_environment_id differ from a baseline.
 // All BLOCK predicates read RAW fields (impact / code / run_status), never the derived severity integer.
 import { readFileSync, existsSync } from 'node:fs';
-import { FAIL_CLOSED_STATUS, findingBlocksCi, isIncomplete } from './core/structural-severity.mjs';
+import { FAIL_CLOSED_STATUS, findingBlocksCi, isIncomplete, isValidImpact } from './core/structural-severity.mjs';
+import { assertLane } from './core/lane.mjs';
 
 const PINNED_AXE = '4.12.1';
 const SCHEMA_VERSION = 1;
@@ -44,7 +45,7 @@ const block = (s) => blocks.push(s);
 // ---- S57: own trust boundary, before any route-level predicate ----------------------------------
 if (meta.axe_version !== PINNED_AXE) block(`REFUSE: metadata.axe_version is "${meta.axe_version}", not the pinned axe-core ${PINNED_AXE} — an unpinned bundle is not merge-evaluable (S57/S2)`);
 if (bundle.schema_version == null || bundle.schema_version !== SCHEMA_VERSION) block(`REFUSE: schema_version ${bundle.schema_version} is missing/unsupported (expected ${SCHEMA_VERSION}) (S57/SN2)`);
-if (bundle.lane !== 'structural') block(`REFUSE: top-level lane is "${bundle.lane}", not "structural" — a misrouted bundle is not merge-evaluable (S57/S22)`);
+{ const laneErr = assertLane(bundle, 'structural'); if (laneErr) block(`REFUSE: ${laneErr} — a misrouted bundle is not merge-evaluable (S57/S22)`); }
 
 // ---- S44: cross-environment comparability refusal -------------------------------------------------
 if (bundle.baseline || bundle.comparability_note || bundle.comparison_note) {
@@ -64,6 +65,15 @@ if (runStatus === 'settle-timeout') block('BLOCK: run_status settle-timeout — 
 
 // ---- finding source / code BLOCK predicates (raw fields only) -------------------------------------
 for (const f of findings) {
+  // C (R2 item 1): fail CLOSED on a non-canonical impact for an axe/incomplete finding, mirroring
+  // structural-report-gate's isValidImpact check. findingBlocksCi folds whitespace+case now, but an
+  // UNKNOWN/garbage impact ("crtical", "high", "critical!!") must not silently pass as "not critical";
+  // the standalone CI-merge gate must reject it rather than treat an unclassifiable impact as clean.
+  const isAxe = (f.source ?? '') === 'axe' || (typeof f.code === 'string' && f.code.startsWith('axe:'));
+  if ((isAxe || isIncomplete(f)) && f.impact != null && !isValidImpact(f.impact)) {
+    block(`BLOCK: axe/incomplete finding ${f.code} carries a non-canonical impact "${f.impact}" — impact must fold to one of critical|serious|moderate|minor; the CI gate fails CLOSED on an unclassifiable impact rather than silently treating it as non-blocking (S60/B6/R2-1)`);
+    continue;
+  }
   if (!findingBlocksCi(f)) continue;
   if (isIncomplete(f)) {
     block(`BLOCK: an axe incomplete finding (${f.code}) has raw underlying impact critical — a reproducible critical a11y gap cannot pass CI clean forever despite its severity-0 display value (S53/D7)`);

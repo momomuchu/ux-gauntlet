@@ -11,13 +11,19 @@ export const AXE_IMPACT_SEVERITY = { critical: 4, serious: 3, moderate: 2, minor
 // CI-block predicate for the single highest-severity defect class. canonicalImpact() folds case so a
 // variant maps like its canonical form; isValidImpact() lets the gates fail CLOSED on a non-canonical
 // impact string (a typo / unknown value) rather than silently treating it as "no known severity".
+// B6-R2 (2026-07-10, R2 item 1): fold WHITESPACE as well as case. axe-core emits a bare lowercase
+// token, but a bundle can carry a padded variant ("critical\n", " Critical ", "critical\t") that a
+// case-only fold still misses — letting the S30/S53 CI-block predicate (which compares the folded
+// impact === 'critical') silently no-op on the single highest-severity defect class. trim() before
+// toLowerCase() so every surrounding-whitespace/newline variant folds to its canonical token; a
+// non-canonical value (unknown string) is returned unchanged so isValidImpact() can fail CLOSED on it.
 export function canonicalImpact(impact) {
   if (typeof impact !== 'string') return impact;
-  const lc = impact.toLowerCase();
-  return lc in AXE_IMPACT_SEVERITY ? lc : impact;
+  const norm = impact.trim().toLowerCase();
+  return norm in AXE_IMPACT_SEVERITY ? norm : impact;
 }
 export function isValidImpact(impact) {
-  return typeof impact === 'string' && impact.toLowerCase() in AXE_IMPACT_SEVERITY;
+  return typeof impact === 'string' && impact.trim().toLowerCase() in AXE_IMPACT_SEVERITY;
 }
 
 // S35: the 9 non-axe DOM-check finding codes, each pinned to a fixed severity.
