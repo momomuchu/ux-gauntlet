@@ -1,8 +1,13 @@
 {
+  "lane": "persona",
   "run": {
     "target_url": "http://localhost:3000",
     "task_list": "test/fixtures/tasks.json",
-    "personas": ["free-tier-user", "willing-to-pay-user", "vp-team-buyer"]
+    "personas": [
+      "free-tier-user",
+      "willing-to-pay-user",
+      "vp-team-buyer"
+    ]
   },
   "findings": [
     {
@@ -12,17 +17,35 @@
       "friction_type": "walkthrough_failure",
       "step": 1,
       "target_element_identifier": "html>body>div:nth-of-type(2)>button:nth-of-type(1)",
-      "personas_flagging": ["free-tier-user", "willing-to-pay-user"],
+      "personas_flagging": [
+        "free-tier-user",
+        "willing-to-pay-user"
+      ],
       "convergence_tier": 2,
       "partial_tier": 0,
       "heuristic_tag": "recognition-rather-than-recall",
       "severity": 2,
-      "component_severities": [2, 2],
-      "severity_factors": { "frequency": "every first visit", "impact": "persona hunts for the control", "persistence": "recurs" },
+      "component_severities": [
+        2,
+        2
+      ],
+      "severity_factors": {
+        "frequency": "every first visit",
+        "impact": "persona hunts for the control",
+        "persistence": "recurs"
+      },
       "market_impact": false,
       "evidence": [
-        { "type": "screenshot", "path": "runs/fixture/step1-free-tier-icon2.png", "persona": "free-tier-user" },
-        { "type": "dom", "path": "runs/fixture/step1-wtp-icon2.html", "persona": "willing-to-pay-user" }
+        {
+          "type": "screenshot",
+          "path": "runs/fixture/step1-free-tier-icon2.png",
+          "persona": "free-tier-user"
+        },
+        {
+          "type": "dom",
+          "path": "runs/fixture/step1-wtp-icon2.html",
+          "persona": "willing-to-pay-user"
+        }
       ],
       "narrative": "CR6-M1 negative control: the icon-only <button><svg/></button> close control carries no data-testid, no accessible name, no stable id, no innerText (F103 tiers 1-4 empty), AND no ancestor walking up to the document root carries a data-testid/id/ARIA-landmark-role — F183's own nearestAncestorWithStableId anchor is absent. Under F193 both personas fall back to the document root element (documentElement), producing the identical documentElement-anchored structural path (html>body>div:nth-of-type(2)>button:nth-of-type(1)); the shared (heuristic_tag, step, target_element_identifier) tuple merges them into one finding at convergence_tier=2."
     }

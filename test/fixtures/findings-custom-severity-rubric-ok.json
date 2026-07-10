@@ -1,8 +1,13 @@
 {
+  "lane": "persona",
   "run": {
     "target_url": "http://localhost:3000",
     "task_list": "test/fixtures/tasks.json",
-    "personas": ["free-tier-user", "willing-to-pay-user", "vp-team-buyer"],
+    "personas": [
+      "free-tier-user",
+      "willing-to-pay-user",
+      "vp-team-buyer"
+    ],
     "heuristic_set_file": "test/fixtures/heuristics-custom-severity-rubric.json"
   },
   "findings": [
@@ -11,15 +16,27 @@
       "friction_name": "checkout dead-ends with a blank page after payment submit",
       "friction_type": "extra_action",
       "step": 5,
-      "personas_flagging": ["free-tier-user", "willing-to-pay-user"],
+      "personas_flagging": [
+        "free-tier-user",
+        "willing-to-pay-user"
+      ],
       "convergence_tier": 2,
       "heuristic_tag": "help-users-recognize-recover-errors",
       "severity": 3,
       "raw_within_run_reencounter_count": 3,
       "terminal_recovery_outcome": "task-abandoned-or-never-resumed",
-      "severity_factors": { "frequency": 2, "impact": 4, "persistence": 2 },
+      "severity_factors": {
+        "frequency": 2,
+        "impact": 4,
+        "persistence": 2
+      },
       "market_impact": true,
-      "evidence": [{ "type": "screenshot", "path": "runs/fixture/step5-blank.png" }],
+      "evidence": [
+        {
+          "type": "screenshot",
+          "path": "runs/fixture/step5-blank.png"
+        }
+      ],
       "narrative": "raw_within_run_reencounter_count=3 maps to frequency=2 under this run's configured non-default severity-rubric override (test/fixtures/heuristics-custom-severity-rubric.json's frequency_buckets '3-4':2), not frequency=1 under F159's shipped default bucket ('2-3':1) — severity=round(mean(2,4,2))=round(2.67)=3, correctly matching, proving the F12 severity formula and the F159/F161/F162 bucket mappings load from the configured heuristic-set file rather than being hardcoded (F184, CR5-M4)."
     }
   ]

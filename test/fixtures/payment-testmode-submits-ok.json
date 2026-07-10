@@ -1,16 +1,29 @@
 {
+  "lane": "persona",
   "run": {
     "target_url": "http://localhost:3000",
     "task_list": "test/fixtures/tasks.json",
-    "personas": ["willing-to-pay-user"],
+    "personas": [
+      "willing-to-pay-user"
+    ],
     "test_mode": true,
     "full_submission": false
   },
   "task_list_steps": [
-    { "step": 4, "payment_step": true }
+    {
+      "step": 4,
+      "payment_step": true
+    }
   ],
   "actions": [
-    { "persona": "willing-to-pay-user", "step": 4, "type": "submit", "payment_step": true, "http_method": "POST", "outcome": "executed" }
+    {
+      "persona": "willing-to-pay-user",
+      "step": 4,
+      "type": "submit",
+      "payment_step": true,
+      "http_method": "POST",
+      "outcome": "executed"
+    }
   ],
   "findings": [],
   "narrative": "CR6-B2 positive path: a payment_step-flagged step in a run declaring test_mode=true, WITHOUT --full-submission and WITHOUT mis-authoring the step as audited_terminal_step, actually submits its own payment (outcome 'executed') and passes the gate. F39's refusal is satisfied (test_mode declared) and F196 grants that one step's own payment submission a narrow F40 dry-run exemption — closing the defect where F40+F164 made a legitimate test-mode payment impossible to submit. The negative control is the existing payment-no-testmode.json (same payment_step step, test_mode=false): still refused by F39 and dry-run-blocked by F40."

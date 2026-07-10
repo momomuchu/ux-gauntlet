@@ -1,8 +1,12 @@
 {
+  "lane": "persona",
   "run": {
     "target_url": "http://localhost:3000",
     "task_list": "test/fixtures/tasks.json",
-    "personas": ["willing-to-pay-user", "vp-team-buyer"]
+    "personas": [
+      "willing-to-pay-user",
+      "vp-team-buyer"
+    ]
   },
   "findings": [
     {
@@ -12,14 +16,29 @@
       "friction_type": "walkthrough_failure",
       "step": 4,
       "target_element_identifier": "data-testid:invite-link",
-      "personas_flagging": ["willing-to-pay-user", "vp-team-buyer"],
+      "personas_flagging": [
+        "willing-to-pay-user",
+        "vp-team-buyer"
+      ],
       "convergence_tier": 2,
       "heuristic_tag": "error-prevention",
       "severity": 4,
-      "component_severities": [4, 4],
-      "severity_factors": { "frequency": 4, "impact": 4, "persistence": 4 },
+      "component_severities": [
+        4,
+        4
+      ],
+      "severity_factors": {
+        "frequency": 4,
+        "impact": 4,
+        "persistence": 4
+      },
       "market_impact": true,
-      "evidence": [{ "type": "screenshot", "path": "runs/fixture/step4-invite.png" }],
+      "evidence": [
+        {
+          "type": "screenshot",
+          "path": "runs/fixture/step4-invite.png"
+        }
+      ],
       "narrative": "This finding_id is SHAPE-VALID (matches /^fid-[0-9a-f]{16}$/) but WRONG: fid-a3e2967e02bf24b0 is sha256 of the tuple fields in REVERSED order (target|step|tag), independently verified != the correct fid-33382de94ebe9883 that fid- + sha256(heuristic_tag|step|target_element_identifier).slice(0,16) produces for this exact same tuple (see findings-finding-id-formula-a.json). A report-gate.mjs that only shape-checks finding_id (never recomputes sha256) would PASS this — F203/CR9-8 requires the gate reject it, proving the hash is actually recomputed, not merely format-validated."
     }
   ]

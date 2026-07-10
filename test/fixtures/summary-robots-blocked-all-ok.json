@@ -1,24 +1,74 @@
 {
+  "lane": "persona",
   "run": {
     "target_url": "http://localhost:3000",
     "task_list": "test/fixtures/tasks.json",
-    "personas": ["free-tier-user", "willing-to-pay-user", "vp-team-buyer"],
+    "personas": [
+      "free-tier-user",
+      "willing-to-pay-user",
+      "vp-team-buyer"
+    ],
     "robots_override": false,
     "robots_txt_fetch_status": 200
   },
   "actions": [
-    { "persona": "free-tier-user", "step": 1, "type": "navigate", "path": "/signup", "robots_disallowed": true, "outcome": "aborted", "reason_code": "robots-disallowed" },
-    { "persona": "willing-to-pay-user", "step": 1, "type": "navigate", "path": "/signup", "robots_disallowed": true, "outcome": "aborted", "reason_code": "robots-disallowed" },
-    { "persona": "vp-team-buyer", "step": 1, "type": "navigate", "path": "/signup", "robots_disallowed": true, "outcome": "aborted", "reason_code": "robots-disallowed" }
+    {
+      "persona": "free-tier-user",
+      "step": 1,
+      "type": "navigate",
+      "path": "/signup",
+      "robots_disallowed": true,
+      "outcome": "aborted",
+      "reason_code": "robots-disallowed"
+    },
+    {
+      "persona": "willing-to-pay-user",
+      "step": 1,
+      "type": "navigate",
+      "path": "/signup",
+      "robots_disallowed": true,
+      "outcome": "aborted",
+      "reason_code": "robots-disallowed"
+    },
+    {
+      "persona": "vp-team-buyer",
+      "step": 1,
+      "type": "navigate",
+      "path": "/signup",
+      "robots_disallowed": true,
+      "outcome": "aborted",
+      "reason_code": "robots-disallowed"
+    }
   ],
   "tasks_ledger": [
-    { "persona": "free-tier-user", "task": "sign up", "task_completed": false, "reason_code": "robots-disallowed" },
-    { "persona": "willing-to-pay-user", "task": "sign up", "task_completed": false, "reason_code": "robots-disallowed" },
-    { "persona": "vp-team-buyer", "task": "sign up", "task_completed": false, "reason_code": "robots-disallowed" }
+    {
+      "persona": "free-tier-user",
+      "task": "sign up",
+      "task_completed": false,
+      "reason_code": "robots-disallowed"
+    },
+    {
+      "persona": "willing-to-pay-user",
+      "task": "sign up",
+      "task_completed": false,
+      "reason_code": "robots-disallowed"
+    },
+    {
+      "persona": "vp-team-buyer",
+      "task": "sign up",
+      "task_completed": false,
+      "reason_code": "robots-disallowed"
+    }
   ],
   "summary": {
     "exit_status": 0,
-    "severity_counts": { "0": 0, "1": 0, "2": 0, "3": 0, "4": 0 },
+    "severity_counts": {
+      "0": 0,
+      "1": 0,
+      "2": 0,
+      "3": 0,
+      "4": 0
+    },
     "convergence_tier_distribution": {},
     "findings_path": "runs/fixture/findings.json",
     "report_path": "runs/fixture/report.md",

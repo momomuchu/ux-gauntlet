@@ -1,8 +1,11 @@
 {
+  "lane": "persona",
   "run": {
     "target_url": "http://localhost:3000",
     "task_list": "test/fixtures/tasks.json",
-    "personas": ["vp-team-buyer"]
+    "personas": [
+      "vp-team-buyer"
+    ]
   },
   "findings": [
     {
@@ -11,14 +14,23 @@
       "friction_type": "ambiguity_resolution",
       "step": 3,
       "concurrent_candidates": 1,
-      "personas_flagging": ["vp-team-buyer"],
+      "personas_flagging": [
+        "vp-team-buyer"
+      ],
       "convergence_tier": 1,
       "heuristic_tag": "match-system-real-world",
       "severity": 1,
-      "severity_factors": { "frequency": "each pricing review", "impact": "minor delay", "persistence": "low" },
+      "severity_factors": {
+        "frequency": "each pricing review",
+        "impact": "minor delay",
+        "persistence": "low"
+      },
       "market_impact": false,
       "evidence": [
-        { "type": "dom", "path": "runs/fixture/step3-pricing-single.html" }
+        {
+          "type": "dom",
+          "path": "runs/fixture/step3-pricing-single.html"
+        }
       ],
       "narrative": "I hesitated between two plans before picking one; this is the persona's own self-narrated hesitation, with no artifact showing 2 candidates concurrently visible (F110 requires concurrent_candidates >= 2)."
     }

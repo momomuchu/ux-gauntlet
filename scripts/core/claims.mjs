@@ -30,6 +30,7 @@ export const WTP_RE = new RegExp(
     'happy\\s+to\\s+pay',                            // "happy to pay"
     'glad(?:ly)?\\s+to?\\s*pay',                     // "gladly pay", "glad to pay"
     'would\\s+(?:gladly\\s+|happily\\s+)?pay',       // "would pay", "would gladly pay", "would happily pay"
+    "\\w+['\\u2019]d\\s+(?:gladly\\s+|happily\\s+)?pay", // R4 MAJOR #7: "I'd pay", "they'd happily pay", "we'd gladly pay" (the contraction of "would" the literal-"would" pattern missed)
     'worth\\s+(?:every\\s+penny|paying\\s+for|the\\s+(?:money|price|cost))', // "worth every penny", "worth paying for"
     '(?:shut\\s+up\\s+and\\s+)?take\\s+my\\s+money', // "take my money", "shut up and take my money"
     'pay(?:s|ing)?\\s+(?:\\$|€|£)?\\d',              // "pay 29", "pays $29"

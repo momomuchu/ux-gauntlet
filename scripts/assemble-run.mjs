@@ -49,27 +49,51 @@ if (!runDir || personas.length === 0) {
 // target_element_identifier field (R2 item 16).
 
 // ------------------------------------------------------------------------------------------------
-// TRACE GROUNDING (R2 items 3/4/5/8). Before a finding enters a cluster it must be grounded against the
-// SAME persona's captured trace.json:
+// TRACE GROUNDING (R2 items 3/4/5/8 + R4 ROOT 1/ROOT 2). Before a finding enters a cluster it must be
+// grounded against the SAME persona's captured trace.json:
 //   (1) FAIL-CLOSED on a MISSING/empty trace — a persona with no trace can ground NOTHING; its findings
 //       are dropped and it is counted as a non-floor (crashed) persona so deriveBlocked catches the
 //       aggregate (item 3/5). The prior code returned true here (fail-OPEN), letting fabricated findings
 //       ship at convergence_tier 3.
-//   (2) the cited step must actually exist in the trace (item 4);
-//   (3) a page-prefixed identifier ("<page>:<element>") must refer to a route the persona ACTUALLY
-//       visited — the grounded route set is DERIVED FROM THE TRACE (visited URL path segments + the
-//       cited step's own label/route), NOT a hardcoded name->path allowlist (item 8: the old 6-route
-//       PAGE_PATH table dropped genuinely-visited pages like /settings and misparsed tier-1 selector
-//       identifiers such as data-testid:cta-signup). Known SELECTOR-STRATEGY prefixes (data-testid,
-//       aria-label, css, ...) are not page names and are never route-grounded.
+//   (2) the cited step must actually EXIST in the trace (item 4) — grounding keys on the finding's own
+//       explicit `step` field, NEVER on splitting the opaque tei on a ':' (R4 ROOT 1: a narrative colon
+//       in a free-text identifier — "Modal: submit button" — must not be mis-read as a page prefix and
+//       silently drop a real finding, the R4 narrative-colon BLOCKER).
+//   (3) ELEMENT EXISTENCE (R4 ROOT 2 — the anti-hallucination core): a tei that names an element must
+//       correspond to SOMETHING really captured on the cited step. The trace's per-step `actionables`
+//       array is real captured DOM (tag/text/href/aboveFold); the visited URL path segments are the real
+//       routes. A tei whose meaningful tokens match NO captured actionable text/href AND NO visited route
+//       is a HALLUCINATED element (an invented `data-testid:nonexistent-cancel-button`) and is dropped
+//       ungrounded with a loud log. This is NECESSARY-not-sufficient: a real element word or a real page
+//       name grounds; the check must never false-drop a legit finding, so a tei with no checkable element
+//       token (all generic/selector-strategy) and a tei-less finding are treated as page-level and kept.
 const pathOf = (u) => { try { return new URL(u).pathname; } catch { return String(u ?? ''); } };
-const pageOf = (tei) => { const m = /^([a-z0-9][a-z0-9-]*):/i.exec(String(tei || '')); return m ? m[1].toLowerCase() : null; };
-// Selector-strategy prefixes are element-addressing schemes, NOT page names — never treated as a route
-// to ground (prevents the item-8 false drop of a canonical data-testid:... tier-1 identifier).
+// Selector-strategy prefixes are element-addressing SCHEMES, not element content — stripped before
+// tokenizing a tei so "data-testid:foo" grounds on "foo", not on the ubiquitous scheme word.
 const SELECTOR_STRATEGIES = new Set([
   'data-testid', 'data-test', 'testid', 'aria-label', 'aria', 'aria-labelledby', 'role', 'id', 'css',
   'xpath', 'text', 'name', 'class', 'placeholder', 'label', 'selector', 'title', 'alt', 'href',
 ]);
+// Generic UI/structure words carry no element-identity: they must NOT let a fabricated identifier ground
+// (e.g. "...-cancel-button" must not ground merely because a real page has some <button>). Excluded from
+// the matchable token set on BOTH sides.
+const GENERIC_TOKENS = new Set([
+  'button', 'btn', 'link', 'anchor', 'input', 'field', 'icon', 'image', 'img', 'control', 'widget',
+  'element', 'component', 'page', 'view', 'screen', 'panel', 'menu', 'item', 'list', 'section',
+  'container', 'wrapper', 'div', 'span', 'area', 'box', 'nav', 'header', 'footer', 'form', 'modal',
+  'dialog', 'the', 'and', 'for', 'with', 'not', 'was', 'are', 'this', 'that', 'from', 'into',
+]);
+const wordTokens = (s) => String(s == null ? '' : s).toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length >= 3 && !GENERIC_TOKENS.has(w));
+// Element-identity tokens of a tei: strip a leading selector-strategy scheme, then tokenize the value.
+function teiTokens(tei) {
+  let s = String(tei == null ? '' : tei).toLowerCase();
+  const ci = s.indexOf(':');
+  if (ci > 0 && SELECTOR_STRATEGIES.has(s.slice(0, ci))) s = s.slice(ci + 1);
+  return wordTokens(s);
+}
+// A fuzzy-but-REAL token match: exact, or one token contained in the other when both are long enough that
+// the overlap is meaningful (avoids "in"⊂"signin" style noise; the length gate keeps fabrications out).
+const tokenMatch = (a, b) => a === b || (Math.min(a.length, b.length) >= 4 && (a.includes(b) || b.includes(a)));
 function traceIndex(tr) {
   const stepByNum = new Map();
   const visitedSegments = new Set();
@@ -78,6 +102,23 @@ function traceIndex(tr) {
     for (const seg of pathOf(s.url).split('/').filter(Boolean)) visitedSegments.add(seg.toLowerCase());
   }
   return { stepByNum, visitedSegments };
+}
+// The pool of REAL evidence tokens a tei may ground against for a given cited step: every visited route
+// path segment across the trace (page-level grounding) PLUS the cited step's own captured actionable text
+// words and href segments (element-level grounding). Actionable TAG names are deliberately excluded — they
+// are as generic as GENERIC_TOKENS and would ground any "...-button" fabrication.
+function evidenceTokens(idx, step) {
+  const toks = new Set();
+  for (const seg of idx.visitedSegments) toks.add(seg);
+  const s = typeof step === 'number' ? idx.stepByNum.get(step) : null;
+  if (s) {
+    for (const seg of pathOf(s.url).split('/').filter(Boolean)) toks.add(seg.toLowerCase());
+    for (const a of (Array.isArray(s.actionables) ? s.actionables : [])) {
+      for (const w of wordTokens(a && a.text)) toks.add(w);
+      for (const seg of String((a && a.href) || '').split(/[/#?=&]+/).filter(Boolean)) toks.add(seg.toLowerCase());
+    }
+  }
+  return toks;
 }
 
 const traces = {};
@@ -102,20 +143,23 @@ function grounded(f, persona) {
   if (typeof f.step === 'number' && !idx.stepByNum.has(f.step)) {
     return { ok: false, reason: `cited step ${f.step} is not present in trace.json (ungrounded-step, B4)` };
   }
-  const page = pageOf(f.target_element_identifier);
-  if (page && !SELECTOR_STRATEGIES.has(page)) {
-    const step = typeof f.step === 'number' ? idx.stepByNum.get(f.step) : null;
-    const stepSegs = step ? new Set(pathOf(step.url).split('/').filter(Boolean).map((x) => x.toLowerCase())) : new Set();
-    // R3 M7: grounding is PURELY URL-path-segment derived — the cited page token must match an actually
-    // VISITED URL path segment (across the trace) or the cited step's OWN URL segment. The prior
-    // `inLabel` free-text fallback (page token appears as a WORD in the step's narrative label) grounded
-    // a hallucinated cross-page citation: a step label incidentally containing the word "pricing" while
-    // only /signup was visited let a finding citing "pricing:cta" ship fully grounded. Free-text label
-    // words are not route evidence, so the fallback is removed; a page token is grounded only by a real
-    // visited path segment.
-    const isVisited = idx.visitedSegments.has(page) || stepSegs.has(page);
-    if (!isVisited) {
-      return { ok: false, reason: `cites page "${page}" but no route the persona actually visited corresponds to it (ungrounded-route, B4/B5/R3-M7; grounded set derived from VISITED URL path segments only, never free-text label words or a hardcoded allowlist)` };
+  // R4 ROOT 2 — ELEMENT EXISTENCE. The tei is opaque: it is NOT split on ':' to derive a page (that
+  // mis-read a narrative colon as a page prefix — R4 BLOCKER — and mis-grounded on a free-text label
+  // word). Instead every meaningful element token of the tei must correspond to REAL captured evidence
+  // on the cited step (actionable text/href) OR a REAL visited route (page-level). A tei whose tokens
+  // match nothing captured is a hallucinated element and is dropped.
+  const tei = f.target_element_identifier;
+  const hasTei = tei != null && String(tei).trim() !== '';
+  if (hasTei) {
+    const toks = teiTokens(tei);
+    // No checkable element token (purely a selector-strategy scheme or generic words): can't disprove
+    // existence — treat as page/structure-general and keep (necessary-not-sufficient, never false-drop).
+    if (toks.length > 0) {
+      const evid = evidenceTokens(idx, f.step);
+      const grounded = toks.some((t) => { for (const e of evid) if (tokenMatch(t, e)) return true; return false; });
+      if (!grounded) {
+        return { ok: false, reason: `cites target "${tei}" whose element tokens [${toks.join(', ')}] correspond to NO captured actionable (text/href) and NO visited route on step ${f.step} — HALLUCINATED element, not in the trace's own captured DOM (ungrounded-element/ungrounded-route, R4 ROOT2/B4/B5)` };
+      }
     }
   }
   return { ok: true };

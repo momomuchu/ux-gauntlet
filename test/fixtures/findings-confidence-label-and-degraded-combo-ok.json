@@ -1,15 +1,31 @@
 {
+  "lane": "persona",
   "run": {
     "target_url": "http://localhost:3000",
     "task_list": "test/fixtures/tasks.json",
-    "personas": ["free-tier-user", "willing-to-pay-user", "vp-team-buyer"],
-    "standardized_flow_allowlist": ["login"]
+    "personas": [
+      "free-tier-user",
+      "willing-to-pay-user",
+      "vp-team-buyer"
+    ],
+    "standardized_flow_allowlist": [
+      "login"
+    ]
   },
   "run_status": "BLOCKED",
   "personas": [
-    { "name": "free-tier-user", "run_status": "completed" },
-    { "name": "willing-to-pay-user", "run_status": "crashed" },
-    { "name": "vp-team-buyer", "run_status": "completed" }
+    {
+      "name": "free-tier-user",
+      "run_status": "completed"
+    },
+    {
+      "name": "willing-to-pay-user",
+      "run_status": "crashed"
+    },
+    {
+      "name": "vp-team-buyer",
+      "run_status": "completed"
+    }
   ],
   "validity_envelope_text": "This report is not a replacement for real user research. It contains no willingness-to-pay estimates. It contains no population percentage extrapolations. It makes no ISO 9241-11 compliance claim. 1 of 3 personas did not complete: willing-to-pay-user.",
   "findings": [
@@ -22,14 +38,25 @@
       "standardized_flow": "login",
       "confidence_label": "lower-confidence",
       "confidence": "degraded-below-persona-floor",
-      "personas_flagging": ["free-tier-user"],
+      "personas_flagging": [
+        "free-tier-user"
+      ],
       "convergence_tier": 1,
       "partial_tier": 0,
       "heuristic_tag": "help-users-recognize-recover-errors",
       "severity": 4,
-      "severity_factors": { "frequency": 4, "impact": 4, "persistence": 4 },
+      "severity_factors": {
+        "frequency": 4,
+        "impact": 4,
+        "persistence": 4
+      },
       "market_impact": true,
-      "evidence": [{ "type": "screenshot", "path": "runs/fixture/step1-login-error.png" }],
+      "evidence": [
+        {
+          "type": "screenshot",
+          "path": "runs/fixture/step1-login-error.png"
+        }
+      ],
       "narrative": "A timed-out-mid-allowlisted-flow finding carries BOTH confidence_label (F27) and confidence (F124) as two independent fields, neither altering the other, neither altering the F121 CI-gate outcome (F143/F144, CR2-17)."
     }
   ]

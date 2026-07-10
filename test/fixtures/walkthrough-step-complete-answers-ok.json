@@ -1,13 +1,45 @@
 {
+  "lane": "persona",
   "run": {
     "target_url": "http://localhost:3000",
     "task_list": "test/fixtures/tasks.json",
-    "personas": ["free-tier-user", "willing-to-pay-user", "vp-team-buyer"]
+    "personas": [
+      "free-tier-user",
+      "willing-to-pay-user",
+      "vp-team-buyer"
+    ]
   },
   "walkthrough": [
-    { "persona": "free-tier-user", "step": 1, "answers": { "right_result": "yes", "notice": "yes", "associate": "yes", "progress": "yes" } },
-    { "persona": "willing-to-pay-user", "step": 1, "answers": { "right_result": "yes", "notice": "yes", "associate": "yes", "progress": "yes" } },
-    { "persona": "vp-team-buyer", "step": 1, "answers": { "right_result": "yes", "notice": "yes", "associate": "yes", "progress": "yes" } }
+    {
+      "persona": "free-tier-user",
+      "step": 1,
+      "answers": {
+        "right_result": "yes",
+        "notice": "yes",
+        "associate": "yes",
+        "progress": "yes"
+      }
+    },
+    {
+      "persona": "willing-to-pay-user",
+      "step": 1,
+      "answers": {
+        "right_result": "yes",
+        "notice": "yes",
+        "associate": "yes",
+        "progress": "yes"
+      }
+    },
+    {
+      "persona": "vp-team-buyer",
+      "step": 1,
+      "answers": {
+        "right_result": "yes",
+        "notice": "yes",
+        "associate": "yes",
+        "progress": "yes"
+      }
+    }
   ],
   "findings": [],
   "narrative": "Every persona's step-1 answers object carries all 4 required keys (right_result, notice, associate, progress) — the same shape as the bad fixture except willing-to-pay-user's answer set is complete, isolating the single variable under test (F9 negative control, CR4-M11)."

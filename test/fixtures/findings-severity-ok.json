@@ -1,8 +1,13 @@
 {
+  "lane": "persona",
   "run": {
     "target_url": "http://localhost:3000",
     "task_list": "test/fixtures/tasks.json",
-    "personas": ["free-tier-user", "willing-to-pay-user", "vp-team-buyer"]
+    "personas": [
+      "free-tier-user",
+      "willing-to-pay-user",
+      "vp-team-buyer"
+    ]
   },
   "findings": [
     {
@@ -10,13 +15,26 @@
       "friction_name": "checkout dead-ends with a blank page after payment submit",
       "friction_type": "extra_action",
       "step": 5,
-      "personas_flagging": ["free-tier-user", "willing-to-pay-user", "vp-team-buyer"],
+      "personas_flagging": [
+        "free-tier-user",
+        "willing-to-pay-user",
+        "vp-team-buyer"
+      ],
       "convergence_tier": 3,
       "heuristic_tag": "help-users-recognize-recover-errors",
       "severity": 3,
-      "severity_factors": { "frequency": 4, "impact": 4, "persistence": 0 },
+      "severity_factors": {
+        "frequency": 4,
+        "impact": 4,
+        "persistence": 0
+      },
       "market_impact": true,
-      "evidence": [{ "type": "screenshot", "path": "runs/fixture/step5-blank.png" }],
+      "evidence": [
+        {
+          "type": "screenshot",
+          "path": "runs/fixture/step5-blank.png"
+        }
+      ],
       "narrative": "severity correctly equals round(mean(4,4,0)) = round(2.67) = 3 (F12)."
     }
   ]

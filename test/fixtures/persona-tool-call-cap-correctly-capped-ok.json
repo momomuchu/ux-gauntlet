@@ -1,14 +1,26 @@
 {
+  "lane": "persona",
   "run": {
     "target_url": "http://localhost:3000",
     "task_list": "test/fixtures/tasks.json",
-    "personas": ["free-tier-user"]
+    "personas": [
+      "free-tier-user"
+    ]
   },
   "personas": [
-    { "name": "free-tier-user", "tool_call_count": 312, "run_status": "runner-capped" }
+    {
+      "name": "free-tier-user",
+      "tool_call_count": 312,
+      "run_status": "runner-capped"
+    }
   ],
   "tasks_ledger": [
-    { "persona": "free-tier-user", "task": "upgrade plan", "task_completed": false, "reason_code": "runner-capped" }
+    {
+      "persona": "free-tier-user",
+      "task": "upgrade plan",
+      "task_completed": false,
+      "reason_code": "runner-capped"
+    }
   ],
   "findings": []
 }

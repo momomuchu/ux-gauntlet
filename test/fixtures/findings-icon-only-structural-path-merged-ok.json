@@ -1,8 +1,13 @@
 {
+  "lane": "persona",
   "run": {
     "target_url": "http://localhost:3000",
     "task_list": "test/fixtures/tasks.json",
-    "personas": ["free-tier-user", "willing-to-pay-user", "vp-team-buyer"]
+    "personas": [
+      "free-tier-user",
+      "willing-to-pay-user",
+      "vp-team-buyer"
+    ]
   },
   "findings": [
     {
@@ -12,17 +17,35 @@
       "friction_type": "walkthrough_failure",
       "step": 1,
       "target_element_identifier": "header#app-toolbar>button:nth-of-type(3)",
-      "personas_flagging": ["free-tier-user", "willing-to-pay-user"],
+      "personas_flagging": [
+        "free-tier-user",
+        "willing-to-pay-user"
+      ],
       "convergence_tier": 2,
       "partial_tier": 0,
       "heuristic_tag": "recognition-rather-than-recall",
       "severity": 2,
-      "component_severities": [2, 2],
-      "severity_factors": { "frequency": "every first visit", "impact": "persona hunts for the menu", "persistence": "recurs" },
+      "component_severities": [
+        2,
+        2
+      ],
+      "severity_factors": {
+        "frequency": "every first visit",
+        "impact": "persona hunts for the menu",
+        "persistence": "recurs"
+      },
       "market_impact": false,
       "evidence": [
-        { "type": "screenshot", "path": "runs/fixture/step1-free-tier-icon.png", "persona": "free-tier-user" },
-        { "type": "dom", "path": "runs/fixture/step1-wtp-icon.html", "persona": "willing-to-pay-user" }
+        {
+          "type": "screenshot",
+          "path": "runs/fixture/step1-free-tier-icon.png",
+          "persona": "free-tier-user"
+        },
+        {
+          "type": "dom",
+          "path": "runs/fixture/step1-wtp-icon.html",
+          "persona": "willing-to-pay-user"
+        }
       ],
       "narrative": "The icon-only <button><svg/></button> menu toggle carries no data-testid, no accessible name, no stable id, no innerText — none of F103's first four fallback tiers resolve. Both personas independently compute the identical F183 tier-5 structural path: the nearest ancestor carrying a stable id (header#app-toolbar), walked down to the button's own ordinal position among same-tag siblings (nth-of-type(3)). Because both records share the identical (heuristic_tag, step, target_element_identifier) tuple, they correctly merge into one finding at convergence_tier=2 (F183, negative control)."
     }

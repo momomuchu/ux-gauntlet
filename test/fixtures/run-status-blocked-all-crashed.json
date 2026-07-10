@@ -1,14 +1,28 @@
 {
+  "lane": "persona",
   "run": {
     "target_url": "http://localhost:3000",
     "task_list": "test/fixtures/tasks.json",
-    "personas": ["free-tier-user", "willing-to-pay-user", "vp-team-buyer"]
+    "personas": [
+      "free-tier-user",
+      "willing-to-pay-user",
+      "vp-team-buyer"
+    ]
   },
   "run_status": "BLOCKED",
   "personas": [
-    { "name": "free-tier-user", "run_status": "crashed" },
-    { "name": "willing-to-pay-user", "run_status": "crashed" },
-    { "name": "vp-team-buyer", "run_status": "crashed" }
+    {
+      "name": "free-tier-user",
+      "run_status": "crashed"
+    },
+    {
+      "name": "willing-to-pay-user",
+      "run_status": "crashed"
+    },
+    {
+      "name": "vp-team-buyer",
+      "run_status": "crashed"
+    }
   ],
   "validity_envelope_text": "This report is not a replacement for real user research. It contains no willingness-to-pay estimates. It contains no population percentage extrapolations. It makes no ISO 9241-11 compliance claim. 3 of 3 personas did not complete: free-tier-user, willing-to-pay-user, vp-team-buyer.",
   "findings": [],

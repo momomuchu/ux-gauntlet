@@ -1,12 +1,22 @@
 {
+  "lane": "persona",
   "run": {
     "target_url": "http://localhost:3000",
     "task_list": "test/fixtures/tasks.json",
-    "personas": ["free-tier-user"],
+    "personas": [
+      "free-tier-user"
+    ],
     "full_submission_mode": false
   },
   "actions": [
-    { "persona": "free-tier-user", "step": 3, "type": "submit", "http_method": "POST", "detected_via": "static-dom-form-attribute-sniffing", "outcome": "aborted" }
+    {
+      "persona": "free-tier-user",
+      "step": 3,
+      "type": "submit",
+      "http_method": "POST",
+      "detected_via": "static-dom-form-attribute-sniffing",
+      "outcome": "aborted"
+    }
   ],
   "findings": []
 }

@@ -1,9 +1,16 @@
 {
+  "lane": "persona",
   "run": {
     "target_url": "http://localhost:3000",
     "task_list": "test/fixtures/tasks.json",
-    "personas": ["free-tier-user", "willing-to-pay-user", "vp-team-buyer"],
-    "standardized_flow_allowlist": ["login"]
+    "personas": [
+      "free-tier-user",
+      "willing-to-pay-user",
+      "vp-team-buyer"
+    ],
+    "standardized_flow_allowlist": [
+      "login"
+    ]
   },
   "run_status": "completed",
   "findings": [
@@ -15,13 +22,26 @@
       "step": 1,
       "standardized_flow": "login",
       "confidence_label": "lower-confidence",
-      "personas_flagging": ["free-tier-user", "willing-to-pay-user", "vp-team-buyer"],
+      "personas_flagging": [
+        "free-tier-user",
+        "willing-to-pay-user",
+        "vp-team-buyer"
+      ],
       "convergence_tier": 3,
       "heuristic_tag": "help-users-recognize-recover-errors",
       "severity": 4,
-      "severity_factors": { "frequency": 4, "impact": 4, "persistence": 4 },
+      "severity_factors": {
+        "frequency": 4,
+        "impact": 4,
+        "persistence": 4
+      },
       "market_impact": true,
-      "evidence": [{ "type": "screenshot", "path": "runs/fixture/step1-login-error.png" }],
+      "evidence": [
+        {
+          "type": "screenshot",
+          "path": "runs/fixture/step1-login-error.png"
+        }
+      ],
       "narrative": "The login flow is operator-allowlisted as standardized, so this finding renders with the lower-confidence label (F27); the label is cosmetic only and must still trigger the F26 CI gate at severity 4 (F121). run_status: completed matches findings-valid.json's baseline run_status (CR3-16 — isolates the single substantive delta between baseline and current to the new severity-4 finding itself, not an unrelated run_status/run-config diff, per the CR1-19 confounded-fixture defect)."
     }
   ]

@@ -1,15 +1,29 @@
 {
+  "lane": "persona",
   "run": {
     "target_url": "http://localhost:3000",
     "task_list": "test/fixtures/tasks.json",
-    "personas": ["free-tier-user"],
+    "personas": [
+      "free-tier-user"
+    ],
     "full_submission_mode": false
   },
   "task_list_steps": [
-    { "step": 4, "payment_step": true, "denylist_override": true }
+    {
+      "step": 4,
+      "payment_step": true,
+      "denylist_override": true
+    }
   ],
   "actions": [
-    { "persona": "free-tier-user", "step": 4, "type": "submit", "http_method": "POST", "detected_via": "network-request-interception", "outcome": "executed" }
+    {
+      "persona": "free-tier-user",
+      "step": 4,
+      "type": "submit",
+      "http_method": "POST",
+      "detected_via": "network-request-interception",
+      "outcome": "executed"
+    }
   ],
   "findings": [],
   "narrative": "A DIFFERENT D15 flag pair than the one task-step-conflicting-flags-bad.json exercises: payment_step:true + denylist_override:true on the same step. F164's mutual-exclusivity rule is a general 10-pair rule, not a single hardcoded (audited_terminal_step, external_side_effect) special case — the schema validator MUST reject this pair too (F164, CR9 M9 test-coverage broadening)."

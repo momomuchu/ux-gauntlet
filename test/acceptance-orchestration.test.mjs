@@ -63,6 +63,7 @@ const CI_DIFF = 'scripts/ci-diff.mjs';
 const SGATE = 'scripts/structural-report-gate.mjs';
 const SCI = 'scripts/structural-ci-diff.mjs';
 const RENDER = 'scripts/render-report.mjs';
+const COMBINED = 'scripts/combined-report.mjs';
 
 // ------------------------------------------------------------------------------------------------
 // 1. normalizeTei — the ONE canonical identity normalizer (R2 3/11 + R3 M2)
@@ -74,12 +75,33 @@ test('ORCH normalizeTei: separator-adjacent whitespace, case, and internal runs 
   assert.equal(normalizeTei('signup:cta'), normalizeTei('signup : cta'), 'spaces on BOTH sides fold away');
   assert.equal(normalizeTei('SIGNUP: CTA'), normalizeTei('signup:cta'), 'case folds');
   assert.equal(normalizeTei('signup  button'), normalizeTei('signup button'), 'internal whitespace runs collapse');
-  assert.equal(normalizeTei('landing:cta.'), normalizeTei('landing:cta'), 'a trailing punctuation mark is stripped');
 });
-test('ORCH normalizeTei: does NOT over-merge genuinely different identifiers or destroy internal hyphens', () => {
+test('ORCH normalizeTei R4 ROOT1: invisible Unicode format/zero-width chars (\\p{Cf}) are stripped so a ZWSP variant clusters identically', () => {
+  // R4 ROOT 1 BLOCKER #1: a U+200B zero-width space around the colon defeated clustering AND the
+  // report-gate dedup backstop, because JS `\s` / String.trim() do NOT match category-Cf chars. The
+  // canonical normalizer must fold every zero-width/format char away so the variant and the plain form
+  // are ONE identity.
+  assert.equal(normalizeTei('signup​:cta'), 'signup:cta', 'a ZWSP (U+200B) around the colon is stripped');
+  assert.equal(normalizeTei('signup​:cta'), normalizeTei('signup:cta'), 'the ZWSP variant and the plain form normalize identically');
+  assert.equal(normalizeTei('﻿signup:cta'), 'signup:cta', 'a BOM/ZWNBSP (U+FEFF) prefix is stripped');
+  assert.equal(normalizeTei('sign­up:cta'), 'signup:cta', 'a SOFT HYPHEN (U+00AD) inside a word is stripped');
+  assert.equal(normalizeTei('signup‍:‌cta'), 'signup:cta', 'ZWJ/ZWNJ around the separator are stripped');
+  // tupleKey (report-gate\'s independent dedup identity) inherits the fix — the ZWSP under-merge is
+  // caught by the same one function, so both clustering and the gate backstop see one identity.
+  assert.equal(
+    tupleKey({ heuristic_tag: 'contrast_low', step: 3, target_element_identifier: 'signup​:cta' }),
+    tupleKey({ heuristic_tag: 'contrast_low', step: 3, target_element_identifier: 'signup:cta' }),
+    'the ZWSP variant produces the SAME F45 identity tuple as the plain form',
+  );
+});
+test('ORCH normalizeTei: does NOT over-merge genuinely different identifiers or destroy internal hyphens, and does NOT strip trailing punctuation (R4 ROOT1 decouple)', () => {
   assert.notEqual(normalizeTei('signup:cta'), normalizeTei('signup:submit'), 'different elements stay distinct');
   assert.notEqual(normalizeTei('signup:cta'), normalizeTei('pricing:cta'), 'different pages stay distinct');
   assert.equal(normalizeTei('data-testid:cta-signup'), 'data-testid:cta-signup', 'hyphens with no surrounding whitespace are preserved verbatim');
+  // R4 MAJOR #10/#16: the old trailing-\p{P}\p{S} strip OVER-merged distinct labels. The tei is an opaque
+  // identifier: a trailing punctuation mark is a real character difference, no longer folded away.
+  assert.notEqual(normalizeTei('Sign up!'), normalizeTei('Sign up'), 'a hero CTA "Sign up!" no longer over-merges with an unrelated "Sign up" link (trailing punctuation is decoupled from identity)');
+  assert.notEqual(normalizeTei('data-testid:cta-signup.'), normalizeTei('data-testid:cta-signup'), 'a trailing period is a real difference on the opaque identifier, not silently stripped');
   assert.equal(normalizeTei(null), '', 'a null identifier normalizes to the empty string');
 });
 
@@ -150,6 +172,53 @@ test('ORCH grounding M7: a finding citing a page the persona never VISITED is dr
   assert.ok(names.includes('signup cta hidden'), 'the genuinely-visited /signup citation is grounded and ships');
   assert.match(r.stderr, /ungrounded-route/, 'the drop names the ungrounded-route reason');
 });
+test('ORCH grounding R4 ROOT2: a tei matching a REAL captured actionable grounds; a FABRICATED element that exists in NO captured actionable is DROPPED', () => {
+  // R4 ROOT 2 (anti-hallucination): the per-step `actionables` array is real captured DOM. A finding whose
+  // element token corresponds to a captured actionable text/href grounds; an invented selector that
+  // matches nothing captured is a hallucinated element and is dropped — closing the fabricated-selector
+  // and bare free-text-fabrication BLOCKERs. Necessary-not-sufficient: a real page name also grounds.
+  const steps = [
+    { step: 1, label: 'landing', url: 'http://localhost:4319/', title: 'Home', actionables: [
+      { tag: 'a', text: 'Pricing', href: '/pricing' }, { tag: 'a', text: 'Get started', href: '/signup' },
+    ] },
+    { step: 2, label: 'signup', url: 'http://localhost:4319/signup', title: 'Sign up', actionables: [
+      { tag: 'button', text: 'Continue', href: null }, { tag: 'input', text: 'you@company.com', href: null },
+    ] },
+  ];
+  const dir = makeRun({ p1: { steps, findings: [
+    f({ friction_name: 'real-continue', step: 2, target_element_identifier: 'signup:continue' }),   // "continue" IS a captured actionable text on step 2
+    f({ friction_name: 'real-pricing-link', step: 1, target_element_identifier: 'nav:pricing' }),    // "pricing" IS a captured actionable text/href on step 1
+    f({ friction_name: 'fabricated-cancel', step: 2, target_element_identifier: 'data-testid:nonexistent-cancel-button' }), // matches nothing captured
+    f({ friction_name: 'fabricated-bare', step: 2, target_element_identifier: 'totally-invented-widget-xyz' }),           // bare, matches nothing
+  ] } });
+  const r = run([ASSEMBLE, dir, 'p1']);
+  const names = JSON.parse(r.stdout).findings.map((x) => x.friction_name);
+  assert.ok(names.includes('real-continue'), 'a tei whose element token matches a captured actionable ("Continue") grounds');
+  assert.ok(names.includes('real-pricing-link'), 'a tei matching a captured actionable text/href ("Pricing"/"/pricing") grounds');
+  assert.ok(!names.includes('fabricated-cancel'), 'an invented data-testid element that exists in NO captured actionable is DROPPED (hallucinated)');
+  assert.ok(!names.includes('fabricated-bare'), 'a bare fabricated identifier matching nothing captured is DROPPED (hallucinated)');
+  assert.match(r.stderr, /HALLUCINATED element/, 'the drop is loud and names the hallucination');
+});
+test('ORCH grounding R4 ROOT1: a legit finding whose free-text tei contains a NARRATIVE COLON is KEPT (not mis-read as a page prefix)', () => {
+  // R4 ROOT 1 narrative-colon BLOCKER: the old grounding split the tei on ':' to derive a "page", so an
+  // ordinary prose identifier like "Modal: submit button" was mis-read as page "modal" (never visited)
+  // and a real, corroborated finding was silently zeroed. The tei is now opaque: grounding keys on the
+  // finding\'s own `step` + element existence, never a colon split. "submit" IS a captured actionable, so
+  // the finding grounds and ships.
+  const steps = [
+    { step: 1, label: 'landing', url: 'http://localhost:4319/', title: 'Home', actionables: [{ tag: 'a', text: 'Get started', href: '/signup' }] },
+    { step: 2, label: 'signup', url: 'http://localhost:4319/signup', title: 'Sign up', actionables: [{ tag: 'button', text: 'Submit' }] },
+  ];
+  const dir = makeRun({ p1: { steps, findings: [
+    f({ friction_name: 'modal-submit', step: 2, severity: 4, target_element_identifier: 'Modal: submit button' }),
+  ] } });
+  const r = run([ASSEMBLE, dir, 'p1']);
+  const bundle = JSON.parse(r.stdout);
+  const names = bundle.findings.map((x) => x.friction_name);
+  assert.ok(names.includes('modal-submit'), 'the legit finding with a NARRATIVE colon is KEPT — the colon is not mis-parsed as a page prefix and false-dropped (R4 ROOT1)');
+  assert.equal(bundle.findings.length, 1, 'the finding is not silently zeroed out of the bundle by a narrative-colon false-drop');
+  assert.doesNotMatch(r.stderr, /DROPPED-UNGROUNDED .*modal-submit/, 'the narrative-colon finding is not logged as an ungrounded drop');
+});
 
 // ------------------------------------------------------------------------------------------------
 // 4. run_status floor derivation — case/space canonicalization (M3)
@@ -202,15 +271,32 @@ test('ORCH impact: a garbage impact string blocks in both gates; a valid non-cri
 // ------------------------------------------------------------------------------------------------
 // 6. lane trust boundary — EXACT-MATCH discriminator across ALL FOUR gates (M15/MI3)
 // ------------------------------------------------------------------------------------------------
-test('ORCH lane: assertLane is a pure exact-match discriminator — no shape sniffing (M15/MI3)', () => {
+test('ORCH lane R4 ROOT3: assertLane requires an EXPLICIT discriminator on BOTH sides — absent lane is REJECTED, not defaulted', () => {
   assert.equal(assertLane({ lane: 'persona' }, 'persona'), null, 'explicit persona accepted');
-  assert.equal(assertLane({ run: {}, findings: [] }, 'persona'), null, 'absent lane accepted (0001-safe default)');
+  // R4 ROOT 3: an OMITTED lane is REJECTED by the persona gate (the prior "0001-safe default" was the
+  // BLOCKER — a de-labelled structural bundle defaulted through). Every persona emitter now writes lane.
+  assert.ok(assertLane({ run: {}, findings: [] }, 'persona'), 'an ABSENT lane is REJECTED by the persona gate (no silent default-to-persona)');
   // M15: a persona finding carrying a top-level `impact` string is NOT sniffed as structural anymore.
   assert.equal(assertLane({ lane: 'persona', findings: [{ impact: 'moderate business impact' }] }, 'persona'), null, 'a persona finding with an `impact` field is accepted (no shape sniff)');
   assert.ok(assertLane({ lane: 'structural' }, 'persona'), 'an explicit structural lane is rejected by the persona gate');
   assert.ok(assertLane({ lane: 'weird' }, 'persona'), 'an unknown lane is rejected by the persona gate');
   assert.ok(assertLane({ run: {}, findings: [] }, 'structural'), 'an absent lane is rejected by the structural gate (must be exactly "structural")');
   assert.equal(assertLane({ lane: 'structural' }, 'structural'), null, 'explicit structural accepted by the structural gate');
+});
+test('ORCH lane R4 ROOT3: a de-labelled structural bundle (lane field dropped) is REJECTED by the persona gate at the subprocess boundary', () => {
+  const dir = tmp();
+  // take a real structural bundle and DROP its lane field — the exact R4 BLOCKER shape.
+  const delabelled = structuralAxeBundle({ impact: 'critical', severity: 4 });
+  delete delabelled.lane;
+  const p = join(dir, 'delabelled-structural.json'); writeJson(p, delabelled);
+  const rg = run([REPORT_GATE, p]);
+  assert.notEqual(rg.code, 0, 'report-gate REFUSES a lane-omitted (de-labelled structural) bundle instead of processing its axe findings as persona (R4 ROOT3)');
+  assert.match(rg.stderr, /persona|lane/i, 'the refusal names the lane discriminator rule');
+  const ci = run([CI_DIFF, '--baseline', p, '--current', p]);
+  assert.notEqual(ci.code, 0, 'ci-diff ALSO refuses the lane-omitted bundle (no gate defaults it through)');
+  // a de-labelled persona bundle (findings present, no lane) is likewise refused — lane is now required.
+  const nolanePersona = join(dir, 'nolane-persona.json'); writeJson(nolanePersona, { run: {}, run_status: 'completed', findings: [] });
+  assert.notEqual(run([REPORT_GATE, nolanePersona]).code, 0, 'even a well-formed persona-shaped bundle is refused when it omits the now-required lane discriminator (R4 ROOT3, symmetric fail-closed)');
 });
 test('ORCH lane: all four gates reject a CROSS-lane bundle at the subprocess boundary', () => {
   const dir = tmp();
@@ -232,6 +318,15 @@ test('ORCH claims: the WTP/population detector catches numeric + idiomatic phras
     assert.ok(forbiddenClaims(s).some((r) => /willingness-to-pay/.test(r)), `WTP idiom caught: "${s}"`);
   }
   assert.ok(forbiddenClaims('roughly 40% of users abandoned the flow').some((r) => /population/.test(r)), 'population-rate extrapolation caught');
+});
+test('ORCH claims R4 MAJOR#7: the "\'d pay" contraction family of would-pay is caught (not only literal "would")', () => {
+  for (const s of ["I'd pay for this in a heartbeat", "I'd happily pay for it", "they'd gladly pay extra", "we'd pay good money for this"]) {
+    assert.ok(forbiddenClaims(s).some((r) => /willingness-to-pay/.test(r)), `contraction WTP caught: "${s}"`);
+  }
+  // NEGATIVE CONTROL: the contraction pattern must not false-fire on ordinary prose or persona role names.
+  for (const s of ['the willing-to-pay-user could not find the button', 'a free-tier-user hit the paywall', 'the layout felt cramped and the copy was unclear']) {
+    assert.deepEqual(forbiddenClaims(s), [], `no false WTP match on: "${s}"`);
+  }
 });
 test('ORCH claims NEGATIVE CONTROL: ordinary prose and hyphenated persona names never false-match', () => {
   for (const s of ['the willing-to-pay-user persona could not find the button', 'a free-tier-user hit the paywall', 'the copy was confusing and the layout felt cramped', 'the CTA was 20 pixels below the fold']) {
@@ -294,4 +389,26 @@ test('ORCH F45: two personas flagging the same (heuristic_tag, step, tei) with D
   assert.equal(bundle.findings[0].severity, 3, 'merged severity is the max of the component severities (F119)');
   const notes = bundle.findings[0].persona_voices.map((v) => v.note);
   assert.ok(notes.some((n) => /ambiguous/.test(n)) && notes.some((n) => /wrong language/.test(n)), 'both distinct persona narratives are preserved in persona_voices (the lower-severity voice is not lost)');
+});
+
+// ------------------------------------------------------------------------------------------------
+// 10. combined-report — the 5th gate (the actual founder-facing composed artifact) enforces the lane
+//     trust boundary on BOTH inputs (R4 MAJOR #9 / S22 M9-class hole)
+// ------------------------------------------------------------------------------------------------
+test('ORCH combined-report R4#9: the two-lane report generator REFUSES swapped/mislabelled lane inputs, renders correctly-routed ones', () => {
+  const dir = tmp();
+  const persona = 'test/fixtures/findings-valid.json';       // lane:"persona"
+  const structural = join(dir, 's.json'); writeJson(structural, structuralAxeBundle({ impact: 'serious', severity: 3 })); // lane:"structural"
+  // correctly routed: renders HTML, exit 0
+  const ok = run([COMBINED, '--persona', persona, '--structural', structural]);
+  assert.equal(ok.code, 0, 'correctly-routed persona+structural inputs render the composed report');
+  assert.match(ok.stdout, /two lanes/i, 'the composed artifact is produced');
+  // SWAPPED args: structural fed as --persona, persona fed as --structural — the M9 hole. Must REFUSE.
+  const swapped = run([COMBINED, '--persona', structural, '--structural', persona]);
+  assert.notEqual(swapped.code, 0, 'swapping the --persona/--structural args is REFUSED — a structural bundle is never rendered under "Persona friction" (R4#9)');
+  assert.equal(swapped.stdout, '', 'no report bytes are emitted for a mislabelled/swapped composition');
+  assert.match(swapped.stderr, /REFUSE/, 'the refusal is loud');
+  // a de-labelled persona bundle (lane dropped) is also refused now that lane is required (R4 ROOT3).
+  const nolane = join(dir, 'nolane.json'); const pv = JSON.parse(readFileSync(persona, 'utf8')); delete pv.lane; writeJson(nolane, pv);
+  assert.notEqual(run([COMBINED, '--persona', nolane, '--structural', structural]).code, 0, 'a lane-omitted persona input is refused by the composer (no silent default)');
 });

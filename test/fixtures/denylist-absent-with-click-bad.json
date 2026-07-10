@@ -1,11 +1,20 @@
 {
+  "lane": "persona",
   "run": {
     "target_url": "http://localhost:3000",
     "task_list": "test/fixtures/tasks.json",
-    "personas": ["free-tier-user"]
+    "personas": [
+      "free-tier-user"
+    ]
   },
   "actions": [
-    { "persona": "free-tier-user", "step": 3, "type": "click", "element_label": "Add to cart", "outcome": "executed" }
+    {
+      "persona": "free-tier-user",
+      "step": 3,
+      "type": "click",
+      "element_label": "Add to cart",
+      "outcome": "executed"
+    }
   ],
   "findings": []
 }

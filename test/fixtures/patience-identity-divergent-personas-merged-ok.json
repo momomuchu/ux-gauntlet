@@ -1,20 +1,53 @@
 {
+  "lane": "persona",
   "run": {
     "target_url": "http://localhost:3000",
     "task_list": "test/fixtures/tasks.json",
-    "personas": ["free-tier-user", "willing-to-pay-user", "vp-team-buyer"]
+    "personas": [
+      "free-tier-user",
+      "willing-to-pay-user",
+      "vp-team-buyer"
+    ]
   },
   "personas": [
-    { "name": "free-tier-user", "patience_threshold_steps": 10, "run_status": "patience-exhausted" },
-    { "name": "willing-to-pay-user", "patience_threshold_steps": 10, "run_status": "patience-exhausted" }
+    {
+      "name": "free-tier-user",
+      "patience_threshold_steps": 10,
+      "run_status": "patience-exhausted"
+    },
+    {
+      "name": "willing-to-pay-user",
+      "patience_threshold_steps": 10,
+      "run_status": "patience-exhausted"
+    }
   ],
   "walkthrough_progress": [
-    { "persona": "free-tier-user", "task": "upgrade plan", "step_count": 11 },
-    { "persona": "willing-to-pay-user", "task": "upgrade plan", "step_count": 11 }
+    {
+      "persona": "free-tier-user",
+      "task": "upgrade plan",
+      "step_count": 11
+    },
+    {
+      "persona": "willing-to-pay-user",
+      "task": "upgrade plan",
+      "step_count": 11
+    }
   ],
   "tasks_ledger": [
-    { "persona": "free-tier-user", "task": "upgrade plan", "task_completed": false, "outcome": "failed_by_patience", "reason_code": "patience-exhausted" },
-    { "persona": "willing-to-pay-user", "task": "upgrade plan", "task_completed": false, "outcome": "failed_by_patience", "reason_code": "patience-exhausted" }
+    {
+      "persona": "free-tier-user",
+      "task": "upgrade plan",
+      "task_completed": false,
+      "outcome": "failed_by_patience",
+      "reason_code": "patience-exhausted"
+    },
+    {
+      "persona": "willing-to-pay-user",
+      "task": "upgrade plan",
+      "task_completed": false,
+      "outcome": "failed_by_patience",
+      "reason_code": "patience-exhausted"
+    }
   ],
   "findings": [
     {
@@ -24,18 +57,36 @@
       "friction_type": "terminal_friction",
       "step": 11,
       "target_element_identifier": "patience-abandonment:step-11",
-      "personas_flagging": ["free-tier-user", "willing-to-pay-user"],
+      "personas_flagging": [
+        "free-tier-user",
+        "willing-to-pay-user"
+      ],
       "convergence_tier": 0,
       "partial_tier": 2,
       "confidence": "degraded-below-persona-floor",
       "heuristic_tag": "flexibility-efficiency-of-use",
       "severity": 3,
-      "component_severities": [3, 3],
-      "severity_factors": { "frequency": "every attempt past threshold", "impact": "task abandoned", "persistence": "recurs" },
+      "component_severities": [
+        3,
+        3
+      ],
+      "severity_factors": {
+        "frequency": "every attempt past threshold",
+        "impact": "task abandoned",
+        "persistence": "recurs"
+      },
       "market_impact": true,
       "evidence": [
-        { "type": "screenshot", "path": "runs/fixture/step11-abandon-free-tier.png", "persona": "free-tier-user" },
-        { "type": "screenshot", "path": "runs/fixture/step11-abandon-wtp.png", "persona": "willing-to-pay-user" }
+        {
+          "type": "screenshot",
+          "path": "runs/fixture/step11-abandon-free-tier.png",
+          "persona": "free-tier-user"
+        },
+        {
+          "type": "screenshot",
+          "path": "runs/fixture/step11-abandon-wtp.png",
+          "persona": "willing-to-pay-user"
+        }
       ],
       "narrative": "free-tier-user reached step 11 via the direct upgrade-plan flow; willing-to-pay-user reached the identical abandonment point via a different retry path with a different simulated page state. Despite the differing DOM/path state, both terminal frictions share the identical fixed-sentinel target_element_identifier (F149, computed only from step=11, never from either persona's rendered DOM) and the identical designated patience-abandonment heuristic_tag (F150, drawn from the heuristic-set config, not narrative-derived) — so the two independently-authored records correctly merge into ONE finding (F45/F46 identity unification). Both flaggers have run_status patience-exhausted, so by F17's counted-set rule ONLY run_status=completed personas count toward convergence_tier: convergence_tier is therefore 0 and partial_tier is 2 (CR7-3 repair of a prior fixture that stored an unreachable convergence_tier=2 — a spec-compliant orchestrator could never emit it, since neither flagger is completed). This is the partial_tier corroboration signal for the terminal_friction (patience-abandonment) class, the exact cross-persona sentinel the 3-persona architecture (F16/N5) exists to produce for the friction class that most needs it."
     }

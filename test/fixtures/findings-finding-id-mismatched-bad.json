@@ -1,8 +1,11 @@
 {
+  "lane": "persona",
   "run": {
     "target_url": "http://localhost:3000",
     "task_list": "test/fixtures/tasks.json",
-    "personas": ["willing-to-pay-user"]
+    "personas": [
+      "willing-to-pay-user"
+    ]
   },
   "findings": [
     {
@@ -12,13 +15,24 @@
       "friction_type": "walkthrough_failure",
       "step": 4,
       "target_element_identifier": "data-testid:invite-link",
-      "personas_flagging": ["willing-to-pay-user"],
+      "personas_flagging": [
+        "willing-to-pay-user"
+      ],
       "convergence_tier": 1,
       "heuristic_tag": "error-prevention",
       "severity": 4,
-      "severity_factors": { "frequency": 4, "impact": 4, "persistence": 4 },
+      "severity_factors": {
+        "frequency": 4,
+        "impact": 4,
+        "persistence": 4
+      },
       "market_impact": true,
-      "evidence": [{ "type": "screenshot", "path": "runs/fixture/step4-invite.png" }],
+      "evidence": [
+        {
+          "type": "screenshot",
+          "path": "runs/fixture/step4-invite.png"
+        }
+      ],
       "narrative": "finding_id is hand-picked and does not equal fid- + sha256(heuristic_tag|step|target_element_identifier).slice(0,16) for this tuple (compare fixture A, same tuple, correct hash fid-33382de94ebe9883); the gate must reject the mismatch (F92 violation, CR2-6)."
     }
   ]

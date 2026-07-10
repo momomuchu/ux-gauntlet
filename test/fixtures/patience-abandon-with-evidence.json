@@ -1,17 +1,33 @@
 {
+  "lane": "persona",
   "run": {
     "target_url": "http://localhost:3000",
     "task_list": "test/fixtures/tasks.json",
-    "personas": ["free-tier-user"]
+    "personas": [
+      "free-tier-user"
+    ]
   },
   "personas": [
-    { "name": "free-tier-user", "patience_threshold_steps": 10 }
+    {
+      "name": "free-tier-user",
+      "patience_threshold_steps": 10
+    }
   ],
   "walkthrough_progress": [
-    { "persona": "free-tier-user", "task": "upgrade plan", "step_count": 11 }
+    {
+      "persona": "free-tier-user",
+      "task": "upgrade plan",
+      "step_count": 11
+    }
   ],
   "tasks_ledger": [
-    { "persona": "free-tier-user", "task": "upgrade plan", "task_completed": false, "outcome": "failed_by_patience", "reason_code": "patience-exhausted" }
+    {
+      "persona": "free-tier-user",
+      "task": "upgrade plan",
+      "task_completed": false,
+      "outcome": "failed_by_patience",
+      "reason_code": "patience-exhausted"
+    }
   ],
   "findings": [
     {
@@ -19,14 +35,25 @@
       "friction_name": "persona abandoned the upgrade-plan task past its patience threshold",
       "friction_type": "terminal_friction",
       "step": 11,
-      "personas_flagging": ["free-tier-user"],
+      "personas_flagging": [
+        "free-tier-user"
+      ],
       "convergence_tier": 0,
       "partial_tier": 1,
       "heuristic_tag": "flexibility-efficiency-of-use",
       "severity": 3,
-      "severity_factors": { "frequency": "every attempt past threshold", "impact": "task abandoned", "persistence": "recurs" },
+      "severity_factors": {
+        "frequency": "every attempt past threshold",
+        "impact": "task abandoned",
+        "persistence": "recurs"
+      },
       "market_impact": true,
-      "evidence": [{ "type": "screenshot", "path": "runs/fixture/step11-abandon.png" }],
+      "evidence": [
+        {
+          "type": "screenshot",
+          "path": "runs/fixture/step11-abandon.png"
+        }
+      ],
       "narrative": "The abandonment procedure captured a screenshot of the persona's last observed page state at step 11 before recording this terminal friction, and tagged it with a heuristic from the configured set (F114, F125)."
     }
   ]

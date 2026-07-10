@@ -1,8 +1,11 @@
 {
+  "lane": "persona",
   "run": {
     "target_url": "http://localhost:3000",
     "task_list": "test/fixtures/tasks.json",
-    "personas": ["vp-team-buyer"]
+    "personas": [
+      "vp-team-buyer"
+    ]
   },
   "findings": [
     {
@@ -12,13 +15,24 @@
       "friction_type": "extra_action",
       "step": 3,
       "target_element_identifier": "data-testid:plan-table",
-      "personas_flagging": ["vp-team-buyer"],
+      "personas_flagging": [
+        "vp-team-buyer"
+      ],
       "convergence_tier": 2,
       "heuristic_tag": "visibility-of-system-status",
       "severity": 2,
-      "severity_factors": { "frequency": "every pricing review", "impact": "extra scroll effort", "persistence": "recurs" },
+      "severity_factors": {
+        "frequency": "every pricing review",
+        "impact": "extra scroll effort",
+        "persistence": "recurs"
+      },
       "market_impact": false,
-      "evidence": [{ "type": "screenshot", "path": "runs/fixture/step3-scroll.png" }],
+      "evidence": [
+        {
+          "type": "screenshot",
+          "path": "runs/fixture/step3-scroll.png"
+        }
+      ],
       "narrative": "vp-team-buyer's own 2 pre-merge records sharing an identical F45 tuple were double-counted into convergence_tier=2, inflating corroboration weight from a single persona's own repeated instance of the same friction (F17/F45 violation, CR2-21)."
     }
   ]

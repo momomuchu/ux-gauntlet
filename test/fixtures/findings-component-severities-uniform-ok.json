@@ -1,8 +1,12 @@
 {
+  "lane": "persona",
   "run": {
     "target_url": "http://localhost:3000",
     "task_list": "test/fixtures/tasks.json",
-    "personas": ["free-tier-user", "willing-to-pay-user"]
+    "personas": [
+      "free-tier-user",
+      "willing-to-pay-user"
+    ]
   },
   "findings": [
     {
@@ -12,14 +16,29 @@
       "friction_type": "walkthrough_failure",
       "step": 2,
       "target_element_identifier": "data-testid:cta-signup",
-      "personas_flagging": ["free-tier-user", "willing-to-pay-user"],
+      "personas_flagging": [
+        "free-tier-user",
+        "willing-to-pay-user"
+      ],
       "convergence_tier": 2,
       "heuristic_tag": "visibility-of-system-status",
       "severity": 3,
-      "component_severities": [3, 3],
-      "severity_factors": { "frequency": "every first visit", "impact": "user scrolls and hunts", "persistence": "recurs until learned" },
+      "component_severities": [
+        3,
+        3
+      ],
+      "severity_factors": {
+        "frequency": "every first visit",
+        "impact": "user scrolls and hunts",
+        "persistence": "recurs until learned"
+      },
       "market_impact": true,
-      "evidence": [{ "type": "screenshot", "path": "runs/fixture/step2-uniform.png" }],
+      "evidence": [
+        {
+          "type": "screenshot",
+          "path": "runs/fixture/step2-uniform.png"
+        }
+      ],
       "narrative": "component_severities are [3, 3] — both personas independently agreed; only one distinct value, so the array need not render adjacent to severity (F137, CR2-12)."
     }
   ]

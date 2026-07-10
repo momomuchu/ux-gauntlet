@@ -1,11 +1,22 @@
 {
+  "lane": "persona",
   "run": {
     "target_url": "http://localhost:3000",
     "task_list": "test/fixtures/tasks.json",
-    "personas": ["free-tier-user"]
+    "personas": [
+      "free-tier-user"
+    ]
   },
   "actions": [
-    { "persona": "free-tier-user", "step": 2, "type": "retry", "auto_recovered": false, "within_wait_timeout": false, "persona_initiated": true, "http_status": null }
+    {
+      "persona": "free-tier-user",
+      "step": 2,
+      "type": "retry",
+      "auto_recovered": false,
+      "within_wait_timeout": false,
+      "persona_initiated": true,
+      "http_status": null
+    }
   ],
   "findings": [
     {
@@ -13,13 +24,24 @@
       "friction_name": "dashboard widget required a manual retry click to render",
       "friction_type": "walkthrough_failure",
       "step": 2,
-      "personas_flagging": ["free-tier-user"],
+      "personas_flagging": [
+        "free-tier-user"
+      ],
       "convergence_tier": 1,
       "heuristic_tag": "visibility-of-system-status",
       "severity": 2,
-      "severity_factors": { "frequency": "rare", "impact": "minor delay", "persistence": "self-resolves" },
+      "severity_factors": {
+        "frequency": "rare",
+        "impact": "minor delay",
+        "persistence": "self-resolves"
+      },
       "market_impact": false,
-      "evidence": [{ "type": "screenshot", "path": "runs/fixture/step2-manual-retry.png" }],
+      "evidence": [
+        {
+          "type": "screenshot",
+          "path": "runs/fixture/step2-manual-retry.png"
+        }
+      ],
       "narrative": "A persona-initiated retry with no 5xx response is correctly recorded as friction per F112 — not excluded as transient (F111 requires auto-recovery, absent here), not filed as an app-error (F113 requires a captured 5xx response, absent here) (negative control, CR4-S3 pattern-3 sweep)."
     }
   ]

@@ -13,24 +13,32 @@ export function findingId(tag, step, tei) {
   return 'fid-' + createHash('sha256').update(`${tag}|${step}|${tei}`).digest('hex').slice(0, 16);
 }
 
-// R2 items 3/11 + R3 M2 — the ONE canonical target_element_identifier normalizer, used EVERYWHERE
-// identity is compared (clusterKey in assemble-run.mjs and tupleKey below). Two personas naming the SAME
-// element must produce the SAME normalized key regardless of surrounding whitespace, internal whitespace
-// runs, letter case, whitespace ADJACENT TO A SEPARATOR ("signup:cta" == "signup: cta" == "signup : cta"),
-// or a trailing punctuation mark. Steps, in order:
-//   1. trim surrounding whitespace, lowercase,
-//   2. collapse whitespace adjacent to ANY punctuation/symbol separator so the separator and its operands
+// R4 ROOT 1 — the tei is a PURE OPAQUE cluster identifier. normalizeTei is the ONE canonical normalizer
+// used EVERYWHERE identity is compared (clusterKey in assemble-run.mjs and tupleKey below). It is
+// DECOUPLED from grounding: it never parses a colon into a "page", and it no longer strips trailing
+// punctuation (that over-merged genuinely different labels — R4 MAJOR #10/#16: "Sign up!" vs "Sign up" —
+// and punctuation is a real character difference on an opaque identifier, not an identity-folding artifact).
+// Two personas naming the SAME element must produce the SAME normalized key regardless of surrounding
+// whitespace, internal whitespace runs, letter case, whitespace ADJACENT TO A SEPARATOR
+// ("signup:cta" == "signup: cta" == "signup : cta"), or INVISIBLE Unicode format characters
+// (\p{Cf}: ZWSP U+200B, ZWNJ U+200C, ZWJ U+200D, BOM/ZWNBSP U+FEFF, LRM/RLM, SOFT HYPHEN U+00AD) that
+// JS `\s` and String.trim() do NOT match — a copy/pasted or LLM-echoed "signup​:cta" with a zero-width
+// space around the colon must fold to the SAME key as "signup:cta" (R4 ROOT 1 BLOCKER #1). Steps, in order:
+//   1. lowercase,
+//   2. STRIP all Unicode format/zero-width chars (\p{Cf}) — the ZWSP-variant clustering defeat,
+//   3. trim surrounding whitespace,
+//   4. collapse whitespace adjacent to ANY punctuation/symbol separator so the separator and its operands
 //      touch ("signup : cta" -> "signup:cta") — R3 M2: the prior build only collapsed whitespace RUNS,
 //      so a single space around the ':' separator ("signup: cta") under-merged vs "signup:cta",
-//   3. collapse every remaining internal whitespace run to a single space ("signup  button" == "signup button"),
-//   4. strip trailing punctuation/symbols ("landing:cta." == "landing:cta").
+//   5. collapse every remaining internal whitespace run to a single space ("signup  button" == "signup button").
 // A null/absent identifier normalizes to '' (the caller treats '' as "no element identifier").
 export function normalizeTei(t) {
   if (t == null) return '';
-  let s = String(t).trim().toLowerCase();
+  let s = String(t).toLowerCase();
+  s = s.replace(/\p{Cf}/gu, '');                 // R4 ROOT 1: strip zero-width/format chars \s and trim() miss
+  s = s.trim();
   s = s.replace(/\s*([\p{P}\p{S}])\s*/gu, '$1'); // R3 M2: fold whitespace touching a separator into the separator
-  s = s.replace(/\s+/g, ' ');                    // collapse remaining internal whitespace runs
-  s = s.replace(/[\p{P}\p{S}]+$/u, '').trim();   // strip trailing punctuation/symbols
+  s = s.replace(/\s+/g, ' ').trim();             // collapse remaining internal whitespace runs
   return s;
 }
 

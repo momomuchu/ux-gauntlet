@@ -1,11 +1,19 @@
 {
+  "lane": "persona",
   "run": {
     "target_url": "http://localhost:3000",
     "task_list": "test/fixtures/tasks.json",
-    "personas": ["vp-team-buyer"]
+    "personas": [
+      "vp-team-buyer"
+    ]
   },
   "tasks_ledger": [
-    { "persona": "vp-team-buyer", "task": "invite teammate", "task_completed": false, "reason_code": "the persona just gave up" }
+    {
+      "persona": "vp-team-buyer",
+      "task": "invite teammate",
+      "task_completed": false,
+      "reason_code": "the persona just gave up"
+    }
   ],
   "findings": []
 }

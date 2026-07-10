@@ -60,13 +60,12 @@ function main() {
   const dropLog = [];
   const add = (m) => violations.push(m);
 
-  // Lane discriminator trust boundary (B9 + R2 item 6): this is the PERSONA-lane gate. A structural
-  // bundle must never be silently processed here — its critical a11y findings would otherwise be
-  // dropped as a coincidental "zero evidence" (F14/F15) side effect rather than caught. The shared
-  // core/lane.mjs assertLane rejects an explicit lane:"structural" AND a bundle whose SHAPE is
-  // structural even when `lane` is omitted (omission is not a safe default for a structural-shaped
-  // bundle). A genuine persona bundle that omits `lane` and has no structural markers still passes
-  // (frozen 0001-safe default). One helper, all four gates fail-closed identically.
+  // Lane discriminator trust boundary (B9 + R2 item 6 + R4 ROOT 3): this is the PERSONA-lane gate. A
+  // structural bundle must never be silently processed here — its critical a11y findings would otherwise
+  // be dropped as a coincidental "zero evidence" (F14/F15) side effect rather than caught. The shared
+  // core/lane.mjs assertLane requires an EXPLICIT lane:"persona" and rejects an absent or structural
+  // discriminator, so a de-labelled structural bundle (its `lane` field dropped) can never default
+  // through as persona. One helper, all four gates fail-closed identically on an absent discriminator.
   {
     const laneErr = assertLane(bundle, 'persona');
     if (laneErr) add(laneErr);

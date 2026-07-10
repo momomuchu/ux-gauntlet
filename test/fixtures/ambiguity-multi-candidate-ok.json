@@ -1,8 +1,11 @@
 {
+  "lane": "persona",
   "run": {
     "target_url": "http://localhost:3000",
     "task_list": "test/fixtures/tasks.json",
-    "personas": ["vp-team-buyer"]
+    "personas": [
+      "vp-team-buyer"
+    ]
   },
   "findings": [
     {
@@ -11,14 +14,23 @@
       "friction_type": "ambiguity_resolution",
       "step": 3,
       "concurrent_candidates": 2,
-      "personas_flagging": ["vp-team-buyer"],
+      "personas_flagging": [
+        "vp-team-buyer"
+      ],
       "convergence_tier": 1,
       "heuristic_tag": "match-system-real-world",
       "severity": 2,
-      "severity_factors": { "frequency": "each pricing review", "impact": "persona re-reads plan copy twice", "persistence": "recurs" },
+      "severity_factors": {
+        "frequency": "each pricing review",
+        "impact": "persona re-reads plan copy twice",
+        "persistence": "recurs"
+      },
       "market_impact": false,
       "evidence": [
-        { "type": "dom", "path": "runs/fixture/step3-pricing-two-plans.html" }
+        {
+          "type": "dom",
+          "path": "runs/fixture/step3-pricing-two-plans.html"
+        }
       ],
       "narrative": "The evidence artifact captures both the 'Pro' and 'Team' plan-copy segments concurrently visible before the persona's choice (F110)."
     }

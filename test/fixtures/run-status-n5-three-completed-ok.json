@@ -1,16 +1,38 @@
 {
+  "lane": "persona",
   "run": {
     "target_url": "http://localhost:3000",
     "task_list": "test/fixtures/tasks.json",
-    "personas": ["free-tier-user", "willing-to-pay-user", "vp-team-buyer", "growth-lead", "it-admin"]
+    "personas": [
+      "free-tier-user",
+      "willing-to-pay-user",
+      "vp-team-buyer",
+      "growth-lead",
+      "it-admin"
+    ]
   },
   "run_status": "completed",
   "personas": [
-    { "name": "free-tier-user", "run_status": "completed" },
-    { "name": "willing-to-pay-user", "run_status": "completed" },
-    { "name": "vp-team-buyer", "run_status": "completed" },
-    { "name": "growth-lead", "run_status": "crashed" },
-    { "name": "it-admin", "run_status": "crashed" }
+    {
+      "name": "free-tier-user",
+      "run_status": "completed"
+    },
+    {
+      "name": "willing-to-pay-user",
+      "run_status": "completed"
+    },
+    {
+      "name": "vp-team-buyer",
+      "run_status": "completed"
+    },
+    {
+      "name": "growth-lead",
+      "run_status": "crashed"
+    },
+    {
+      "name": "it-admin",
+      "run_status": "crashed"
+    }
   ],
   "findings": [],
   "narrative": "M2 regression lock: an N=5 run with 3 personas in the F49 floor set {completed, patience-exhausted, runner-capped} and 2 crashed. The convergence floor is a fixed constant 3, NOT the persona count (F49 'fewer than 3'), so floorCount 3 is NOT < 3 and this run is NOT BLOCKED — the stored run_status 'completed' matches the derived value. Under the defective floorCount < personaEntries.length rule (3 < 5) this healthy-enough 3-of-5 run would have falsely derived BLOCKED."

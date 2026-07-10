@@ -8,6 +8,7 @@
 //
 // Usage: node scripts/combined-report.mjs --persona <findings.json> --structural <structural.json> [--out <file>]
 import { readFileSync, writeFileSync } from 'node:fs';
+import { assertLane } from './core/lane.mjs';
 
 function arg(name, def) { const i = process.argv.indexOf(`--${name}`); return i > -1 ? process.argv[i + 1] : def; }
 const personaPath = arg('persona');
@@ -20,6 +21,20 @@ if (!personaPath || !structuralPath) {
 
 const persona = JSON.parse(readFileSync(personaPath, 'utf8'));
 const structural = JSON.parse(readFileSync(structuralPath, 'utf8'));
+
+// R4 MAJOR #9 (S22 lane trust boundary): this is the 5th gate — the actual founder-facing artifact
+// generator — and it previously had ZERO lane validation, so swapping the --persona/--structural file
+// args rendered structural axe findings under "Persona friction" as "flagged by 0/0" with no error (the
+// exact M9 lane-confusion class the trust boundary exists to prevent). Enforce the SAME explicit-lane
+// discriminator both gates use (R4 ROOT 3): the --persona input must be lane:"persona", the --structural
+// input must be lane:"structural". Refuse (exit 1, no output file) on any mismatch — never compose a
+// mislabelled/misrouted bundle into an official-looking report.
+{
+  const pErr = assertLane(persona, 'persona');
+  if (pErr) { process.stderr.write(`REFUSE: --persona input is not a persona-lane bundle — ${pErr}\n`); process.exit(1); }
+  const sErr = assertLane(structural, 'structural');
+  if (sErr) { process.stderr.write(`REFUSE: --structural input is not a structural-lane bundle — ${sErr}\n`); process.exit(1); }
+}
 
 const SEV_COLOR = { 4: '#c0392b', 3: '#e67e22', 2: '#f1c40f', 1: '#95a5a6', 0: '#5d6b7a' };
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));

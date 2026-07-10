@@ -1,20 +1,51 @@
 {
+  "lane": "persona",
   "run": {
     "target_url": "http://localhost:3000",
     "task_list": "test/fixtures/tasks.json",
-    "personas": ["free-tier-user", "willing-to-pay-user", "vp-team-buyer"]
+    "personas": [
+      "free-tier-user",
+      "willing-to-pay-user",
+      "vp-team-buyer"
+    ]
   },
   "personas": [
-    { "name": "free-tier-user", "patience_threshold_steps": 10 },
-    { "name": "willing-to-pay-user", "patience_threshold_steps": 10 }
+    {
+      "name": "free-tier-user",
+      "patience_threshold_steps": 10
+    },
+    {
+      "name": "willing-to-pay-user",
+      "patience_threshold_steps": 10
+    }
   ],
   "walkthrough_progress": [
-    { "persona": "free-tier-user", "task": "upgrade plan", "step_count": 11 },
-    { "persona": "willing-to-pay-user", "task": "upgrade plan", "step_count": 11 }
+    {
+      "persona": "free-tier-user",
+      "task": "upgrade plan",
+      "step_count": 11
+    },
+    {
+      "persona": "willing-to-pay-user",
+      "task": "upgrade plan",
+      "step_count": 11
+    }
   ],
   "tasks_ledger": [
-    { "persona": "free-tier-user", "task": "upgrade plan", "task_completed": false, "outcome": "failed_by_patience", "reason_code": "patience-exhausted" },
-    { "persona": "willing-to-pay-user", "task": "upgrade plan", "task_completed": false, "outcome": "failed_by_patience", "reason_code": "patience-exhausted" }
+    {
+      "persona": "free-tier-user",
+      "task": "upgrade plan",
+      "task_completed": false,
+      "outcome": "failed_by_patience",
+      "reason_code": "patience-exhausted"
+    },
+    {
+      "persona": "willing-to-pay-user",
+      "task": "upgrade plan",
+      "task_completed": false,
+      "outcome": "failed_by_patience",
+      "reason_code": "patience-exhausted"
+    }
   ],
   "findings": [
     {
@@ -24,14 +55,26 @@
       "friction_type": "terminal_friction",
       "step": 11,
       "target_element_identifier": "patience-abandonment:step-11",
-      "personas_flagging": ["free-tier-user"],
+      "personas_flagging": [
+        "free-tier-user"
+      ],
       "convergence_tier": 1,
       "partial_tier": 0,
       "heuristic_tag": "flexibility-efficiency-of-use",
       "severity": 3,
-      "severity_factors": { "frequency": "every attempt past threshold", "impact": "task abandoned", "persistence": "recurs" },
+      "severity_factors": {
+        "frequency": "every attempt past threshold",
+        "impact": "task abandoned",
+        "persistence": "recurs"
+      },
       "market_impact": true,
-      "evidence": [{ "type": "screenshot", "path": "runs/fixture/step11-abandon-free-tier.png", "persona": "free-tier-user" }],
+      "evidence": [
+        {
+          "type": "screenshot",
+          "path": "runs/fixture/step11-abandon-free-tier.png",
+          "persona": "free-tier-user"
+        }
+      ],
       "narrative": "free-tier-user's terminal friction correctly uses the fixed-sentinel target_element_identifier (F149) computed only from step=11."
     },
     {
@@ -41,14 +84,26 @@
       "friction_type": "terminal_friction",
       "step": 11,
       "target_element_identifier": "css:div.upsell-modal > button.close",
-      "personas_flagging": ["willing-to-pay-user"],
+      "personas_flagging": [
+        "willing-to-pay-user"
+      ],
       "convergence_tier": 1,
       "partial_tier": 0,
       "heuristic_tag": "flexibility-efficiency-of-use",
       "severity": 3,
-      "severity_factors": { "frequency": "every attempt past threshold", "impact": "task abandoned", "persistence": "recurs" },
+      "severity_factors": {
+        "frequency": "every attempt past threshold",
+        "impact": "task abandoned",
+        "persistence": "recurs"
+      },
       "market_impact": true,
-      "evidence": [{ "type": "screenshot", "path": "runs/fixture/step11-abandon-wtp.png", "persona": "willing-to-pay-user" }],
+      "evidence": [
+        {
+          "type": "screenshot",
+          "path": "runs/fixture/step11-abandon-wtp.png",
+          "persona": "willing-to-pay-user"
+        }
+      ],
       "narrative": "willing-to-pay-user's terminal friction WRONGLY derives target_element_identifier from its own last-rendered DOM (an upsell-modal close button it happened to be looking at) instead of the fixed per-step sentinel F149 mandates — a violation of F149/CR3-5. Because the two records' target_element_identifier now differ despite being the identical underlying step-11 abandonment, they fail to merge: the same abandonment event is reported as two convergence_tier=1 findings instead of one convergence_tier=2 finding, silently defeating the 3-persona corroboration signal for the friction class that most needs it."
     }
   ]

@@ -1,8 +1,13 @@
 {
+  "lane": "persona",
   "run": {
     "target_url": "http://localhost:3000",
     "task_list": "test/fixtures/tasks.json",
-    "personas": ["free-tier-user", "willing-to-pay-user", "vp-team-buyer"]
+    "personas": [
+      "free-tier-user",
+      "willing-to-pay-user",
+      "vp-team-buyer"
+    ]
   },
   "run_status": "completed",
   "findings": [
@@ -12,14 +17,26 @@
       "friction_name": "invite-teammate email link points to a 404 page",
       "friction_type": "walkthrough_failure",
       "step": 6,
-      "personas_flagging": ["vp-team-buyer", "willing-to-pay-user"],
+      "personas_flagging": [
+        "vp-team-buyer",
+        "willing-to-pay-user"
+      ],
       "convergence_tier": 2,
       "partial_tier": 0,
       "heuristic_tag": "error-prevention",
       "severity": 4,
-      "severity_factors": { "frequency": 4, "impact": 4, "persistence": 4 },
+      "severity_factors": {
+        "frequency": 4,
+        "impact": 4,
+        "persistence": 4
+      },
       "market_impact": true,
-      "evidence": [{ "type": "screenshot", "path": "runs/fixture/step6-invite-404.png" }],
+      "evidence": [
+        {
+          "type": "screenshot",
+          "path": "runs/fixture/step6-invite-404.png"
+        }
+      ],
       "narrative": "The team-invite confirmation email's accept link 404s; the invited teammate can never join the workspace.",
       "timestamp": "2026-07-08T11:00:00Z"
     }

@@ -1,14 +1,29 @@
 {
+  "lane": "persona",
   "run": {
     "target_url": "http://localhost:3000",
     "task_list": "test/fixtures/tasks.json",
-    "personas": ["free-tier-user", "willing-to-pay-user", "vp-team-buyer"]
+    "personas": [
+      "free-tier-user",
+      "willing-to-pay-user",
+      "vp-team-buyer"
+    ]
   },
   "run_status": "BLOCKED",
   "personas": [
-    { "name": "free-tier-user", "run_status": "completed" },
-    { "name": "willing-to-pay-user", "run_status": "timed-out", "last_completed_step": 3 },
-    { "name": "vp-team-buyer", "run_status": "completed" }
+    {
+      "name": "free-tier-user",
+      "run_status": "completed"
+    },
+    {
+      "name": "willing-to-pay-user",
+      "run_status": "timed-out",
+      "last_completed_step": 3
+    },
+    {
+      "name": "vp-team-buyer",
+      "run_status": "completed"
+    }
   ],
   "findings": [
     {
@@ -17,15 +32,26 @@
       "friction_name": "checkout step partially explored before the run-level timeout fired",
       "friction_type": "walkthrough_failure",
       "step": 3,
-      "personas_flagging": ["willing-to-pay-user"],
+      "personas_flagging": [
+        "willing-to-pay-user"
+      ],
       "convergence_tier": 0,
       "partial_tier": 1,
       "heuristic_tag": "visibility-of-system-status",
       "severity": 2,
       "confidence": "degraded-below-persona-floor",
-      "severity_factors": { "frequency": 2, "impact": 2, "persistence": 2 },
+      "severity_factors": {
+        "frequency": 2,
+        "impact": 2,
+        "persistence": 2
+      },
       "market_impact": false,
-      "evidence": [{ "type": "screenshot", "path": "runs/fixture/step3-timeout-partial.png" }],
+      "evidence": [
+        {
+          "type": "screenshot",
+          "path": "runs/fixture/step3-timeout-partial.png"
+        }
+      ],
       "narrative": "willing-to-pay-user's partial ledger (progress through step 3) was merged as-is into findings.json when the run-level wallclock timeout fired (F75/F76); run_status timed-out is a valid enum member (F53)."
     }
   ]
