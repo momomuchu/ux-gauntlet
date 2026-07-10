@@ -1,11 +1,32 @@
 #!/usr/bin/env node
 // render-report.mjs <findings.json>
 // Emits a markdown report derived FROM the findings data (never a static template).
+// R3 M11: this is the FOUNDER-FACING artifact, so it applies a gate BEFORE rendering — the prior build
+// formatted hand-typed garbage JSON (a 2-field object with a fabricated finding) into an official-looking
+// "UX Gauntlet Report" with exit 0 and no warning. It now (1) exact-matches the persona lane discriminator
+// (a structural-lane bundle must be rendered by structural-render-report.mjs, not here) and (2) validates
+// the bundle against the persona-bundle shape contract (schemas/findings.schema.json required sets), and
+// REFUSES to render on any failure. This is a shape/lane gate, not the full report-gate.mjs run.
 import { readFileSync, existsSync } from 'node:fs';
+import { assertLane } from './core/lane.mjs';
+import { validatePersonaBundle } from './core/schema-validate.mjs';
 
 const file = process.argv[2];
 if (!file || !existsSync(file)) { process.stderr.write(`usage: render-report.mjs <findings.json>\n`); process.exit(2); }
-const bundle = JSON.parse(readFileSync(file, 'utf8'));
+let bundle;
+try { bundle = JSON.parse(readFileSync(file, 'utf8')); }
+catch (e) { process.stderr.write(`render-report: REFUSING to render — not parseable JSON: ${e.message}\n`); process.exit(1); }
+
+// --- gate BEFORE rendering (R3 M11): lane discriminator + persona-bundle shape contract ---
+const laneErr = assertLane(bundle, 'persona');
+if (laneErr) { process.stderr.write(`render-report: REFUSING to render — ${laneErr}\n`); process.exit(1); }
+const shapeErrors = validatePersonaBundle(bundle);
+if (shapeErrors.length > 0) {
+  process.stderr.write('render-report: REFUSING to render — bundle fails the persona-bundle shape contract (schemas/findings.schema.json); a founder-facing report is not emitted for an unvalidated/hand-typed bundle:\n');
+  for (const e of shapeErrors) process.stderr.write('  - ' + e + '\n');
+  process.exit(1);
+}
+
 const findings = Array.isArray(bundle.findings) ? bundle.findings : [];
 
 const out = [];

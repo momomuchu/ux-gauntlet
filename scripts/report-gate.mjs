@@ -368,8 +368,19 @@ function main() {
   }
 
   // --- Dedup / merge divergence (F45/F46/F92/F147/F183/F193) ---
+  // R3 B1: a finding with NO target_element_identifier/target_selector is UNGROUNDED. assemble-run.mjs
+  // intentionally assigns each such tei-less finding a UNIQUE internal cluster key so they NEVER
+  // false-merge across personas (R2 item 2 — they stay convergence_tier 1, flagged low-confidence). The
+  // F45 identity tuple is (heuristic_tag, step, target_element_identifier); with tei ABSENT, tupleKey()
+  // collapses to "heuristic_tag|step|" and multiple genuinely-distinct tei-less findings COLLIDE on that
+  // partial key. Recomputing dedup from the collided partial key falsely flagged them as "unmerged
+  // duplicates" and CRASHED assemble-run --write on the realistic multi-persona no-selector shape the
+  // pipeline exists to handle (the round-3 BLOCKER). F45 identity is UNDEFINED without a tei, so a
+  // tei-less finding is not dedup-eligible: exempt it from BOTH the tuple-collision and the
+  // divergent-tuple checks. (These findings are already surfaced as ungrounded/low-confidence upstream.)
+  const dedupable = kept.filter((f) => teiOf(f) != null);
   const byTuple = new Map();
-  for (const f of kept) {
+  for (const f of dedupable) {
     const key = tupleKey(f);
     byTuple.set(key, (byTuple.get(key) || 0) + 1);
   }
@@ -377,7 +388,7 @@ function main() {
     if (count > 1) add(`two findings share identity tuple (${key}) but were left unmerged (F45/F46)`);
   }
   const byName = new Map();
-  for (const f of kept) {
+  for (const f of dedupable) {
     if (!byName.has(f.friction_name)) byName.set(f.friction_name, []);
     byName.get(f.friction_name).push(f);
   }

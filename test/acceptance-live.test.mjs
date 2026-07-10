@@ -10,69 +10,75 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn, execFileSync, spawnSync } from 'node:child_process';
 import { readFileSync, writeFileSync, existsSync, statSync, mkdtempSync, mkdirSync, openSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import net from 'node:net';
 
-const PORT = 4337;
-const BASE = `http://localhost:${PORT}`;
+// R3 M16/M10: NO hardcoded shared port. Each run spawns its own staging server on an OS-allocated
+// ephemeral port (server.mjs prints "port=<N>" on its ready line), captured below. This structurally
+// removes the port-4337 TOCTOU/EADDRINUSE race and the cross-run contention that made this suite flaky
+// AND made the earlier "non-flaky" commit claim false — there is no shared port to contend on.
+const SERVER_SRC = 'examples/staging-demo/server.mjs';
 let server = null;
-let ownedServer = false; // did WE spawn it? (ownership — never kill a pre-existing process, R2 items 12/20)
+let BASE = null;
 
 // Real HTTP status of a route (not mere TCP reachability): curl prints the code, 000/non-zero on failure.
 function httpStatus(url) {
   const r = spawnSync('curl', ['-s', '-o', '/dev/null', '-m', '2', '-w', '%{http_code}', url], { encoding: 'utf8' });
   return r.status === 0 ? parseInt((r.stdout || '').trim(), 10) || 0 : 0;
 }
-// Quick TCP probe for a pre-existing listener on the port (ownership pre-flight).
-function portInUse(port) {
-  return new Promise((resolve) => {
-    const sock = net.connect({ port, host: '127.0.0.1' });
-    sock.setTimeout(600);
-    sock.once('connect', () => { sock.destroy(); resolve(true); });
-    sock.once('timeout', () => { sock.destroy(); resolve(false); });
-    sock.once('error', () => resolve(false));
-  });
+function httpBody(url) {
+  const r = spawnSync('curl', ['-s', '-m', '2', url], { encoding: 'utf8' });
+  return r.status === 0 ? (r.stdout || '').trim() : '';
 }
 
+// R3 MI2: reap OUR owned child on ANY exit path — normal after(), a thrown test, OR a signal (SIGINT/
+// SIGTERM). The prior suite trapped neither signal, so SIGKILL-ing the parent mid-run orphaned the child
+// server (confirmed LISTENing via lsof). Register once at module load.
+function reap() {
+  if (server) { try { server.kill('SIGKILL'); } catch { /* already gone */ } server = null; }
+}
+for (const sig of ['SIGINT', 'SIGTERM']) {
+  process.on(sig, () => { reap(); process.exit(130); });
+}
+process.on('exit', reap);
+
 before(async () => {
-  // Ownership pre-flight (R2 items 12/20): if a process already holds the port, do NOT spawn our own and
-  // do NOT kill it in after(). Still assert it serves a real 200 on an actual app route, else fail LOUD —
-  // a decoy/stray server must not silently produce product-shaped failures.
-  if (await portInUse(PORT)) {
-    if (httpStatus(`${BASE}/signup`) !== 200) {
-      throw new Error(`port ${PORT} is already occupied by a process that does not serve HTTP 200 on /signup — refusing to run the live suite against an unknown pre-existing server (ownership + readiness guard, R2 item 20)`);
-    }
-    ownedServer = false;
-    return;
-  }
-  server = spawn('node', ['examples/staging-demo/server.mjs', String(PORT)], { stdio: 'ignore' });
-  ownedServer = true;
+  // Always spawn OUR OWN server on an ephemeral port (M16). Capture the bound port from stdout, then
+  // (R2 item 12) assert a REAL 200 on an actual route within a hard, throwing deadline, AND (M4) verify
+  // the running process reflects the CURRENT on-disk server source via /__source-hash before trusting it —
+  // never run the suite against a stale build silently serving old HTML.
+  const diskHash = createHash('sha256').update(readFileSync(SERVER_SRC)).digest('hex');
+  server = spawn('node', [SERVER_SRC, '0'], { stdio: ['ignore', 'pipe', 'ignore'] });
   let spawnError = null;
   server.once('error', (e) => { spawnError = e; });
-  // Readiness ASSERTION (R2 item 12): poll until a REAL 200 on an actual route, with a hard timeout that
-  // THROWS — never proceed on unverified reachability. Also bail if the child exits early.
-  const deadline = Date.now() + 15000;
-  let ready = false;
-  while (Date.now() < deadline) {
+  // Parse the bound port from the ready line "... port=<N> ...".
+  let boundPort = null;
+  const readyDeadline = Date.now() + 15000;
+  server.stdout.setEncoding('utf8');
+  server.stdout.on('data', (chunk) => { const m = /port=(\d+)/.exec(chunk); if (m) boundPort = Number(m[1]); });
+  while (boundPort == null && Date.now() < readyDeadline) {
     if (spawnError) throw new Error(`failed to spawn staging server: ${spawnError.message}`);
+    if (server.exitCode !== null) throw new Error(`staging server exited early (code ${server.exitCode}) before printing its bound port`);
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  if (boundPort == null) { reap(); throw new Error('staging server never printed its bound port within 15s (readiness assertion failed) — refusing a flaky green'); }
+  BASE = `http://localhost:${boundPort}`;
+  // Readiness: poll a real 200 on /signup with a throwing deadline.
+  let ready = false;
+  while (Date.now() < readyDeadline) {
     if (server.exitCode !== null) throw new Error(`staging server exited early (code ${server.exitCode}) before becoming ready`);
     if (httpStatus(`${BASE}/signup`) === 200) { ready = true; break; }
-    await new Promise((r) => setTimeout(r, 200));
+    await new Promise((r) => setTimeout(r, 150));
   }
-  if (!ready) {
-    try { server.kill('SIGKILL'); } catch { /* already gone */ }
-    throw new Error(`staging server never returned HTTP 200 on ${BASE}/signup within 15s — readiness assertion failed (R2 item 12), refusing to run a flaky green`);
-  }
+  if (!ready) { reap(); throw new Error(`staging server never returned HTTP 200 on ${BASE}/signup within 15s — readiness assertion failed (R2 item 12)`); }
+  // Freshness (M4): the running process must serve the hash of the CURRENT disk source.
+  const servedHash = httpBody(`${BASE}/__source-hash`);
+  if (servedHash !== diskHash) { reap(); throw new Error(`staging server /__source-hash (${servedHash.slice(0, 12)}) does not match the on-disk ${SERVER_SRC} hash (${diskHash.slice(0, 12)}) — the running process does not reflect current disk code, refusing to run against a stale build (M4)`); }
 });
 
-// Reap OUR child unconditionally (even if a test threw); never kill an unowned pre-existing server.
-after(() => {
-  if (ownedServer && server) {
-    try { server.kill('SIGKILL'); } catch { /* already gone */ }
-    server = null;
-  }
-});
+// Reap OUR child unconditionally (even if a test threw).
+after(() => { reap(); });
 
 // spawnSync so BOTH stdout and stderr are captured on EVERY exit path — the prior execFileSync form
 // discarded stderr on success (masking diagnostics) and on a JSON-parse crash surfaced only "Unexpected
@@ -145,16 +151,19 @@ test('LIVE crawl drives a real browser: captures steps, non-empty screenshots, m
 test('LIVE end-to-end: crawl trace grounds a persona ledger — an off-trace finding is dropped', () => {
   const dir = mkdtempSync(join(tmpdir(), 'uxg-e2e-'));
   execFileSync('node', ['scripts/crawl.mjs', '--url', BASE, '--tasks', 'examples/tasks.json', '--persona', 'p1', '--viewport', '1280x800', '--out', join(dir, 'p1')]);
-  // a ledger with one grounded finding (step 1, landing) + one ungrounded (a page never in the trace)
+  // a ledger with one grounded finding citing a REAL VISITED URL segment (/signup, step 2) + one
+  // ungrounded (a page never in the trace). R3 M7: grounding is now purely URL-path-segment derived —
+  // the grounded finding cites "signup:cta" ("signup" is a visited path segment), NOT a page name that
+  // only appears as a free-text label word (the removed inLabel fallback).
   const led = { persona: 'p1', run_status: 'completed', findings: [
-    { friction_name: 'cta hidden', friction_type: 'walkthrough_failure', step: 1, heuristic_tag: 'aesthetic-minimalist-design', severity: 3, severity_factors: { frequency: 'x', impact: 'y', persistence: 'z' }, evidence: [{ type: 'screenshot', path: 'a.png' }], narrative: 'cta below fold', target_element_identifier: 'landing:cta' },
+    { friction_name: 'cta hidden', friction_type: 'walkthrough_failure', step: 2, heuristic_tag: 'aesthetic-minimalist-design', severity: 3, severity_factors: { frequency: 'x', impact: 'y', persistence: 'z' }, evidence: [{ type: 'screenshot', path: 'a.png' }], narrative: 'cta below fold', target_element_identifier: 'signup:cta' },
     { friction_name: 'invented admin page', friction_type: 'ambiguity_resolution', step: 1, heuristic_tag: 'match-system-real-world', severity: 2, severity_factors: { frequency: 'x', impact: 'y', persistence: 'z' }, evidence: [{ type: 'dom', path: 'b.html' }], narrative: 'the admin panel is confusing', target_element_identifier: 'admin:panel' },
   ] };
   writeFileSync(join(dir, 'p1', 'ledger.json'), JSON.stringify(led));
   const out = run(['scripts/assemble-run.mjs', join(dir), 'p1']);
   const bundle = JSON.parse(out.stdout);
   const names = bundle.findings.map((f) => f.friction_name);
-  assert.ok(names.includes('cta hidden'), 'the grounded landing-page finding ships');
+  assert.ok(names.includes('cta hidden'), 'the grounded /signup finding (cites a visited URL path segment) ships');
   assert.ok(!names.includes('invented admin page'), 'the ungrounded finding citing a never-crawled admin page is DROPPED (trace grounding, B4/B5)');
 });
 
@@ -190,4 +199,31 @@ test('LIVE persona-LLM residual: a realistic NO-target_element_identifier ledger
     assert.ok(!/^fid-[0-9a-f]{16}$/.test(f.finding_id), 'a tei-less finding does not receive a hex F165 finding_id it cannot back with a real target_element_identifier');
   }
   assert.match(out.stderr, /UNGROUNDED-FINDINGS|ungrounded/i, 'the pipeline degrades LOUDLY — it names the ungrounded findings on stderr rather than silently fabricating convergence (persona-LLM residual made loud)');
+});
+
+test('LIVE persona-LLM residual through --write: the realistic no-tei shape COMPLETES + gates + persists (R3 B1/M6)', () => {
+  // R3 M6: the prior live suite exercised the tei-less residual ONLY through the read-only (bare) path,
+  // so the round-3 BLOCKER — report-gate's F45/F46 dedup CRASHING assemble-run --write on exactly this
+  // shape — was never caught by the very test built to cover it. This test runs the SAME realistic shape
+  // through the persisting --write path and asserts it exits 0, gates clean, and writes findings.json.
+  const dir = mkdtempSync(join(tmpdir(), 'uxg-notei-write-'));
+  const mkTrace = (persona) => ({ persona, base: BASE, steps: [
+    { step: 1, label: 'open the landing page', url: `${BASE}/`, title: 'Cloudly' },
+    { step: 2, label: 'click the signup CTA', url: `${BASE}/signup`, title: 'Sign up' },
+  ], run_status: 'completed', task_completed: true });
+  for (const p of ['p1', 'p2', 'p3']) {
+    mkdirSync(join(dir, p), { recursive: true });
+    writeFileSync(join(dir, p, 'trace.json'), JSON.stringify(mkTrace(p)));
+    const led = { persona: p, run_status: 'completed', findings: [
+      { friction_name: `${p} copy confusion`, friction_type: 'walkthrough_failure', step: 1, heuristic_tag: 'match-system-real-world', severity: 3, severity_factors: { frequency: 'x', impact: 'y', persistence: 'z' }, evidence: [{ type: 'screenshot', path: `${p}-1.png` }], narrative: 'the wording did not match what I expected' },
+      { friction_name: `${p} button confusion`, friction_type: 'walkthrough_failure', step: 2, heuristic_tag: 'match-system-real-world', severity: 2, severity_factors: { frequency: 'x', impact: 'y', persistence: 'z' }, evidence: [{ type: 'screenshot', path: `${p}-2.png` }], narrative: 'the button label was unclear' },
+    ] };
+    writeFileSync(join(dir, p, 'ledger.json'), JSON.stringify(led));
+  }
+  const r = run(['scripts/assemble-run.mjs', '--write', dir, 'p1', 'p2', 'p3']);
+  assert.equal(r.code, 0, `assemble-run --write must exit 0 on the tei-less residual shape, not crash (R3 B1). stderr:\n${r.stderr}`);
+  assert.match(r.stdout, /gate: PASS/, 'the persisted bundle passes report-gate');
+  assert.ok(existsSync(join(dir, 'findings.json')), 'findings.json is persisted (the --write deliverable actually lands on disk)');
+  const bundle = JSON.parse(readFileSync(join(dir, 'findings.json'), 'utf8'));
+  assert.equal(bundle.findings.length, 6, 'all 6 tei-less findings survive as SEPARATE tier-1 entries — no false-merge, no crash');
 });

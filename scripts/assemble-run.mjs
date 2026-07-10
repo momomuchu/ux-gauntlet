@@ -2,9 +2,18 @@
 // GROUNDS each finding against that persona's own trace.json, clusters cross-persona findings by their
 // STRUCTURAL identity (F45), sets convergence_tier = number of distinct personas that flagged the
 // clustered issue, assigns the deterministic finding_id via the pure core, derives the run-level
-// run_status, and writes a gate-ready findings bundle. When run with --write it persists findings.json
-// and enforces the run through report-gate.mjs (the WTP/forbidden-claim gate is a REAL pipeline step —
-// not a silent pre-scrub), persisting the file ONLY after the gate passes (R2 item 21).
+// run_status, and writes a gate-ready findings bundle. Two modes:
+//   * bare (no --write): emits the assembled bundle to stdout as a PREVIEW. The WTP/forbidden-claim
+//     check runs here too and FAILS CLOSED (exit 1) on a violation (R3 M12) -- bare mode is a preview,
+//     not a gate-bypass, but it is NOT the full report-gate run (use --write for the complete enforced
+//     pipeline: dedup, run_status derivation, redaction, convergence arithmetic, ...).
+//   * --write: persists findings.json ONLY after the full report-gate.mjs run passes (R2 item 21) -- a
+//     violating bundle is never left on disk.
+// Over-merge policy is F45-normative: two friction records are the SAME finding iff they share the
+// (heuristic_tag, step, target_element_identifier) 3-tuple (F45/F92/F165). friction_name/friction_type
+// are NOT part of identity -- two personas tagging the same element+step+heuristic differently is
+// convergence, and their distinct narratives are preserved in persona_voices (R3: no friction_type key
+// discriminator -- adding one would violate F45 and desync clustering from report-gate's tupleKey).
 //
 // Usage:
 //   node scripts/assemble-run.mjs <runDir> <persona1> <persona2> ...            > findings.json
@@ -61,8 +70,6 @@ const SELECTOR_STRATEGIES = new Set([
   'data-testid', 'data-test', 'testid', 'aria-label', 'aria', 'aria-labelledby', 'role', 'id', 'css',
   'xpath', 'text', 'name', 'class', 'placeholder', 'label', 'selector', 'title', 'alt', 'href',
 ]);
-const labelWords = (s) => new Set(String((s && s.label) || '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean));
-
 function traceIndex(tr) {
   const stepByNum = new Map();
   const visitedSegments = new Set();
@@ -98,11 +105,17 @@ function grounded(f, persona) {
   const page = pageOf(f.target_element_identifier);
   if (page && !SELECTOR_STRATEGIES.has(page)) {
     const step = typeof f.step === 'number' ? idx.stepByNum.get(f.step) : null;
-    const inLabel = step ? labelWords(step).has(page) : false;
     const stepSegs = step ? new Set(pathOf(step.url).split('/').filter(Boolean).map((x) => x.toLowerCase())) : new Set();
-    const isVisited = idx.visitedSegments.has(page) || inLabel || stepSegs.has(page);
+    // R3 M7: grounding is PURELY URL-path-segment derived — the cited page token must match an actually
+    // VISITED URL path segment (across the trace) or the cited step's OWN URL segment. The prior
+    // `inLabel` free-text fallback (page token appears as a WORD in the step's narrative label) grounded
+    // a hallucinated cross-page citation: a step label incidentally containing the word "pricing" while
+    // only /signup was visited let a finding citing "pricing:cta" ship fully grounded. Free-text label
+    // words are not route evidence, so the fallback is removed; a page token is grounded only by a real
+    // visited path segment.
+    const isVisited = idx.visitedSegments.has(page) || stepSegs.has(page);
     if (!isVisited) {
-      return { ok: false, reason: `cites page "${page}" but no route the persona actually visited corresponds to it (ungrounded-route, B4/B5; grounded set derived from the trace, not a hardcoded allowlist)` };
+      return { ok: false, reason: `cites page "${page}" but no route the persona actually visited corresponds to it (ungrounded-route, B4/B5/R3-M7; grounded set derived from VISITED URL path segments only, never free-text label words or a hardcoded allowlist)` };
     }
   }
   return { ok: true };
@@ -184,6 +197,10 @@ const findings = [...clusters.values()].map((c) => {
 
 const runStatus = deriveBlocked(personaStatus) ? 'BLOCKED' : 'completed';
 const bundle = {
+  // R3 M15: the lane discriminator is EXPLICIT on the emitted bundle (no longer left to a downstream
+  // shape sniff). A persona run always carries lane:"persona"; the persona gate (core/lane.mjs) exact-
+  // matches this discriminator.
+  lane: 'persona',
   run: {
     target_url: 'http://localhost:4319',
     target_name: 'Cloudly (staging-demo)',
@@ -206,14 +223,27 @@ if (ungroundedTeiCount) {
   // The persona-LLM residual made LOUD (not silent): a real un-annotated LLM run degrades visibly.
   process.stderr.write(`UNGROUNDED-FINDINGS: ${ungroundedTeiCount} finding(s) lack a target_element_identifier — kept tier-1, flagged confidence "ungrounded-no-target-element", and NEVER merged into cross-persona convergence; any convergence signal that would have required these to merge is UNRELIABLE (R2 items 2/14, persona-LLM residual)\n`);
 }
+// R3 M12: the WTP/forbidden-claim check runs in BOTH modes (bare preview + --write) — it is not a
+// --write-only step. A forbidden claim (F21 WTP / F22 population) is enforced identically regardless of
+// invocation: surfaced on stderr AND fails the process (exit 1). The prior build ran the check but, in
+// bare mode, exited 0 while emitting the violating bundle to stdout — so piping bare stdout into a
+// renderer shipped a WTP-violating "preview" that never met a gate. Bare mode now fails closed on a
+// forbidden claim, matching --write.
 const wtpLog = [];
 for (const f of findings) {
-  for (const reason of forbiddenClaims(f.narrative)) wtpLog.push(`WTP/FORBIDDEN ${f.finding_id} "${f.friction_name}" — ${reason} (surfaced, will fail report-gate)`);
+  for (const reason of forbiddenClaims(f.narrative)) wtpLog.push(`WTP/FORBIDDEN ${f.finding_id} "${f.friction_name}" — ${reason} (forbidden claim; fails the gate in BOTH bare and --write mode, R3 M12)`);
 }
 for (const line of wtpLog) process.stderr.write(line + '\n');
 
 if (!writeMode) {
+  // Bare mode is a preview, but it is NOT unvalidated: the forbidden-claim check above is enforced here
+  // too. Emit the bundle (so the caller can inspect the violating preview) then fail closed if any
+  // forbidden claim was found — a WTP/population claim never exits 0, in either mode (R3 M12).
   process.stdout.write(JSON.stringify(bundle, null, 2));
+  if (wtpLog.length > 0) {
+    process.stderr.write(`assemble-run: ${wtpLog.length} forbidden-claim violation(s) surfaced above — bare-mode preview FAILS CLOSED (exit 1), matching the --write gate; a WTP/population claim is never shipped at exit 0 (R3 M12)\n`);
+    process.exit(1);
+  }
   process.exit(0);
 }
 

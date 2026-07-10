@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 // run-gauntlet.mjs — UX Gauntlet runner CLI (contract: docs/adr/0001-runner-cli-contract.md).
 // Exit codes: 0 = crawl started & gates passed; 1 = gate/validation refusal; 2 = usage error;
-// 3 = target unreachable at crawl start. This layer implements argument validation + refusal;
-// the live Playwright crawl is stubbed behind the validated entry (TODO: wire persona subagents).
+// 3 = target unreachable at crawl start. This layer implements argument validation + refusal, then
+// drives the REAL live Playwright crawl per persona via scripts/crawl.mjs (MI4: the crawl is NOT stubbed
+// — it captures real steps/screenshots/trace.json). Persona JUDGMENT (ledger.json) remains the separate
+// LLM-subagent step per ADR-0002; this runner does effects/capture + gating, not scoring.
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';

@@ -6,9 +6,10 @@
   "required": ["run", "findings"],
   "properties": {
     "lane": {
-      "description": "Lane discriminator (B9). This schema describes the PERSONA lane; a bundle is persona-lane when lane is \"persona\" or absent (default). A structural-lane bundle (lane:\"structural\") must be routed to structural-report-gate.mjs, and report-gate.mjs refuses it.",
+      "description": "Lane discriminator (B9, R3 M15). EXPLICIT, not shape-sniffed: a bundle is persona-lane when lane is \"persona\" (the default assemble-run.mjs emits) or absent (frozen 0001-safe default). A structural-lane bundle (lane:\"structural\") must be routed to structural-report-gate.mjs; report-gate.mjs / ci-diff.mjs / render-report.mjs exact-match this discriminator and refuse a \"structural\" (or any other explicit) value. Kept OPTIONAL here (not in top-level required) so the structural schema is exactly this family's required set plus \"lane\" (0002 D6/M9).",
       "type": "string",
-      "enum": ["persona"]
+      "enum": ["persona"],
+      "default": "persona"
     },
     "run": {
       "type": "object",

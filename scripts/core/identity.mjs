@@ -13,19 +13,24 @@ export function findingId(tag, step, tei) {
   return 'fid-' + createHash('sha256').update(`${tag}|${step}|${tei}`).digest('hex').slice(0, 16);
 }
 
-// R2 items 3/11 — the ONE canonical target_element_identifier normalizer, used EVERYWHERE identity is
-// compared (clusterKey in assemble-run.mjs and tupleKey below). Two personas naming the SAME element
-// must produce the SAME normalized key regardless of surrounding whitespace, internal whitespace runs,
-// letter case, or a trailing punctuation mark. Steps, in order:
-//   1. trim surrounding whitespace,
-//   2. lowercase,
-//   3. collapse every internal whitespace run to a single space ("signup  button" == "signup button"),
+// R2 items 3/11 + R3 M2 — the ONE canonical target_element_identifier normalizer, used EVERYWHERE
+// identity is compared (clusterKey in assemble-run.mjs and tupleKey below). Two personas naming the SAME
+// element must produce the SAME normalized key regardless of surrounding whitespace, internal whitespace
+// runs, letter case, whitespace ADJACENT TO A SEPARATOR ("signup:cta" == "signup: cta" == "signup : cta"),
+// or a trailing punctuation mark. Steps, in order:
+//   1. trim surrounding whitespace, lowercase,
+//   2. collapse whitespace adjacent to ANY punctuation/symbol separator so the separator and its operands
+//      touch ("signup : cta" -> "signup:cta") — R3 M2: the prior build only collapsed whitespace RUNS,
+//      so a single space around the ':' separator ("signup: cta") under-merged vs "signup:cta",
+//   3. collapse every remaining internal whitespace run to a single space ("signup  button" == "signup button"),
 //   4. strip trailing punctuation/symbols ("landing:cta." == "landing:cta").
 // A null/absent identifier normalizes to '' (the caller treats '' as "no element identifier").
 export function normalizeTei(t) {
   if (t == null) return '';
-  let s = String(t).trim().toLowerCase().replace(/\s+/g, ' ');
-  s = s.replace(/[\p{P}\p{S}]+$/u, '').trim();
+  let s = String(t).trim().toLowerCase();
+  s = s.replace(/\s*([\p{P}\p{S}])\s*/gu, '$1'); // R3 M2: fold whitespace touching a separator into the separator
+  s = s.replace(/\s+/g, ' ');                    // collapse remaining internal whitespace runs
+  s = s.replace(/[\p{P}\p{S}]+$/u, '').trim();   // strip trailing punctuation/symbols
   return s;
 }
 

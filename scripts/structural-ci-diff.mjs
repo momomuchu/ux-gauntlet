@@ -65,13 +65,25 @@ if (runStatus === 'settle-timeout') block('BLOCK: run_status settle-timeout — 
 
 // ---- finding source / code BLOCK predicates (raw fields only) -------------------------------------
 for (const f of findings) {
-  // C (R2 item 1): fail CLOSED on a non-canonical impact for an axe/incomplete finding, mirroring
-  // structural-report-gate's isValidImpact check. findingBlocksCi folds whitespace+case now, but an
-  // UNKNOWN/garbage impact ("crtical", "high", "critical!!") must not silently pass as "not critical";
-  // the standalone CI-merge gate must reject it rather than treat an unclassifiable impact as clean.
+  // C (R2 item 1 + R3 M1): fail CLOSED on an unclassifiable impact, mirroring structural-report-gate's
+  // isValidImpact check. findingBlocksCi folds whitespace+case, but an UNKNOWN/garbage impact ("crtical",
+  // "high", "critical!!") — or, for an axe finding, an ABSENT/null impact — must not silently pass as
+  // "not critical"; an unclassifiable impact is not evaluable, so the standalone CI-merge gate rejects it.
   const isAxe = (f.source ?? '') === 'axe' || (typeof f.code === 'string' && f.code.startsWith('axe:'));
-  if ((isAxe || isIncomplete(f)) && f.impact != null && !isValidImpact(f.impact)) {
-    block(`BLOCK: axe/incomplete finding ${f.code} carries a non-canonical impact "${f.impact}" — impact must fold to one of critical|serious|moderate|minor; the CI gate fails CLOSED on an unclassifiable impact rather than silently treating it as non-blocking (S60/B6/R2-1)`);
+  // R3 M1: an axe finding MUST carry a canonical impact (S60 — the S53 critical predicate reads impact,
+  // not severity). The prior `f.impact != null` exclusion let a null/missing impact on a sev-4 axe finding
+  // MERGE CLEAN in sci while structural-report-gate correctly FAILED it — an unreconciled gate divergence.
+  // Drop the exclusion for axe: a missing/null impact fails CLOSED exactly like a garbage string.
+  if (isAxe && !isValidImpact(f.impact)) {
+    block(`BLOCK: axe finding ${f.code} carries a missing/non-canonical impact ${JSON.stringify(f.impact ?? null)} — an axe impact must fold to one of critical|serious|moderate|minor; the CI gate fails CLOSED on an absent/unclassifiable impact rather than silently treating it as non-blocking (S60/B6/R2-1/R3-M1)`);
+    continue;
+  }
+  // An axe INCOMPLETE finding is severity-0 needs-manual-review and MAY legitimately omit impact (only a
+  // *critical* incomplete blocks, S53/D7). So for incomplete, reject only a PRESENT-but-garbage impact —
+  // a null impact stays valid (blocking every null-impact incomplete would contradict S53 and the frozen
+  // structural-incomplete-surfaced-ok fixture).
+  if (isIncomplete(f) && f.impact != null && !isValidImpact(f.impact)) {
+    block(`BLOCK: axe incomplete finding ${f.code} carries a non-canonical impact "${f.impact}" — impact must fold to one of critical|serious|moderate|minor; the CI gate fails CLOSED on an unclassifiable impact rather than silently treating it as non-blocking (S60/B6/R2-1)`);
     continue;
   }
   if (!findingBlocksCi(f)) continue;

@@ -51,9 +51,26 @@ async function snap(stepIdx, label, action, actionCost) {
   });
 }
 
+// M5: the first navigation races the target server becoming reachable — a transient
+// net::ERR_CONNECTION_REFUSED here dropped the whole crawl to run_status:'crashed'/0 steps (the ~1-in-6
+// to ~1-in-15 live flake). Retry ONLY the initial goto on a connection-refused, with short backoff,
+// before falling through to the real crash path. A non-connection error is not retried (no masking).
+async function gotoWithRetry(url, attempts = 4) {
+  let lastErr = null;
+  for (let i = 0; i < attempts; i++) {
+    try { return await page.goto(url, { waitUntil: 'domcontentloaded' }); }
+    catch (e) {
+      lastErr = e;
+      if (!/ERR_CONNECTION_REFUSED|ECONNREFUSED|ERR_CONNECTION_RESET/i.test(String(e))) throw e;
+      await new Promise((r) => setTimeout(r, 150 * (i + 1)));
+    }
+  }
+  throw lastErr;
+}
+
 try {
   // Step 1 — open landing
-  await page.goto(base, { waitUntil: 'domcontentloaded' });
+  await gotoWithRetry(base);
   await snap(1, tasks.steps[0]?.label || 'open landing', 'goto ' + base, 1);
 
   // Step 2 — find & click the signup CTA. Cost = 1 + scrolls needed to bring it into view (real friction

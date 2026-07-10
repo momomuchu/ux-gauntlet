@@ -1,9 +1,17 @@
 // Staging demo target for ux-gauntlet — a tiny SaaS signup flow with DELIBERATELY planted
 // UX friction, so a real crawl has genuine problems to find. Zero-dep Node http server.
-// Run: node examples/staging-demo/server.mjs [port]   (default 4319)
+// Run: node examples/staging-demo/server.mjs [port]   (default 4319; pass 0 for an OS-allocated
+// ephemeral port — the actual bound port is printed on the ready line, "port=<N>").
 import { createServer } from 'node:http';
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
-const PORT = Number(process.argv[2] || 4319);
+const PORT = Number(process.argv[2] ?? 4319); // 0 => OS-allocated ephemeral port (M16: no shared-port TOCTOU)
+// M4: a content-freshness fingerprint of THIS server's own source, exposed at /__source-hash. A live
+// harness can compare it against a hash of the on-disk file to prove the running process reflects the
+// current disk code before trusting it (never adopt a stale/leaked build that silently serves old HTML).
+const SOURCE_HASH = createHash('sha256').update(readFileSync(fileURLToPath(import.meta.url))).digest('hex');
 
 const page = (title, body) => `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>${title} · Cloudly</title>
@@ -79,8 +87,11 @@ const routes = {
     <a class="btn" href="#">Upload a file</a>`),
 };
 
-createServer((req, res) => {
+const srv = createServer((req, res) => {
   const url = req.url.split('?')[0];
+  if (url === '/__source-hash') { // M4: freshness fingerprint (plain text, GET only)
+    res.writeHead(200, { 'content-type': 'text/plain' }); return res.end(SOURCE_HASH);
+  }
   if (req.method === 'POST') { // any POST just advances (dry-run friendly; no real writes)
     const to = url === '/verify' ? '/verify' : url === '/dashboard' ? '/dashboard' : '/';
     res.writeHead(303, { Location: to }); return res.end();
@@ -88,4 +99,8 @@ createServer((req, res) => {
   const body = routes[url];
   if (!body) { res.writeHead(404, { 'content-type': 'text/html' }); return res.end(page('Not found', '<h1>404</h1>')); }
   res.writeHead(200, { 'content-type': 'text/html' }); res.end(body);
-}).listen(PORT, () => console.log(`staging-demo (Cloudly) on http://localhost:${PORT}`));
+});
+srv.listen(PORT, () => {
+  const bound = srv.address().port; // the ACTUAL bound port (equals PORT unless PORT was 0)
+  console.log(`staging-demo (Cloudly) on http://localhost:${bound} port=${bound} source-hash=${SOURCE_HASH.slice(0, 12)}`);
+});

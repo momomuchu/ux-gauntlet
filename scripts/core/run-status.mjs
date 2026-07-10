@@ -13,9 +13,20 @@ export const FLOOR_STATES = new Set(['completed', 'patience-exhausted', 'runner-
 // (M2, quality-phase fix): an N=5 run with 3 floor-state personas is NOT blocked.
 export const CONVERGENCE_FLOOR = 3;
 
+// R3 M3: match run_status against FLOOR_STATES case-insensitively + trimmed, the SAME canonicalization
+// class canonicalImpact()/isValidImpact() already apply to axe impact strings. axe/persona emitters emit
+// the bare lowercase token, but a bundle can carry a padded/case variant ("Completed", " completed ",
+// "COMPLETED") that a raw FLOOR_STATES.has() silently treats as a NON-floor state — tripping a false
+// F191 derivation-mismatch (a healthy run derives BLOCKED). Normalize before membership so a case/space
+// variant folds to its canonical floor token; a genuinely-different status is unchanged and still counts
+// as non-floor.
+function canonicalStatus(s) {
+  return typeof s === 'string' ? s.trim().toLowerCase() : s;
+}
+
 export function floorCount(personaEntries) {
   if (!Array.isArray(personaEntries)) return 0;
-  return personaEntries.filter((p) => p && FLOOR_STATES.has(p.run_status)).length;
+  return personaEntries.filter((p) => p && FLOOR_STATES.has(canonicalStatus(p.run_status))).length;
 }
 
 // Derives whether a run is BLOCKED from its per-persona terminal states alone.
